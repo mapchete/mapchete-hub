@@ -19,15 +19,13 @@ def flask_app(config=None, no_sql=False):
     @app.route('/status/<task_id>')
     def status(task_id):
         res = celery_app.AsyncResult(task_id)
-        res_meta = res.backend.get_task_meta(task_id),
+        res_meta = res.backend.get_task_meta(task_id)
         if res.status == "FAILURE":
+            # TODO add error handling
             print("HOHOHO")
-            print(res_meta)
+            print(res)
             print("Ahsah")
-        return jsonify(dict(
-            res_meta,
-            task_id=task_id
-        ))
+        return jsonify(dict(res_meta, task_id=task_id))
 
     @app.route('/start/<task_id>')
     def start(task_id):

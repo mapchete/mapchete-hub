@@ -1,26 +1,20 @@
-import concurrent.futures
+from billiard import Pool
+from functools import partial
+import time
 
 from mapchete_hub.celery_app import celery_app
 
 
+def _worker(i):
+    time.sleep(1)
+    return "done!"
+
+
 @celery_app.task(track_started=True)
 def run():
-    import time
-
-    # 10 seconds single task
-    print("start task")
-    1/0
-    time.sleep(10)
+    # use multiprocessing via celery-friendly package billiard
+    f = partial(_worker)
+    pool = Pool()
+    for result in pool.imap_unordered(f, range(100)):
+        print(result)
     return "yay"
-
-    # # multiprocessing example
-    # def _worker(i):
-    #     time.sleep(1)
-
-    # with concurrent.futures.ProcessPoolExecutor() as executor:
-    #     tasks = (
-    #         executor.submit(_worker, i)
-    #         for i in range(100)
-    #     )
-    #     for task in concurrent.futures.as_completed(tasks):
-    #         print(task)
