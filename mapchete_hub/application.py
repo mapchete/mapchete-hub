@@ -30,6 +30,7 @@ def flask_app(config=None, no_sql=False):
     @app.route('/start/<task_id>')
     def start(task_id):
         res = zone_worker.run.apply_async(task_id=task_id)
+        return jsonify(dict(task_id=res.id, status="sent"))
         return "sent task named " + res.id
 
     # Return the application instance.

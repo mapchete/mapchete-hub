@@ -1,3 +1,5 @@
 *.egg-info
-__pycache__
+.eggs
 *.pyc
+__pycache__
+.pytest_cache

@@ -19,7 +19,7 @@ def mhub(ctx, **kwargs):
 @mhub.command(short_help='Show capabilities.')
 @click.pass_context
 def capabilities(ctx):
-    click.echo("mapcheteHub capabilities (available processes, workers.)")
+    click.echo("mapchete hub capabilities (available processes, workers.)")
 
 
 @mhub.command(short_help='Starts job.')
@@ -29,7 +29,7 @@ def start(ctx, job_name):
     try:
         start_job(job_name)
     except URLError:
-        click.echo("No mapcheteHub running under given endpoint.")
+        click.echo("No mapchete hub running under given endpoint.")
 
 
 @mhub.command(short_help='Stops job.')
@@ -46,7 +46,7 @@ def status(ctx, job_name):
     try:
         get_status(job_name)
     except URLError:
-        click.echo("No mapcheteHub running under given endpoint.")
+        click.echo("No mapchete hub running under given endpoint.")
 
 
 @mhub.command(short_help='Shows current tasks.')
