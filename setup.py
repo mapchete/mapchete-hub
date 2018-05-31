@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """Install Mapchete."""
 
 from setuptools import setup
@@ -32,6 +30,7 @@ setup(
     },
     install_requires=[
         'celery',
+        'celery-flower',
         'click',
         'Flask-Celery-py3',
         'mapchete>=0.21',

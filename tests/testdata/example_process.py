@@ -5,8 +5,8 @@ from random import randint
 
 def execute(mp):
     """User defined process."""
-    time.sleep(1)
-    # assert randint(0, 80) != 0
+    assert randint(0, 500)
+    time.sleep(10 // randint(1, 50))
     return "empty"
     # Reading and writing data works like this:
     # with mp.open("file1", resampling="bilinear") as raster_file:

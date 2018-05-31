@@ -1,4 +1,5 @@
 Flask-Celery-py3
 celery
+celery-flower
 click
 mapchete>=0.21

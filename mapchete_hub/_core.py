@@ -48,8 +48,11 @@ def mapchete_execute(
                 logger.exception(e)
                 raise
             finally:
-                pool.terminate()
+                # logger.debug("terminate pool")
+                # pool.terminate()
+                logger.debug("close pool")
                 pool.close()
+                logger.debug("join pool")
                 pool.join()
             # for tile in mp.get_process_tiles(zoom):
             #     yield dict(process_tile=tile, **_process_worker(mp, tile)[1])

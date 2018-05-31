@@ -11,17 +11,22 @@ def get_flask_options():
         result_backend='rpc://guest:guest@localhost:5672//',
         # required to hanlde exceptions raised by billiard
         result_serializer='pickle',
+        task_serializer='pickle',
+        event_serializer='pickle',
         accept_content=['pickle', 'json'],
         task_routes={'mapchete_hub.workers.zone_worker.*': {'queue': 'zone_queue'}},
         task_acks_late=True,
+        worker_send_task_events=True,
+        task_send_sent_event=True,
+        event_queue_expires=604800  # one week in seconds
     )
 
 
-# def get_celery_options():
-#     return dict(
-#         broker_url='amqp://guest:guest@localhost:5672//',
-#         result_backend='rpc://guest:guest@localhost:5672//',
-#         CELERY_TASK_SERIALIZER='pickle',
-#         CELERY_EVENT_SERIALIZER='pickle',
-#         CELERY_RESULT_SERIALIZER='pickle',
-#     )
+def get_main_options():
+    return dict(
+        job_states_dir="temp",
+        success="success.json",
+        failed="failed.json",
+        progress="progress.json",
+        queued="queued.json",
+    )

@@ -1,11 +1,14 @@
 from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
+import logging
 
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub.config import get_flask_options
+from mapchete_hub.config import get_flask_options, get_main_options
 from mapchete_hub.exceptions import UnknownJobState
 from mapchete_hub.workers import zone_worker
 
+
+logger = logging.getLogger(__name__)
 
 # local jobs cache
 registered_jobs = {}
@@ -17,6 +20,7 @@ unknown_jobs = {}
 
 def flask_app(config=None, no_sql=False):
     """Flask application factory. Initializes and returns the Flask application."""
+    logger.debug("initialize flask app")
     app = Flask(__name__)
     conf = get_flask_options()
     if config:
@@ -27,14 +31,19 @@ def flask_app(config=None, no_sql=False):
     celery_app.conf.update(app.config)
     celery_app.init_app(app)
 
+    logger.debug("add resources")
     api.add_resource(JobsOverview, '/jobs/')
     api.add_resource(Jobs, '/jobs/<string:job_id>')
 
+    logger.debug("return app")
     # Return the application instance.
     return app
 
 
 class JobsOverview(Resource):
+
+    state_store = get_main_options().get("state_store_file")
+
     def get(self):
         update_jobs_caches()
         return jsonify(
@@ -48,6 +57,9 @@ class JobsOverview(Resource):
 
 
 class Jobs(Resource):
+
+    state_store = get_main_options().get("state_store_file")
+
     def get(self, job_id):
         if job_id not in registered_jobs:
             return jsonify(dict(job_id=job_id, status="UNKNOWN"))
@@ -67,7 +79,7 @@ class Jobs(Resource):
         unknown_jobs[job_id] = jsonify(job)
         # pass on to celery cluster
         zone_worker.run.apply_async(
-            kwargs=dict(job_id=job_id, config=config),
+            kwargs=dict(config=config),
             task_id=job_id
         )
         return job

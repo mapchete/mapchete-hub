@@ -1,4 +1,3 @@
-from celery.bin.celery import main as celery_main
 import click
 import json
 import requests
@@ -33,7 +32,7 @@ def capabilities(ctx):
 @click.pass_context
 def start(ctx, job_id, mapchete_file):
     start_job(job_id, mapchete_file)
-    get_status(job_id)
+    # get_status(job_id)
 
 
 @mhub.command(short_help='Stops job.')
@@ -65,17 +64,18 @@ def start_job(job_id, mapchete_file):
     data = yaml.safe_load(open(mapchete_file, "r").read())
     res = requests.post(url, json=data)
     assert res.status_code == 200
-    job_status = json.loads(res.text)["status"]
-    if job_status == "QUEUED":
-        click.echo("job %s registered with current status %s" % (job_id, job_status))
-    elif job_status in ["SUCCESS", "FAILURE"]:
-        click.echo(
-            "job %s was already executed earlier with status %s" % (job_id, job_status)
-        )
-    elif job_status == "PROGRESS":
-        click.echo("job %s in progress" % job_id)
-    else:
-        click.echo("job %s unknown status %s " % (job_id, job_status))
+    click.echo("queued job %s" % job_id)
+    # job_status = json.loads(res.text)["status"]
+    # if job_status == "QUEUED":
+    #     click.echo("job %s registered with current status %s" % (job_id, job_status))
+    # elif job_status in ["SUCCESS", "FAILURE"]:
+    #     click.echo(
+    #         "job %s was already executed earlier with status %s" % (job_id, job_status)
+    #     )
+    # elif job_status == "PROGRESS":
+    #     click.echo("job %s in progress" % job_id)
+    # else:
+    #     click.echo("job %s unknown status %s " % (job_id, job_status))
 
 
 def get_status(job_id):
@@ -125,16 +125,28 @@ def get_status(job_id):
 
 
 def get_jobs():
-    host_opts = get_host_options()
-    url = "http://%s:%s/jobs" % (host_opts["host_ip"], host_opts["port"])
-    res = _get_json(url)
-    for g in ["unknown", "progress", "success", "failed"]:
-        click.echo(g + ":")
-        for j in res[g]:
-            click.echo(j)
-        click.echo("\n")
+    url = "http://localhost:5555/api/tasks"
+    job_baseurl = "http://localhost:5555/api/task/info/"
+    headers = {
+        'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate, compress'
+    }
+    res = _get_json(url, headers=headers)
+    for job_id, v in res.items():
+        click.echo("%s: %s" % (job_id, v["state"]))
+        # print(_get_json(job_baseurl + job_id, headers=headers))
+
+    # host_opts = get_host_options()
+    # url = "http://%s:%s/jobs" % (host_opts["host_ip"], host_opts["port"])
+    # res = _get_json(url)
+    # for g in ["unknown", "progress", "success", "failed"]:
+    #     click.echo(g + ":")
+    #     for j in res[g]:
+    #         click.echo(j)
+    #     click.echo("\n")
 
 
-def _get_json(url):
-    response = requests.get(url)
+def _get_json(url, headers={}):
+    response = requests.get(url, headers=headers)
+    # print(response.text)
     return json.loads(response.text)
