@@ -9,7 +9,11 @@ from mapchete_hub.workers import zone_worker
 
 
 logger = logging.getLogger(__name__)
-# status = StatusHandler(get_main_options().get("status_gpkg"), mode="r")
+status = StatusHandler(
+    get_main_options().get("status_gpkg"),
+    mode="r",
+    profile=get_main_options()["status_gpkg_profile"]
+)
 
 
 def flask_app(config=None, no_sql=False):

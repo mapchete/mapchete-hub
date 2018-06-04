@@ -24,7 +24,7 @@ def get_flask_options():
 
 def get_main_options():
     return dict(
-        status_gpkg='herbert.gpkg',
+        status_gpkg='status.gpkg',
         status_gpkg_profile=dict(
             crs={'init': 'epsg:4326'},
             driver="GPKG",
@@ -32,7 +32,7 @@ def get_main_options():
                 geometry='Polygon',
                 properties=dict(
                     job_id='str:100',
-                    status='str:50',
+                    state='str:50',
                     timestamp='float',
                     started='float',
                     hostname='str:50',

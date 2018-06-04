@@ -48,8 +48,6 @@ def mapchete_execute(
                 logger.exception(e)
                 raise
             finally:
-                # logger.debug("terminate pool")
-                # pool.terminate()
                 logger.debug("close pool")
                 pool.close()
                 logger.debug("join pool")

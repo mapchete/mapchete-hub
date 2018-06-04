@@ -25,6 +25,7 @@ def status_monitor(celery_app):
         def announce_task_state(event):
             state.event(event)
             task = state.tasks.get(event['uuid'])
+            logger.debug(event)
             logger.debug('task status: %s: %s', task.uuid, event["state"])
             status_handler.update(task.uuid, event)
 
@@ -59,16 +60,17 @@ def status_monitor(celery_app):
 class StatusHandler():
 
     def __init__(self, filename, mode='r', profile=None):
-        mode = 'r'
+        logger.debug("mode: %s", mode)
         self.mode = mode
+        if os.path.isfile(filename):
+            logger.debug("GPKG file exists: %s", filename)
+        else:
+            logger.debug("create new status GPKG %s, %s", filename, profile)
+            src = fiona.open(filename, 'w', **profile)
+            src.close()
+
         if self.mode == 'w':
             logger.debug("open status handler in 'w' mode: %s", filename)
-            if os.path.isfile(filename):
-                logger.debug("GPKG file exists: %s", filename)
-            else:
-                logger.debug("create new status GPKG %s, %s", filename, profile)
-                src = fiona.open(filename, 'w', **profile)
-                src.close()
             self.connection = spatialite.connect(filename)
 
         elif self.mode == 'r':

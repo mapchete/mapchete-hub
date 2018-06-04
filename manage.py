@@ -28,8 +28,6 @@ stream_handler.setFormatter(formatter)
 stream_handler.setLevel(logging.ERROR)
 logging.getLogger().addHandler(stream_handler)
 
-logger = logging.getLogger(__name__)
-
 
 @click.version_option(version=mapchete_hub.__version__, message='%(version)s')
 @click.group()
@@ -43,6 +41,7 @@ def cli(ctx, **kwargs):
 def devserver(ctx):
     logging.getLogger("mapchete_hub").setLevel(logging.DEBUG)
     stream_handler.setLevel(logging.DEBUG)
+
     click.echo("launch dev server")
     app = flask_app()
     host_opts = get_host_options()
@@ -54,10 +53,11 @@ def devserver(ctx):
 def monitor(ctx):
     logging.getLogger("mapchete_hub").setLevel(logging.DEBUG)
     stream_handler.setLevel(logging.DEBUG)
+
     click.echo("launch monitor")
     celery_app.conf.update(get_flask_options())
     celery_app.init_app(flask_app())
-    logger.debug("launch status_monitor")
+    # logger.debug("launch status_monitor")
     status_monitor(celery_app)
 
 

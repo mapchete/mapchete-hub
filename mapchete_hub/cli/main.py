@@ -82,46 +82,48 @@ def get_status(job_id):
     host_opts = get_host_options()
     url = "http://%s:%s/jobs/%s" % (host_opts["host_ip"], host_opts["port"], job_id)
     res = _get_json(url)
-    if res["status"] == "PENDING":
-        click.echo("waiting for worker to accept job...")
-        while True:
-            res = _get_json(url)
-            if res["status"] in ["SUCCESS", "FAILURE", "PROGRESS"]:
-                break
-            time.sleep(1)
-    if res["status"] == "PROGRESS":
-        click.echo("job %s in progress" % job_id)
-        while True:
-            try:
-                res = _get_json(url)
-                current = res["result"]["current"]
-                total = res["result"]["total"]
-                assert isinstance(current, int)
-                assert isinstance(total, int)
-                break
-            except:
-                pass
-            finally:
-                time.sleep(1)
-        with tqdm(total=total, initial=current) as pbar:
-            while True:
-                res = _get_json(url)
-                if res["status"] in ["SUCCESS", "FAILURE"]:
-                    break
-                elif res["status"] == "PROGRESS":
-                    last = current
-                    if res["result"]:
-                        current = res["result"]["current"]
-                        if current and last and current > last:
-                            pbar.update(current - last)
-                time.sleep(1)
-    if res["status"] == "SUCCESS":
-        click.echo("job %s successfully finished" % job_id)
-    if res["status"] == "FAILURE":
-        click.echo("job %s failed:" % job_id)
-        click.echo(res["traceback"])
-    if res["status"] == "UNKNOWN":
-        click.echo("no job named %s currently registered" % job_id)
+    click.echo(res)
+
+    # if res["status"] == "PENDING":
+    #     click.echo("waiting for worker to accept job...")
+    #     while True:
+    #         res = _get_json(url)
+    #         if res["status"] in ["SUCCESS", "FAILURE", "PROGRESS"]:
+    #             break
+    #         time.sleep(1)
+    # if res["status"] == "PROGRESS":
+    #     click.echo("job %s in progress" % job_id)
+    #     while True:
+    #         try:
+    #             res = _get_json(url)
+    #             current = res["result"]["current"]
+    #             total = res["result"]["total"]
+    #             assert isinstance(current, int)
+    #             assert isinstance(total, int)
+    #             break
+    #         except:
+    #             pass
+    #         finally:
+    #             time.sleep(1)
+    #     with tqdm(total=total, initial=current) as pbar:
+    #         while True:
+    #             res = _get_json(url)
+    #             if res["status"] in ["SUCCESS", "FAILURE"]:
+    #                 break
+    #             elif res["status"] == "PROGRESS":
+    #                 last = current
+    #                 if res["result"]:
+    #                     current = res["result"]["current"]
+    #                     if current and last and current > last:
+    #                         pbar.update(current - last)
+    #             time.sleep(1)
+    # if res["status"] == "SUCCESS":
+    #     click.echo("job %s successfully finished" % job_id)
+    # if res["status"] == "FAILURE":
+    #     click.echo("job %s failed:" % job_id)
+    #     click.echo(res["traceback"])
+    # if res["status"] == "UNKNOWN":
+    #     click.echo("no job named %s currently registered" % job_id)
 
 
 def get_jobs():

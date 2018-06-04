@@ -48,8 +48,8 @@ def test_statushandler(status_gpkg, status_profile):
 
     another_progress = dict(progress, uuid=another_test_job)
 
-    with StatusHandler(status_gpkg, 'w', profile=status_profile) as status_w:
-        with StatusHandler(status_gpkg, 'r') as status_r:
+    with StatusHandler(status_gpkg, mode='w', profile=status_profile) as status_w:
+        with StatusHandler(status_gpkg, mode='r') as status_r:
             # write progress event
             status_w.update(test_job, progress)
 
