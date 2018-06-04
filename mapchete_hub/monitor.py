@@ -1,36 +1,197 @@
+from collections import OrderedDict
+import fiona
+import json
+from json.decoder import JSONDecodeError
 import logging
-import pickledb
+import os
+from shapely.geometry import Polygon
+import spatialite
+
+from mapchete_hub.config import get_main_options
 
 logger = logging.getLogger(__name__)
 
 
 def status_monitor(celery_app):
-    state_store = get_main_options().get("state_store_file")
-    states = pickledb.load(state_store)
+    status_gpkg = get_main_options().get("status_gpkg")
     logger.debug("status monitor")
     state = celery_app.events.State()
     logger.debug("state: %s", state)
 
-    def announce_failed_tasks(event):
-        # task name is sent only with -received event, and state
-        # will keep track of this for us.
-        state.event(event)
-        task = state.tasks.get(event['uuid'])
-        logger.error('TASK FAILED: %s: %s', task.uuid, event)
+    with StatusHandler(
+        status_gpkg, mode='w', profile=get_main_options()["status_gpkg_profile"]
+    ) as status_handler:
 
-    def announce_progress_tasks(event):
-        state.event(event)
-        task = state.tasks.get(event['uuid'])
-        logger.debug('TASK IN PROGRESS: %s: %s', task.uuid, event)
+        def announce_task_state(event):
+            state.event(event)
+            task = state.tasks.get(event['uuid'])
+            logger.debug('task status: %s: %s', task.uuid, event["state"])
+            status_handler.update(task.uuid, event)
 
-    with celery_app.connection() as connection:
-        logger.debug("connection: %s", connection)
-        recv = celery_app.events.Receiver(
-            connection,
-            handlers={
-                'task-failed': announce_failed_tasks,
-                'task-progress': announce_progress_tasks,
-            }
+        def announce_failed_task_state(event):
+            # task name is sent only with -received event, and state
+            # will keep track of this for us.
+            state.event(event)
+            task = state.tasks.get(event['uuid'])
+            logger.error('task failed: %s: %s', task.uuid, event)
+            status_handler.update(task.uuid, event)
+
+        with celery_app.connection() as connection:
+            logger.debug("connection: %s", connection)
+            recv = celery_app.events.Receiver(
+                connection,
+                handlers={
+                    'task-sent': announce_task_state,
+                    'task-received': announce_task_state,
+                    'task-started': announce_task_state,
+                    'task-succeeded': announce_task_state,
+                    'task-failed': announce_failed_task_state,
+                    'task-rejected': announce_task_state,
+                    'task-revoked': announce_task_state,
+                    'task-retried': announce_task_state,
+                    'task-progress': announce_task_state,
+                }
+            )
+            logger.debug("ready to capture events")
+            recv.capture(limit=None, timeout=None, wakeup=True)
+
+
+class StatusHandler():
+
+    def __init__(self, filename, mode='r', profile=None):
+        mode = 'r'
+        self.mode = mode
+        if self.mode == 'w':
+            logger.debug("open status handler in 'w' mode: %s", filename)
+            if os.path.isfile(filename):
+                logger.debug("GPKG file exists: %s", filename)
+            else:
+                logger.debug("create new status GPKG %s, %s", filename, profile)
+                src = fiona.open(filename, 'w', **profile)
+                src.close()
+            self.connection = spatialite.connect(filename)
+
+        elif self.mode == 'r':
+            if os.path.isfile(filename):
+                logger.debug("open status handler in 'r' mode: %s", filename)
+                self.connection = spatialite.connect(filename, check_same_thread=False)
+            else:
+                raise IOError("no GPKG file found: %s", filename)
+
+        else:
+            raise ValueError("unknown mode '%s'", mode)
+
+        logger.debug("connect to GPKG %s", filename)
+        self.tablename = os.path.splitext(os.path.basename(filename))[0]
+
+        def _get_f_type(f_type):
+            if f_type == "REAL":
+                return float
+            elif f_type == "INTEGER":
+                return int
+            elif f_type.startswith("TEXT"):
+                return str
+            elif f_type == "POLYGON":
+                return Polygon
+            else:
+                raise TypeError("unknown field type")
+
+        c = self.connection.cursor()
+        self.fields = OrderedDict(
+            (column[1], _get_f_type(column[2]))
+            for column in c.execute("PRAGMA table_info(%s);" % self.tablename)
         )
-        logger.debug("ready to capture events")
-        recv.capture(limit=None, timeout=None, wakeup=True)
+        logger.debug(self.fields)
+
+    def all(self):
+        logger.debug("get status of all jobs")
+        c = self.connection.cursor()
+        res = c.execute('SELECT * FROM %s;' % self.tablename)
+        return [self._decode_row(row) for row in res]
+
+    def job(self, job_id):
+        logger.debug("get job %s status", job_id)
+        c = self.connection.cursor()
+        row = c.execute(
+            'SELECT * FROM %s WHERE job_id=?;' % self.tablename, [job_id]
+        ).fetchone()
+        if row is None:
+            return {}
+        else:
+            return self._decode_row(row)
+
+    def update(self, job_id, metadata={}):
+        if self.mode == 'r':
+            raise AttributeError('update not allowed in read mode')
+        logger.debug("update job %s status with: %s", job_id, metadata)
+        c = self.connection.cursor()
+        # use 'job_id' instead of 'uuid'
+        metadata.update(job_id=metadata['uuid'])
+        metadata = self._filtered_by_schema(metadata)
+        encoded_values = self._encode_values(metadata)
+
+        # check if entry exists and insert new or update existing
+        # TODO: there must be a better way!
+        if c.execute(
+            'SELECT * FROM %s WHERE job_id=?;' % self.tablename, [job_id]
+        ).fetchone() is None:
+            # insert new entry
+            insert = "INSERT INTO %s (%s) VALUES (%s);" % (
+                self.tablename,
+                ", ".join(metadata.keys()),
+                ", ".join(["?" for _ in metadata])
+            )
+            logger.debug(insert)
+            c.execute(insert, encoded_values)
+        else:
+            # update existing entry
+            update = "UPDATE %s SET %s WHERE job_id=?;" % (
+                self.tablename,
+                ", ".join([
+                    "%s=%s" % (column, value)
+                    for column, value in zip(metadata.keys(), ["?" for _ in metadata])
+                ])
+            )
+            logger.debug(update)
+            encoded_values = self._encode_values(metadata)
+            encoded_values.append(job_id)
+            c.execute(update, encoded_values)
+        # commit changes
+        self.connection.commit()
+
+    def close(self):
+        self.connection.close()
+
+    def _filtered_by_schema(self, metadata):
+        return {
+            k: v
+            for k, v in metadata.items()
+            if k in self.fields
+        }
+
+    def _encode_values(self, entry):
+        def _encode():
+            for v in entry.values():
+                if isinstance(v, dict):
+                    yield json.dumps(v)
+                else:
+                    yield v
+        return list(_encode())
+
+    def _decode_row(self, row):
+        def _decode():
+            for k, v in zip(self.fields, row):
+                if isinstance(v, str):
+                    try:
+                        yield (k, json.loads(v))
+                    except JSONDecodeError:
+                        yield (k, v)
+                else:
+                    yield (k, v)
+        return dict(_decode())
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, tb):
+        self.close()

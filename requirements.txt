@@ -3,3 +3,4 @@ celery
 celery-flower
 click
 mapchete>=0.21
+pysqlite3

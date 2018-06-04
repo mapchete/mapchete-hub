@@ -34,6 +34,7 @@ setup(
         'click',
         'Flask-Celery-py3',
         'mapchete>=0.21',
+        'pysqlite3'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',

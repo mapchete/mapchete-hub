@@ -24,9 +24,23 @@ def get_flask_options():
 
 def get_main_options():
     return dict(
-        job_states_dir="temp",
-        success="success.json",
-        failed="failed.json",
-        progress="progress.json",
-        queued="queued.json",
+        status_gpkg='herbert.gpkg',
+        status_gpkg_profile=dict(
+            crs={'init': 'epsg:4326'},
+            driver="GPKG",
+            schema=dict(
+                geometry='Polygon',
+                properties=dict(
+                    job_id='str:100',
+                    status='str:50',
+                    timestamp='float',
+                    started='float',
+                    hostname='str:50',
+                    progress_data='str:100',
+                    runtime='float',
+                    exception='str:100',
+                    traceback='str:1000',
+                )
+            )
+        )
     )

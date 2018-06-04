@@ -2,6 +2,11 @@
 """
 Main entry point for mapcheteHub.
 
+To start a mapcheteHub cluster, you have to start
+- a server instance (currently just devserver available)
+- a monitor instance
+- one or more workers
+
 Inspirations:
 https://github.com/Robpol86/Flask-Large-Application-Example/blob/master/manage.py
 """
@@ -22,6 +27,8 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 stream_handler.setLevel(logging.ERROR)
 logging.getLogger().addHandler(stream_handler)
+
+logger = logging.getLogger(__name__)
 
 
 @click.version_option(version=mapchete_hub.__version__, message='%(version)s')
@@ -50,6 +57,7 @@ def monitor(ctx):
     click.echo("launch monitor")
     celery_app.conf.update(get_flask_options())
     celery_app.init_app(flask_app())
+    logger.debug("launch status_monitor")
     status_monitor(celery_app)
 
 
