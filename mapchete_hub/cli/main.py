@@ -61,7 +61,15 @@ def jobs(ctx):
 def start_job(job_id, mapchete_file):
     host_opts = get_host_options()
     url = "http://%s:%s/jobs/%s" % (host_opts["host_ip"], host_opts["port"], job_id)
-    data = yaml.safe_load(open(mapchete_file, "r").read())
+    data = dict(
+        mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
+        mode="continue",
+        zoom=None,
+        bounds=None,
+        wkt_geometry=None,
+        point=None,
+        tile=None
+    )
     res = requests.post(url, json=data)
     assert res.status_code == 200
     click.echo("queued job %s" % job_id)

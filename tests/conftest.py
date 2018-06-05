@@ -52,7 +52,8 @@ def status_profile():
             geometry='Polygon',
             properties=OrderedDict(
                 job_id='str:100',
-                status='str:50',
+                config='str:1000',
+                state='str:50',
                 timestamp='float',
                 started='float',
                 hostname='str:50',

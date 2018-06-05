@@ -32,6 +32,7 @@ def get_main_options():
                 geometry='Polygon',
                 properties=dict(
                     job_id='str:100',
+                    config='str:1000',
                     state='str:50',
                     timestamp='float',
                     started='float',

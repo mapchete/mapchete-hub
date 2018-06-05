@@ -1,7 +1,7 @@
-from billiard import cpu_count
 from celery.utils.log import get_task_logger
 from mapchete_hub import mapchete_execute
 from mapchete_hub.celery_app import celery_app
+from shapely import wkt
 
 
 logger = get_task_logger(__name__)
@@ -9,22 +9,13 @@ logger = get_task_logger(__name__)
 
 # ignore_result=True important, otherwise it will be stored in broker
 @celery_app.task(bind=True, ignore_result=True)
-def run(
-    self,
-    config=None,
-    mode="continue",
-    zoom=None,
-    bounds=None,
-    multi=cpu_count(),
-    max_chunksize=1
-):
-    self.send_event('task-progress', progress_data=dict(current=None, total=None))
+def run(self, config=None, process_area=None):
     logger.debug("initialize process")
+    self.send_event('task-progress', progress_data=dict(current=None, total=None))
     # first, the inputs get parsed, i.e. all metadat queried from catalogue
     # this may take a while
     executor = mapchete_execute(
-        config=config, mode=mode, zoom=zoom, bounds=bounds, multi=multi,
-        max_chunksize=max_chunksize
+        config=config['mapchete_config'], process_area=wkt.loads(process_area)
     )
 
     # get total tiles

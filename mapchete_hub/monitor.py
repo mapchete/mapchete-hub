@@ -4,7 +4,8 @@ import json
 from json.decoder import JSONDecodeError
 import logging
 import os
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, mapping
+from shapely import wkt
 import spatialite
 
 from mapchete_hub.config import get_main_options
@@ -127,10 +128,19 @@ class StatusHandler():
             raise AttributeError('update not allowed in read mode')
         logger.debug("update job %s status with: %s", job_id, metadata)
         c = self.connection.cursor()
-        # use 'job_id' instead of 'uuid'
-        metadata.update(job_id=metadata['uuid'])
-        metadata = self._filtered_by_schema(metadata)
-        encoded_values = self._encode_values(metadata)
+        # update incoming metadata
+        entry = dict(self._filtered_by_schema(metadata), job_id=metadata['uuid'])
+        logger.debug(entry)
+        if 'kwargs' in metadata:
+            logger.debug("found kwargs: %s", metadata['kwargs'])
+            kwargs = json.loads(metadata['kwargs'].replace("'", '"'))
+            logger.debug(kwargs)
+            entry.update(
+                geom=wkt.loads(kwargs['process_area']).wkt,
+                config=kwargs['config']
+            )
+        encoded_values = self._encode_values(entry)
+        logger.debug("encoded: %s", encoded_values)
 
         # check if entry exists and insert new or update existing
         # TODO: there must be a better way!
@@ -140,10 +150,11 @@ class StatusHandler():
             # insert new entry
             insert = "INSERT INTO %s (%s) VALUES (%s);" % (
                 self.tablename,
-                ", ".join(metadata.keys()),
-                ", ".join(["?" for _ in metadata])
+                ", ".join(entry.keys()),
+                ", ".join(["?" for _ in entry])
             )
             logger.debug(insert)
+            logger.debug(encoded_values)
             c.execute(insert, encoded_values)
         else:
             # update existing entry
@@ -151,11 +162,10 @@ class StatusHandler():
                 self.tablename,
                 ", ".join([
                     "%s=%s" % (column, value)
-                    for column, value in zip(metadata.keys(), ["?" for _ in metadata])
+                    for column, value in zip(entry.keys(), ["?" for _ in entry])
                 ])
             )
             logger.debug(update)
-            encoded_values = self._encode_values(metadata)
             encoded_values.append(job_id)
             c.execute(update, encoded_values)
         # commit changes
@@ -181,16 +191,28 @@ class StatusHandler():
         return list(_encode())
 
     def _decode_row(self, row):
+        logger.debug("decode row: %s", row)
+
         def _decode():
             for k, v in zip(self.fields, row):
-                if isinstance(v, str):
+                if k == 'geom':
+                    if v is None:
+                        yield (k, v)
+                        # raise TypeError("geometry invalid")
+                    else:
+                        yield (k, mapping(wkt.loads(v)))
+                elif isinstance(v, str):
                     try:
                         yield (k, json.loads(v))
                     except JSONDecodeError:
                         yield (k, v)
                 else:
                     yield (k, v)
-        return dict(_decode())
+        decoded = dict(_decode())
+        return dict(
+            geometry=decoded['geom'],
+            properties={k: v for k, v in decoded.items() if k != 'geom'}
+        )
 
     def __enter__(self):
         return self

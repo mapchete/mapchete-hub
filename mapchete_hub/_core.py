@@ -16,7 +16,7 @@ def mapchete_execute(
     config=None,
     mode="continue",
     zoom=None,
-    bounds=None,
+    process_area=None,
     multi=cpu_count(),
     max_chunksize=1
 ):
@@ -24,7 +24,7 @@ def mapchete_execute(
         raise AttributeError("no mapchete config given")
     config.update(config_dir=get_main_options()['config_dir'])
 
-    with mapchete.open(config, mode=mode, zoom=zoom, bounds=bounds) as mp:
+    with mapchete.open(config, mode=mode, zoom=zoom, bounds=process_area.bounds) as mp:
         logger.debug("run with multiprocessing")
         num_processed = 0
         zoom_levels = list(_get_zoom_level(zoom, mp))
