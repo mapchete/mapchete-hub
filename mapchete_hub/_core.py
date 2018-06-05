@@ -6,20 +6,25 @@ import mapchete
 from mapchete.errors import MapcheteNodataTile
 import time
 
+from mapchete_hub.config import get_main_options
+
 
 logger = get_task_logger(__name__)
 
 
 def mapchete_execute(
-    config=None, mode="continue", zoom=None, bounds=None, debug=False, multi=cpu_count(),
+    config=None,
+    mode="continue",
+    zoom=None,
+    bounds=None,
+    multi=cpu_count(),
     max_chunksize=1
 ):
     if config is None:
         raise AttributeError("no mapchete config given")
-    config.update(config_dir="/home/ungarj/git/mapchete_hub/tests/testdata")
-    with mapchete.open(
-        config, mode=mode, zoom=zoom, bounds=bounds, debug=debug
-    ) as mp:
+    config.update(config_dir=get_main_options()['config_dir'])
+
+    with mapchete.open(config, mode=mode, zoom=zoom, bounds=bounds) as mp:
         logger.debug("run with multiprocessing")
         num_processed = 0
         zoom_levels = list(_get_zoom_level(zoom, mp))

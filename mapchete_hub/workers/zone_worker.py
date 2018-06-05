@@ -15,7 +15,6 @@ def run(
     mode="continue",
     zoom=None,
     bounds=None,
-    debug=False,
     multi=cpu_count(),
     max_chunksize=1
 ):
@@ -24,7 +23,7 @@ def run(
     # first, the inputs get parsed, i.e. all metadat queried from catalogue
     # this may take a while
     executor = mapchete_execute(
-        config=config, mode=mode, zoom=zoom, bounds=bounds, debug=debug, multi=multi,
+        config=config, mode=mode, zoom=zoom, bounds=bounds, multi=multi,
         max_chunksize=max_chunksize
     )
 

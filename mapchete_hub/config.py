@@ -42,5 +42,6 @@ def get_main_options():
                     traceback='str:1000',
                 )
             )
-        )
+        ),
+        config_dir="/home/ungarj/git/mapchete_hub/tests/testdata/"
     )
