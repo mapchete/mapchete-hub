@@ -27,7 +27,10 @@ def status_monitor(celery_app):
             state.event(event)
             task = state.tasks.get(event['uuid'])
             logger.debug(event)
-            logger.debug('task status: %s: %s', task.uuid, event["state"])
+            try:
+                logger.debug('task status: %s: %s', task.uuid, event["state"])
+            except:
+                logger.error('malformed task status: %s', event)
             status_handler.update(task.uuid, event)
 
         def announce_failed_task_state(event):
@@ -119,6 +122,7 @@ class StatusHandler():
             'SELECT * FROM %s WHERE job_id=?;' % self.tablename, [job_id]
         ).fetchone()
         if row is None:
+            logger.debug("no job found named %s", job_id)
             return {}
         else:
             return self._decode_row(row)
@@ -126,21 +130,18 @@ class StatusHandler():
     def update(self, job_id, metadata={}):
         if self.mode == 'r':
             raise AttributeError('update not allowed in read mode')
-        logger.debug("update job %s status with: %s", job_id, metadata)
+        # logger.debug("update job %s status with: %s", job_id, metadata)
         c = self.connection.cursor()
         # update incoming metadata
         entry = dict(self._filtered_by_schema(metadata), job_id=metadata['uuid'])
-        logger.debug(entry)
         if 'kwargs' in metadata:
-            logger.debug("found kwargs: %s", metadata['kwargs'])
+            # logger.debug("found kwargs: %s", metadata['kwargs'])
             kwargs = json.loads(metadata['kwargs'].replace("'", '"'))
-            logger.debug(kwargs)
             entry.update(
                 geom=wkt.loads(kwargs['process_area']).wkt,
                 config=kwargs['config']
             )
         encoded_values = self._encode_values(entry)
-        logger.debug("encoded: %s", encoded_values)
 
         # check if entry exists and insert new or update existing
         # TODO: there must be a better way!
@@ -153,8 +154,6 @@ class StatusHandler():
                 ", ".join(entry.keys()),
                 ", ".join(["?" for _ in entry])
             )
-            logger.debug(insert)
-            logger.debug(encoded_values)
             c.execute(insert, encoded_values)
         else:
             # update existing entry
@@ -165,7 +164,6 @@ class StatusHandler():
                     for column, value in zip(entry.keys(), ["?" for _ in entry])
                 ])
             )
-            logger.debug(update)
             encoded_values.append(job_id)
             c.execute(update, encoded_values)
         # commit changes
@@ -191,7 +189,6 @@ class StatusHandler():
         return list(_encode())
 
     def _decode_row(self, row):
-        logger.debug("decode row: %s", row)
 
         def _decode():
             for k, v in zip(self.fields, row):

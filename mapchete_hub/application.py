@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, abort, make_response
 from flask_restful import Api, Resource
 import json
 import logging
@@ -14,7 +14,7 @@ from mapchete_hub.workers import zone_worker
 
 
 logger = logging.getLogger(__name__)
-status = StatusHandler(
+states = StatusHandler(
     get_main_options().get("status_gpkg"),
     mode="r",
     profile=get_main_options()["status_gpkg_profile"]
@@ -46,43 +46,64 @@ def flask_app(config=None, no_sql=False):
 class JobsOverview(Resource):
 
     def get(self):
-        return jsonify(status.all())
+        return jsonify(states.all())
 
 
 class Jobs(Resource):
 
     def get(self, job_id):
-        res = status.job(job_id)
+        res = states.job(job_id)
+        logger.debug("return get(): %s", res)
         if not res:
-            return jsonify(dict(job_id=job_id, status="UNKNOWN"))
-        else:
-            return jsonify(res)
+            logger.debug("send 404")
+            abort(404)
+        response = make_response(jsonify(res), 200)
+        return response
 
     def post(self, job_id):
-        res = status.job(job_id)
+        res = states.job(job_id)
         if res:
-            return jsonify(res)
+            logger.debug("job already exists: %s", job_id)
+            response = make_response(
+                jsonify(
+                    dict(
+                        geometry=res["geometry"],
+                        properties=dict(state="EXISTS")
+                    )
+                ), 409
+            )
+            return response
 
         # job is new, so read config, add to caches and send to celery
         config = request.get_json()
         # pass on to celery cluster
-        kwargs = dict(config=config, process_area=process_area_from_config(config))
+        process_area = process_area_from_config(config)
+        kwargs = dict(config=config, process_area=process_area.wkt)
         zone_worker.run.apply_async(
             kwargs=kwargs, task_id=job_id, kwargsrepr=json.dumps(kwargs)
         )
-        return status.job(job_id)
+        logger.debug("process area: %s", process_area)
+        response = make_response(
+            jsonify(
+                dict(
+                    geometry=mapping(process_area),
+                    properties=dict(state="PENDING")
+                )
+            ), 202
+        )
+        return response
 
 
 def process_area_from_config(config):
     # bounds
     bounds = config['bounds']
     if bounds:
-        return box(*bounds).wkt
+        return box(*bounds)
 
     # wkt_geometry
     wkt_geometry = config['wkt_geometry']
     if wkt_geometry:
-        return wkt.loads(wkt_geometry).wkt
+        return wkt.loads(wkt_geometry)
 
     def _tp():
         return BufferedTilePyramid(
@@ -99,17 +120,17 @@ def process_area_from_config(config):
             process_zoom_levels=config["mapchete_config"]["zoom_levels"],
             init_zoom_levels=config["zoom"]
         )
-        return _tp().tile_from_xy(x, y, max(zoom_levels)).bbox.wkt
+        return _tp().tile_from_xy(x, y, max(zoom_levels)).bbox
 
     # tile
     tile = config['tile']
     if tile:
-        return _tp().tile(*tile).bbox.wkt
+        return _tp().tile(*tile).bbox
 
     # mapchete_config
     process_bounds = config['mapchete_config'].get('process_bounds')
     if process_bounds:
-        return box(*process_bounds).wkt
+        return box(*process_bounds)
 
     # raise error if no process areas is given
     raise AttributeError("no bounds, wkt_geometry, point, tile or process bounds given.")

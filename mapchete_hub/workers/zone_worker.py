@@ -1,7 +1,8 @@
 from celery.utils.log import get_task_logger
+from shapely import wkt
+
 from mapchete_hub import mapchete_execute
 from mapchete_hub.celery_app import celery_app
-from shapely import wkt
 
 
 logger = get_task_logger(__name__)
