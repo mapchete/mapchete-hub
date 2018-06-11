@@ -36,7 +36,6 @@ setup(
         'Flask-Celery-py3',
         'flask_restful',
         'geojson',
-        'json',
         'mapchete>=0.21',
         'pysqlite3',
         'shapely',
