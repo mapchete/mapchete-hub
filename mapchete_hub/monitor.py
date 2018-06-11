@@ -8,7 +8,7 @@ from shapely.geometry import Polygon, mapping
 from shapely import wkt
 import spatialite
 
-from mapchete_hub.config import get_main_options
+from mapchete_hub.config import get_main_options, get_flask_options
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def status_monitor(celery_app):
             logger.error('task failed: %s: %s', task.uuid, event)
             status_handler.update(task.uuid, event)
 
-        with celery_app.connection() as connection:
+        with celery_app.connection(get_flask_options()["broker_url"]) as connection:
             logger.debug("connection: %s", connection)
             recv = celery_app.events.Receiver(
                 connection,
