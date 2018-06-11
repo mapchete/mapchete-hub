@@ -32,10 +32,17 @@ setup(
         'celery',
         'celery-flower',
         'click',
+        'fiona',
         'Flask-Celery-py3',
         'flask_restful',
+        'geojson',
+        'json',
         'mapchete>=0.21',
-        'pysqlite3'
+        'pysqlite3',
+        'shapely',
+        'spatialite',
+        'tqdm',
+        'pyyaml'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
