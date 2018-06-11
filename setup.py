@@ -33,6 +33,7 @@ setup(
         'celery-flower',
         'click',
         'Flask-Celery-py3',
+        'flask_restful',
         'mapchete>=0.21',
         'pysqlite3'
     ],
