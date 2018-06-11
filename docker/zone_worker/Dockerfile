@@ -26,7 +26,8 @@ RUN apt update -y && apt install -y \
     libspatialindex-dev \
     libspatialite7 \
     libspatialite-dev \
-    libsqlite3-mod-spatialite
+    libsqlite3-mod-spatialite \
+    language-pack-de
 
 # strange fix for remote rasters
 ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
@@ -54,29 +55,29 @@ RUN chmod 600 /root/.ssh/id_rsa \
 
 # install orgonite, mapchete-s2aws & mapchete-s3
 ################################################
-    # orgonite
+RUN pip install --upgrade setuptools
+ARG AWS_ACCESS_KEY_ID
+ARG AWS_SECRET_ACCESS_KEY
+
+# orgonite
 RUN git clone git@gitlab.eox.at:maps/orgonite.git \
     && cd orgonite \
     && pip install -r requirements.txt \
     && python setup.py build_ext --inplace \
     && python setup.py develop \
-    #&& python setup.py test \
+    && python setup.py test \
     && cd ..
 
-ARG AWS_ACCESS_KEY_ID
-ARG AWS_SECRET_ACCESS_KEY
-RUN env
-    # mapchete-s2aws
+# mapchete-s2aws
 RUN git clone git@gitlab.eox.at:maps/mapchete_s2aws.git \
     && cd mapchete_s2aws \
     && pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal" \
-    && pip install --upgrade setuptools \
     && pip install -r requirements.txt \
     && python setup.py develop \
     && python setup.py test \
     && cd ..
 
-    # mapchete-s3
+# mapchete-s3
 RUN git clone https://github.com/ungarj/mapchete-s3.git \
     && cd mapchete-s3 \
     && pip install -r requirements.txt \
@@ -95,6 +96,9 @@ RUN git clone git@gitlab.eox.at:maps/mapchete_hub.git \
 # clean up
 RUN rm /root/.ssh/id_rsa
 
+ENV LC_ALL C.UTF-8
+ENV LANG C.UTF-8
+
 RUN mkdir /mnt/data
 WORKDIR $ROOTDIR/src/mapchete_hub/
-ENTRYPOINT manage.py start_zone_worker
+ENTRYPOINT ./manage.py start_zone_worker --loglevel=$LOGLEVEL --logfile=$LOGFILE

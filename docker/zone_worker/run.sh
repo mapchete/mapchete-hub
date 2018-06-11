@@ -1,13 +1,17 @@
 #!/bin/bash
 
 CI_JOB_TOKEN=REDACTED_API_KEY
+LOGLEVEL=DEBUG
+LOGFILE=/mnt/data/log/worker.log
 
 # install docker
 curl -fsSL get.docker.com -o get-docker.sh && sudo sh get-docker.sh
 sudo usermod -aG docker ubuntu
+sudo chown "$USER":"$USER" /home/"$USER"/.docker -R
+sudo chmod g+rwx "/home/$USER/.docker" -R
 
 # get rgb_worker docker container
-sudo docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.eox.at
+docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.eox.at
 
 # make dirs
 sudo mkdir -p /mnt/data/log
@@ -25,6 +29,8 @@ docker run \
   -e MHUB_BROKER_URL='amqp://s2processor:REDACTED_API_KEY@18.197.182.82:5672//' \
   -e MHUB_RESULT_BACKEND='rpc://s2processor:REDACTED_API_KEY@18.197.182.82:5672//' \
   -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+  -e LOGLEVEL=$LOGLEVEL \
+  -e LOGFILE=$LOGFILE \
   -v /mnt/data:/mnt/data \
   -d \
   registry.gitlab.eox.at/maps/mapchete_hub/zone_worker:latest

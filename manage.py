@@ -63,8 +63,9 @@ def monitor(ctx):
 
 @cli.command(short_help='Launches Celery zone worker.')
 @click.option('--loglevel', type=click.Choice(['INFO', 'DEBUG']), default=None)
+@click.option('--logfile', type=click.Path(), default=None)
 @click.pass_context
-def start_zone_worker(ctx, loglevel):
+def start_zone_worker(ctx, loglevel, logfile):
     click.echo("launch zone worker")
     app = flask_app()
     celery_args = [
@@ -80,6 +81,8 @@ def start_zone_worker(ctx, loglevel):
     ]
     if loglevel:
         celery_args.append('--loglevel=%s' % loglevel)
+    if logfile:
+        celery_args.append('--logfile=%s' % logfile)
     with app.app_context():
         return celery_main(celery_args)
 
