@@ -26,8 +26,6 @@ def flask_app(config=None, no_sql=False):
     logger.debug("initialize flask app")
     app = Flask(__name__)
     conf = get_flask_options()
-    if config:
-        conf.update(**config)
     app.config.update(conf)
     api = Api(app)
 
