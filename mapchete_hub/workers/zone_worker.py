@@ -1,4 +1,5 @@
 from celery.utils.log import get_task_logger
+import logging
 from shapely import wkt
 
 from mapchete_hub import mapchete_execute
@@ -6,6 +7,9 @@ from mapchete_hub.celery_app import celery_app
 
 
 logger = get_task_logger(__name__)
+# suppress spam loggers
+logging.getLogger("botocore").setLevel(logging.ERROR)
+logging.getLogger("boto3").setLevel(logging.ERROR)
 
 
 # ignore_result=True important, otherwise it will be stored in broker
