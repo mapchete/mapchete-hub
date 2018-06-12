@@ -8,16 +8,16 @@ from shapely.geometry import box, mapping
 from shapely import wkt
 
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub.config import get_flask_options, get_main_options
+from mapchete_hub.config import flask_options, main_options
 from mapchete_hub.monitor import StatusHandler
 from mapchete_hub.workers import zone_worker
 
 
 logger = logging.getLogger(__name__)
 states = StatusHandler(
-    get_main_options().get("status_gpkg"),
+    main_options.get("status_gpkg"),
     mode="r",
-    profile=get_main_options()["status_gpkg_profile"]
+    profile=main_options["status_gpkg_profile"]
 )
 
 
@@ -25,8 +25,8 @@ def flask_app(config=None, no_sql=False):
     """Flask application factory. Initializes and returns the Flask application."""
     logger.debug("initialize flask app")
     app = Flask(__name__)
-    conf = get_flask_options()
-    app.config.update(conf)
+    logger.debug(flask_options)
+    app.config.update(flask_options)
     api = Api(app)
 
     celery_app.conf.update(app.config)

@@ -1,7 +1,7 @@
 import os
 
 
-def get_host_options():
+def _get_host_options():
     default = dict(
         host_ip='0.0.0.0',
         port=5000
@@ -9,7 +9,7 @@ def get_host_options():
     return _get_opts(default)
 
 
-def get_flask_options():
+def _get_flask_options():
     default = dict(
         broker_url='amqp://guest:guest@localhost:5672//',
         result_backend='rpc://guest:guest@localhost:5672//',
@@ -27,7 +27,7 @@ def get_flask_options():
     return _get_opts(default)
 
 
-def get_main_options():
+def _get_main_options():
     default = dict(
         status_gpkg='status.gpkg',
         status_gpkg_profile=dict(
@@ -62,3 +62,8 @@ def _get_opts(default):
     return {
         k: os.environ.get('MHUB_' + k.upper(), default.get(k)) for k in default.keys()
     }
+
+
+host_options = _get_host_options()
+flask_options = _get_flask_options()
+main_options = _get_main_options()

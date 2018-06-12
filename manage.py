@@ -17,7 +17,7 @@ import logging
 import mapchete_hub
 from mapchete_hub.application import flask_app
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub.config import get_host_options, get_flask_options
+from mapchete_hub.config import host_options, flask_options
 from mapchete_hub.monitor import status_monitor
 
 
@@ -27,6 +27,8 @@ stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 stream_handler.setLevel(logging.ERROR)
 logging.getLogger().addHandler(stream_handler)
+
+logger = logging.getLogger()
 
 
 @click.version_option(version=mapchete_hub.__version__, message='%(version)s')
@@ -43,9 +45,10 @@ def cli(ctx, **kwargs):
 def devserver(ctx, loglevel, logfile):
     click.echo("launch dev server")
     setup_logger(loglevel, logfile)
+    logger.debug(host_options)
+    print(host_options)
     app = flask_app()
-    host_opts = get_host_options()
-    app.run(host=host_opts['host_ip'], port=host_opts['port'])
+    app.run(host=host_options['host_ip'], port=host_options['port'])
 
 
 @cli.command(short_help='Launch job status monitor.')
@@ -55,7 +58,7 @@ def devserver(ctx, loglevel, logfile):
 def monitor(ctx, loglevel, logfile):
     click.echo("launch monitor")
     setup_logger(loglevel, logfile)
-    celery_app.conf.update(get_flask_options())
+    celery_app.conf.update(flask_options)
     celery_app.init_app(flask_app())
     status_monitor(celery_app)
 

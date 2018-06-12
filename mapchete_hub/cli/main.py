@@ -9,7 +9,7 @@ from tqdm import tqdm
 import yaml
 
 import mapchete_hub
-from mapchete_hub.config import get_host_options
+from mapchete_hub.config import host_options
 
 # https://github.com/tqdm/tqdm/issues/481
 tqdm.monitor_interval = 0
@@ -78,8 +78,7 @@ def start_job(job_id, mapchete_file, bounds):
             for k, v in d.items()
         }
 
-    host_opts = get_host_options()
-    url = "http://%s:%s/jobs/%s" % (host_opts["host_ip"], host_opts["port"], job_id)
+    url = "http://%s:%s/jobs/%s" % (host_options["host_ip"], host_options["port"], job_id)
     data = _cleanup_datetime(
         dict(
             mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
@@ -109,8 +108,7 @@ def start_job(job_id, mapchete_file, bounds):
 
 
 def get_status(job_id):
-    host_opts = get_host_options()
-    url = "http://%s:%s/jobs/%s" % (host_opts["host_ip"], host_opts["port"], job_id)
+    url = "http://%s:%s/jobs/%s" % (host_options["host_ip"], host_options["port"], job_id)
     try:
         res = _get_json(url)
     except ConnectionError as e:
@@ -190,8 +188,7 @@ def get_status(job_id):
 
 
 def get_jobs(as_geojson=False):
-    host_opts = get_host_options()
-    url = "http://%s:%s/jobs" % (host_opts["host_ip"], host_opts["port"])
+    url = "http://%s:%s/jobs" % (host_options["host_ip"], host_options["port"])
     res = _get_json(url)
     if as_geojson:
         click.echo(

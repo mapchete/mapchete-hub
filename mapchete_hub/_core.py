@@ -6,7 +6,7 @@ import mapchete
 from mapchete.errors import MapcheteNodataTile
 import time
 
-from mapchete_hub.config import get_main_options
+from mapchete_hub.config import main_options
 
 
 logger = get_task_logger(__name__)
@@ -22,7 +22,7 @@ def mapchete_execute(
 ):
     if config is None:
         raise AttributeError("no mapchete config given")
-    config.update(config_dir=get_main_options()['config_dir'])
+    config.update(config_dir=main_options['config_dir'])
 
     with mapchete.open(config, mode=mode, zoom=zoom, bounds=process_area.bounds) as mp:
         logger.debug("run with multiprocessing")
