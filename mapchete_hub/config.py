@@ -24,9 +24,7 @@ def get_flask_options():
         task_send_sent_event=True,
         event_queue_expires=604800  # one week in seconds
     )
-    opts = _get_opts(default)
-    print(opts)
-    return opts
+    return _get_opts(default)
 
 
 def get_main_options():
