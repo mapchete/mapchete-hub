@@ -3,8 +3,13 @@ MAINTAINER Joachim Ungar
 
 ENV ROOTDIR /usr/local
 ENV RASTERIO_VERSION 1.0b1
+# strange fix for remote rasters
+ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 
 WORKDIR $ROOTDIR/src
+
+ARG AWS_ACCESS_KEY_ID
+ARG AWS_SECRET_ACCESS_KEY
 
 # add ubuntugis-unstable repository
 RUN apt -y update \
@@ -19,6 +24,8 @@ RUN apt-get install -y python3-pip python3-dev\
   && ln -s /usr/bin/python3 python \
   && pip3 install --upgrade pip
 
+# install system dependencies
+#############################
 RUN apt update -y && apt install -y \
     git \
     gdal-bin \
@@ -29,13 +36,18 @@ RUN apt update -y && apt install -y \
     libsqlite3-mod-spatialite \
     language-pack-de
 
-# strange fix for remote rasters
-ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+# get deploy key for gitlab.eox.at
+##################################
+RUN mkdir -p /root/.ssh
+COPY id_rsa /root/.ssh/
+RUN chmod 600 /root/.ssh/id_rsa \
+    && ssh-keyscan gitlab.eox.at >> /root/.ssh/known_hosts
 
 # install NumPy & rasterio
 ##########################
 RUN pip install --no-binary :all: numpy \
-  && pip install rasterio==${RASTERIO_VERSION}
+  && pip install rasterio==${RASTERIO_VERSION} \
+  && pip install --upgrade setuptools
 
 # install latest mapchete
 #########################
@@ -45,20 +57,8 @@ RUN git clone https://github.com/ungarj/mapchete.git \
     && pip install -r requirements.txt \
     && python setup.py develop
 
-# get deploy key for gitlab.eox.at
-##################################
-RUN mkdir -p /root/.ssh
-COPY id_rsa /root/.ssh/
-RUN chmod 600 /root/.ssh/id_rsa \
-    && ssh-keyscan gitlab.eox.at >> /root/.ssh/known_hosts
-
-
-# install orgonite, mapchete-s2aws & mapchete-s3
-################################################
-RUN pip install --upgrade setuptools
-ARG AWS_ACCESS_KEY_ID
-ARG AWS_SECRET_ACCESS_KEY
-
+# orgonite, mapchete-s2aws & mapchete-s3
+########################################
 # orgonite
 RUN git clone git@gitlab.eox.at:maps/orgonite.git \
     && cd orgonite \
