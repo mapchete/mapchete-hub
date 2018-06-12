@@ -1,4 +1,5 @@
 import click
+import datetime
 import geojson
 import json
 import requests
@@ -67,17 +68,29 @@ def jobs(ctx, geojson):
 
 
 def start_job(job_id, mapchete_file):
+
+    def _cleanup_datetime(d):
+        """Represent timestamps as strings, not datetime.date objects."""
+        return {
+            k: _cleanup_datetime(v) if isinstance(v, dict)
+            else str(v) if isinstance(v, datetime.date) else v
+            for k, v in d.items()
+        }
+
     host_opts = get_host_options()
     url = "http://%s:%s/jobs/%s" % (host_opts["host_ip"], host_opts["port"], job_id)
-    data = dict(
-        mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
-        mode="continue",
-        zoom=None,
-        bounds=None,
-        point=None,
-        wkt_geometry=None,
-        tile=None
+    data = _cleanup_datetime(
+        dict(
+            mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
+            mode="continue",
+            zoom=None,
+            bounds=None,
+            point=None,
+            wkt_geometry=None,
+            tile=None
+        )
     )
+
     try:
         res = requests.post(url, json=data)
     except ConnectionError:
