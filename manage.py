@@ -37,27 +37,26 @@ def cli(ctx, **kwargs):
 
 
 @cli.command(short_help='Launches Flask Development Server.')
+@click.option('--loglevel', type=click.Choice(['INFO', 'DEBUG']), default=None)
+@click.option('--logfile', type=click.Path(), default=None)
 @click.pass_context
-def devserver(ctx):
-    logging.getLogger("mapchete_hub").setLevel(logging.DEBUG)
-    stream_handler.setLevel(logging.DEBUG)
-
+def devserver(ctx, loglevel, logfile):
     click.echo("launch dev server")
+    setup_logger(loglevel, logfile)
     app = flask_app()
     host_opts = get_host_options()
     app.run(host=host_opts['host_ip'], port=host_opts['port'])
 
 
-@cli.command(short_help='Launches Celery tile worker.')
+@cli.command(short_help='Launch job status monitor.')
+@click.option('--loglevel', type=click.Choice(['INFO', 'DEBUG']), default=None)
+@click.option('--logfile', type=click.Path(), default=None)
 @click.pass_context
-def monitor(ctx):
-    logging.getLogger("mapchete_hub").setLevel(logging.DEBUG)
-    stream_handler.setLevel(logging.DEBUG)
-
+def monitor(ctx, loglevel, logfile):
     click.echo("launch monitor")
+    setup_logger(loglevel, logfile)
     celery_app.conf.update(get_flask_options())
     celery_app.init_app(flask_app())
-    # logger.debug("launch status_monitor")
     status_monitor(celery_app)
 
 
@@ -85,6 +84,20 @@ def start_zone_worker(ctx, loglevel, logfile):
         celery_args.append('--logfile=%s' % logfile)
     with app.app_context():
         return celery_main(celery_args)
+
+
+def setup_logger(loglevel=None, logfile=None):
+    if logfile:
+        file_handler = logging.FileHandler(logfile)
+        file_handler.setFormatter(formatter)
+        logging.getLogger().addHandler(file_handler)
+        logging.getLogger("mapchete_hub").setLevel(logging.DEBUG)
+    if loglevel == "DEBUG":
+        logging.getLogger("mapchete_hub").setLevel(logging.DEBUG)
+        stream_handler.setLevel(logging.DEBUG)
+    elif loglevel == "INFO":
+        logging.getLogger("mapchete_hub").setLevel(logging.INFO)
+        stream_handler.setLevel(logging.INFO)
 
 
 if __name__ == '__main__':
