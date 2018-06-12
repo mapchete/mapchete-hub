@@ -25,7 +25,7 @@ def flask_app(config=None, no_sql=False):
     """Flask application factory. Initializes and returns the Flask application."""
     logger.debug("initialize flask app")
     app = Flask(__name__)
-    logger.debug(flask_options)
+    logger.debug("initialize flask with: %s", flask_options)
     app.config.update(flask_options)
     api = Api(app)
 

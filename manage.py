@@ -28,8 +28,6 @@ stream_handler.setFormatter(formatter)
 stream_handler.setLevel(logging.ERROR)
 logging.getLogger().addHandler(stream_handler)
 
-logger = logging.getLogger()
-
 
 @click.version_option(version=mapchete_hub.__version__, message='%(version)s')
 @click.group()
@@ -45,8 +43,6 @@ def cli(ctx, **kwargs):
 def devserver(ctx, loglevel, logfile):
     click.echo("launch dev server")
     setup_logger(loglevel, logfile)
-    logger.debug(host_options)
-    print(host_options)
     app = flask_app()
     app.run(host=host_options['host_ip'], port=host_options['port'])
 
