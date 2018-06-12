@@ -24,7 +24,11 @@ def _get_flask_options():
         task_send_sent_event=True,
         event_queue_expires=604800  # one week in seconds
     )
-    return _get_opts(default)
+    opts = {}
+    for k, v in _get_opts(default).items():
+        opts[k] = v
+        opts["CELERY_" + k.upper()] = v
+    return opts
 
 
 def _get_main_options():
