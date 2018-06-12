@@ -103,4 +103,7 @@ ENV C_FORCE_ROOT True
 
 WORKDIR $ROOTDIR/src/mapchete_hub/
 RUN cp -R $ROOTDIR/src/mapchete_hub/processes /mnt/
+ARG MHUB_BROKER_URL
+ARG MHUB_RESULT_BACKEND
+
 ENTRYPOINT ./manage.py start_zone_worker --loglevel=$LOGLEVEL --logfile=$LOGFILE
