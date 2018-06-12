@@ -1,0 +1,75 @@
+MAP
+  NAME "map"
+  IMAGETYPE png
+  SIZE 1600 800
+  UNITS meters
+  DEFRESOLUTION 72
+  EXTENT -180 -90 180 90
+  CONFIG "MS_ERRORFILE" "stderr"
+  #IMAGECOLOR "#101D33"
+  IMAGECOLOR "#182c4e"
+  OUTPUTFORMAT
+    NAME "png"
+    DRIVER AGG/PNG
+    MIMETYPE "image/png"
+    IMAGEMODE RGBA
+    EXTENSION "png"
+    FORMATOPTION "GAMMA=0.75"
+    FORMATOPTION "COMPRESSION=0"
+  END
+  OUTPUTFORMAT
+    NAME "jpeg"
+    DRIVER AGG/JPEG
+    MIMETYPE "image/jpeg"
+    IMAGEMODE RGB
+    EXTENSION "jpg"
+    FORMATOPTION "GAMMA=0.75"
+    FORMATOPTION "QUALITY=90"
+  END
+  WEB
+    METADATA
+      OWS_ENABLE_REQUEST "*"
+      WMS_SRS "EPSG:4326"
+      # WMS_EXTENT "-20037508.34 -20037508.34 20037508.34 20037508.34"
+      WMS_EXTENT "-180 -90 180 90"
+      WMS_ONLINERESOURCE "http://localhost/"
+      LABELCACHE_MAP_EDGE_BUFFER "-10"
+      WMS_TITLE "eox_maps_dev"
+    END
+  END
+  PROJECTION
+    'init=epsg:4326'
+  END
+  LAYER
+    NAME ne_land
+    STATUS ON
+    TYPE POLYGON
+    DATA "/mapdata/ne_10m_land"
+    PROJECTION
+      "init=epsg:4326"
+    END
+    CLASS
+      STYLE
+        COLOR "#ffffff"
+        OPACITY 100
+      END
+    END
+  END
+  LAYER
+    NAME ne_ocean
+    STATUS ON
+    TYPE POLYGON
+    DATA "/mapdata/ne_10m_ocean"
+    PROJECTION
+      "init=epsg:4326"
+    END
+    CLASS
+      STYLE
+        COLOR "#182c4e"
+        OPACITY 100
+      END
+    END
+  END
+
+
+END

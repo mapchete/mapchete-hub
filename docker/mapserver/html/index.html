@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>EOX Sentinel-2 Cloudless (development version)</title>
+    <link rel="stylesheet" href="https://openlayers.org/en/v3.20.1/css/ol.css" type="text/css">
+    <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+    <script src="https://openlayers.org/en/v3.20.1/build/ol.js"></script>
+    <style type="text/css">
+    html, body, .map {
+        height: 100%;
+        width: 100%;
+        border: 0px;
+        margin: 0px;
+        padding: 0px;
+    }
+    </style>
+  </head>
+  <body>
+    <div id="map" class="map"></div>
+    <script>
+    init_zoom = 4;
+    init_lon = 8.0;
+    init_lat = 55.0;
+    min_zoom = 0;
+    max_zoom = 13;
+    srs = 'EPSG:4326'
+
+
+    // parse permalink items
+    var hash = (window.location.hash || '').replace('#', '');
+    var parts = hash.split('&');
+    var obj = {};
+    for (var i = 0; i < parts.length; ++i) {
+        var kv = parts[i].split('=');
+        obj[kv[0]] = kv[1];
+    }
+
+    zoom = parseInt(typeof obj.zoom === 'undefined' ? init_zoom : obj.zoom, 10);
+    center = [
+        parseFloat(typeof obj.lon === 'undefined' ? init_lon : obj.lon),
+        parseFloat(typeof obj.lat === 'undefined' ? init_lat : obj.lat)
+    ];
+    // determine tile grid
+    zoomOffset = 1;
+    var projection = ol.proj.get(srs);
+    var projectionExtent = projection.getExtent();
+    var size = ol.extent.getWidth(projectionExtent) / 512;
+    var resolutions = new Array(max_zoom+zoomOffset);
+    var matrixIds = new Array(max_zoom+zoomOffset);
+    var sizes = new Array(max_zoom+zoomOffset);
+    for (var z = min_zoom; z <= max_zoom; ++z) {
+        // generate resolutions and matrixIds arrays for this WMTS
+        resolutions[z] = size / Math.pow(2, z);
+        matrixIds[z] = z;
+    }
+    tile_grid = new ol.tilegrid.WMTS({
+        origin: ol.extent.getTopLeft(projectionExtent),
+        resolutions: resolutions,
+        matrixIds: matrixIds,
+    })
+
+    var map = new ol.Map({
+        layers: [
+            new ol.layer.Tile({
+                source: new ol.source.TileWMS({
+                    attributions: [new ol.Attribution({
+                        html: 'S2Maps { Data &copy; Copernicus, Rendering &copy; <a href="http://eox.at">EOX</a> }'
+                    })],
+                    url: "/cgi-bin/mapserv?map=/map/layer.map&",
+                    params: {'LAYERS': 'map', 'FORMAT': 'image/jpeg', 'TRANSPARENT': 'false'},
+                    projection: projection
+                })
+            })
+        ],
+        target: 'map',
+        controls: ol.control.defaults({
+            attributionOptions: /** @type {olx.control.AttributionOptions} */ ({
+                collapsible: true
+            })
+        }).extend([new ol.control.MousePosition()]),
+        view: new ol.View({
+            center: center,
+            zoom: zoom+zoomOffset,
+            projection: srs,
+            maxZoom: max_zoom+zoomOffset,
+            minZoom: min_zoom+zoomOffset
+        })
+        });
+        map.on('moveend', function() {
+            var view = map.getView();
+            var center = view.getCenter();
+            window.location.hash =
+                'zoom=' + (view.getZoom()-zoomOffset) + '&' + 'lon=' + center[0] + '&' + 'lat=' + center[1];
+        });
+
+    </script>
+  </body>
+</html>
