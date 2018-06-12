@@ -37,9 +37,10 @@ def capabilities(ctx):
 @mhub.command(short_help='Starts job.')
 @click.argument('job_id', type=str)
 @click.argument('mapchete_file', type=str)
+@click.option('--bounds', '-b', type=float, nargs=4)
 @click.pass_context
-def start(ctx, job_id, mapchete_file):
-    start_job(job_id, mapchete_file)
+def start(ctx, job_id, mapchete_file, bounds=None):
+    start_job(job_id, mapchete_file, bounds)
     get_status(job_id)
 
 
@@ -67,7 +68,7 @@ def jobs(ctx, geojson):
     return get_jobs(as_geojson=geojson)
 
 
-def start_job(job_id, mapchete_file):
+def start_job(job_id, mapchete_file, bounds):
 
     def _cleanup_datetime(d):
         """Represent timestamps as strings, not datetime.date objects."""
@@ -84,7 +85,7 @@ def start_job(job_id, mapchete_file):
             mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
             mode="continue",
             zoom=None,
-            bounds=None,
+            bounds=bounds,
             point=None,
             wkt_geometry=None,
             tile=None
