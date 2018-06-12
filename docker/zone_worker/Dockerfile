@@ -96,9 +96,11 @@ RUN git clone git@gitlab.eox.at:maps/mapchete_hub.git \
 # clean up
 RUN rm /root/.ssh/id_rsa
 
+# set lang variables & allow celery to run as root
 ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
+ENV C_FORCE_ROOT True
 
-RUN mkdir /mnt/data
 WORKDIR $ROOTDIR/src/mapchete_hub/
+RUN cp -R $ROOTDIR/src/mapchete_hub/processes /mnt/
 ENTRYPOINT ./manage.py start_zone_worker --loglevel=$LOGLEVEL --logfile=$LOGFILE

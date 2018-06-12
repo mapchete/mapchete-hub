@@ -28,6 +28,7 @@ docker run \
   -e AWS_SECRET_ACCESS_KEY='REDACTED_API_KEY' \
   -e MHUB_BROKER_URL='amqp://s2processor:REDACTED_API_KEY@18.197.182.82:5672//' \
   -e MHUB_RESULT_BACKEND='rpc://s2processor:REDACTED_API_KEY@18.197.182.82:5672//' \
+  -e MHUB_CONFIG_DIR='/mnt/processes' \
   -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
   -e LOGLEVEL=$LOGLEVEL \
   -e LOGFILE=$LOGFILE \
