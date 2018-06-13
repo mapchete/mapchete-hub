@@ -23,6 +23,12 @@ job_states = {
 
 @click.version_option(version=mapchete_hub.__version__, message='%(version)s')
 @click.group()
+@click.option(
+    '--host', '-h',
+    type=click.STRING,
+    nargs=1,
+    default='%s:%s' % (host_options["host_ip"], host_options["port"])
+)
 @click.pass_context
 def mhub(ctx, **kwargs):
     ctx.obj = dict(**kwargs)
@@ -35,28 +41,29 @@ def capabilities(ctx):
 
 
 @mhub.command(short_help='Starts job.')
-@click.argument('job_id', type=str)
-@click.argument('mapchete_file', type=str)
+@click.argument('job_id', type=click.STRING)
+@click.argument('mapchete_file', type=click.STRING)
 @click.option('--bounds', '-b', type=float, nargs=4)
 @click.pass_context
 def start(ctx, job_id, mapchete_file, bounds=None):
-    start_job(job_id, mapchete_file, bounds)
+    start_job(job_id, mapchete_file, bounds, host=ctx.obj['host'])
     get_status(job_id)
 
 
 @mhub.command(short_help='Stops job.')
-@click.argument('job_id', type=str)
+@click.argument('job_id', type=click.STRING)
 @click.pass_context
 def stop(ctx):
     click.echo("stop job")
+    raise NotImplementedError()
 
 
 @mhub.command(short_help='Shows job status.')
-@click.argument('job_id', type=str)
+@click.argument('job_id', type=click.STRING)
 @click.pass_context
 def status(ctx, job_id):
     try:
-        get_status(job_id)
+        get_status(job_id, host=ctx.obj['host'])
     except ConnectionError:
         click.echo("No mapchete hub running under given endpoint.")
 
@@ -65,10 +72,10 @@ def status(ctx, job_id):
 @click.option('--geojson', is_flag=True)
 @click.pass_context
 def jobs(ctx, geojson):
-    return get_jobs(as_geojson=geojson)
+    return get_jobs(as_geojson=geojson, host=ctx.obj['host'])
 
 
-def start_job(job_id, mapchete_file, bounds):
+def start_job(job_id, mapchete_file, bounds, host=None):
 
     def _cleanup_datetime(d):
         """Represent timestamps as strings, not datetime.date objects."""
@@ -78,7 +85,7 @@ def start_job(job_id, mapchete_file, bounds):
             for k, v in d.items()
         }
 
-    url = "http://%s:%s/jobs/%s" % (host_options["host_ip"], host_options["port"], job_id)
+    url = "http://%s/jobs/%s" % (host, job_id)
     data = _cleanup_datetime(
         dict(
             mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
@@ -107,8 +114,8 @@ def start_job(job_id, mapchete_file, bounds):
         raise ValueError("unknown status code: %s", res.status_code)
 
 
-def get_status(job_id):
-    url = "http://%s:%s/jobs/%s" % (host_options["host_ip"], host_options["port"], job_id)
+def get_status(job_id, host=None):
+    url = "http://%s/jobs/%s" % (host, job_id)
     try:
         res = _get_json(url)
     except ConnectionError as e:
@@ -187,8 +194,8 @@ def get_status(job_id):
         raise ValueError("unknown state: %s", res["properties"]["state"])
 
 
-def get_jobs(as_geojson=False):
-    url = "http://%s:%s/jobs" % (host_options["host_ip"], host_options["port"])
+def get_jobs(as_geojson=False, host=None):
+    url = "http://%s/jobs" % host
     res = _get_json(url)
     if as_geojson:
         click.echo(
