@@ -2,9 +2,10 @@ from collections import OrderedDict
 import os
 import pytest
 import shutil
+import yaml
 
 from mapchete_hub.application import flask_app
-from mapchete_hub.config import get_host_options
+from mapchete_hub.config import host_options
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
@@ -19,8 +20,7 @@ def app():
 
 @pytest.fixture
 def baseurl():
-    host_opts = get_host_options()
-    return "http://%s:%s" % (host_opts["host_ip"], host_opts["port"])
+    return "http://%s:%s" % (host_options["host_ip"], host_options["port"])
 
 
 @pytest.fixture
@@ -63,4 +63,24 @@ def status_profile():
                 traceback='str:1000',
             )
         )
+    )
+
+
+@pytest.fixture
+def example_process():
+    return yaml.load(open(os.path.join(TESTDATA_DIR, 'example.mapchete')).read())
+
+
+@pytest.fixture
+def example_config():
+    return dict(
+        mapchete_config=yaml.load(
+            open(os.path.join(TESTDATA_DIR, 'example.mapchete')).read()
+        ),
+        tile=None,
+        mode='continue',
+        wkt_geometry=None,
+        bounds=[0.0, 1.0, 2.0, 3.0],
+        zoom=None,
+        point=None
     )

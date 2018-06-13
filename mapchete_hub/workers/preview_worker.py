@@ -1,8 +1,10 @@
 from celery.utils.log import get_task_logger
 import logging
+import os
 from shapely import wkt
+from slacker import Slacker
 
-from mapchete_hub import mapchete_execute, cleanup_config
+from mapchete_hub import mapchete_index, cleanup_config
 from mapchete_hub.celery_app import celery_app
 
 
@@ -18,14 +20,18 @@ logging.getLogger("smart_open").setLevel(logging.ERROR)
 @celery_app.task(bind=True, ignore_result=True)
 def run(self, *args, **kwargs):
     config = kwargs["config"]
-    process_area = kwargs["process_area"]
+    logger.debug(config)
+    process_area = wkt.loads(kwargs["process_area"])
     logger.debug("initialize process")
     self.send_event('task-progress', progress_data=dict(current=None, total=None))
     mapchete_config = cleanup_config(config['mapchete_config'])
-    # first, the inputs get parsed, i.e. all metadata queried from catalogue
+    # first, the inputs get parsed, i.e. all metadat queried from catalogue
     # this may take a while
-    executor = mapchete_execute(
-        config=mapchete_config, process_area=wkt.loads(process_area)
+    executor = mapchete_index(
+        config=mapchete_config,
+        process_area=process_area,
+        out_dir=os.environ.get('INDEX_OUTPUT_DIR'),
+        gpkg=True
     )
 
     # get total tiles
@@ -40,3 +46,19 @@ def run(self, *args, **kwargs):
         self.send_event('task-progress', progress_data=dict(current=i, total=total_tiles))
 
     logger.debug("processing successful.")
+    logger.debug(config['mapchete_config'].keys())
+    if config['mapchete_config'].get("mhub_announce_on_slack", False):
+        logger.debug("announce on slack")
+        zone_lat, zone_lon = process_area.centroid.y, process_area.centroid.x
+        permalink = "%s#zoom=8&lon=%s&lat=%s" % (
+            os.environ.get("PREVIEW_PERMALINK"), zone_lon, zone_lat
+        )
+        slack = Slacker("", incoming_webhook_url=os.environ["SLACK_WEBHOOK_URL"])
+        slack.incomingwebhook.post(
+            {
+                "username": "Mapchete",
+                "icon_url": "https://a2.memecaptain.com/src_thumbs/24132.jpg",
+                "channel": "#mapchete_hub",
+                "text": permalink
+            }
+        )

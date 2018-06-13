@@ -1,6 +1,5 @@
 from flask import Flask, jsonify, request, abort, make_response
 from flask_restful import Api, Resource
-import json
 import logging
 from mapchete.config import get_zoom_levels
 from mapchete.tile import BufferedTilePyramid
@@ -10,7 +9,7 @@ from shapely import wkt
 from mapchete_hub.celery_app import celery_app
 from mapchete_hub.config import flask_options, main_options
 from mapchete_hub.monitor import StatusHandler
-from mapchete_hub.workers import zone_worker
+from mapchete_hub import send_to_queue
 
 
 logger = logging.getLogger(__name__)
@@ -59,6 +58,9 @@ class Jobs(Resource):
         return response
 
     def post(self, job_id):
+        config = request.get_json()
+        mhub_worker = config['mapchete_config']['mhub_worker']
+
         res = states.job(job_id)
         if res:
             logger.debug("job already exists: %s", job_id)
@@ -72,15 +74,16 @@ class Jobs(Resource):
             )
             return response
 
-        # job is new, so read config, add to caches and send to celery
-        config = request.get_json()
+        # job is new
         # pass on to celery cluster
         process_area = process_area_from_config(config)
-        kwargs = dict(config=config, process_area=process_area.wkt)
-        zone_worker.run.apply_async(
-            kwargs=kwargs, task_id=job_id, kwargsrepr=json.dumps(kwargs)
-        )
         logger.debug("process area: %s", process_area)
+        send_to_queue(
+            job_id=job_id,
+            worker=mhub_worker,
+            config=config,
+            process_area=process_area
+        )
         response = make_response(
             jsonify(
                 dict(

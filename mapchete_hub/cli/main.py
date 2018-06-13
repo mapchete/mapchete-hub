@@ -1,5 +1,4 @@
 import click
-import datetime
 import geojson
 import json
 import requests
@@ -47,7 +46,6 @@ def capabilities(ctx):
 @click.pass_context
 def start(ctx, job_id, mapchete_file, bounds=None):
     start_job(job_id, mapchete_file, bounds, host=ctx.obj['host'])
-    get_status(job_id)
 
 
 @mhub.command(short_help='Stops job.')
@@ -77,16 +75,8 @@ def jobs(ctx, geojson):
 
 def start_job(job_id, mapchete_file, bounds, host=None):
 
-    def _cleanup_datetime(d):
-        """Represent timestamps as strings, not datetime.date objects."""
-        return {
-            k: _cleanup_datetime(v) if isinstance(v, dict)
-            else str(v) if isinstance(v, datetime.date) else v
-            for k, v in d.items()
-        }
-
     url = "http://%s/jobs/%s" % (host, job_id)
-    data = _cleanup_datetime(
+    data = mapchete_hub.cleanup_datetime(
         dict(
             mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
             mode="continue",
@@ -97,6 +87,8 @@ def start_job(job_id, mapchete_file, bounds, host=None):
             tile=None
         )
     )
+    if 'mhub_worker' not in data['mapchete_config']:
+        raise ValueError('specify mhub worker (zone_worker or preview_worker)')
 
     try:
         res = requests.post(url, json=data)

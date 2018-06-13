@@ -38,6 +38,7 @@ setup(
         'geojson',
         'mapchete>=0.21',
         'pysqlite3',
+        'slacker',
         'shapely',
         'spatialite',
         'tqdm',

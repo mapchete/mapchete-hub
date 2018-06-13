@@ -86,6 +86,32 @@ def start_zone_worker(ctx, loglevel, logfile):
         return celery_main(celery_args)
 
 
+@cli.command(short_help='Launches Celery preview worker.')
+@click.option('--loglevel', type=click.Choice(['INFO', 'DEBUG']), default=None)
+@click.option('--logfile', type=click.Path(), default=None)
+@click.pass_context
+def start_preview_worker(ctx, loglevel, logfile):
+    click.echo("launch preview worker")
+    app = flask_app()
+    celery_args = [
+        'celery',
+        'worker',
+        '-n', 'preview_worker@' + os.environ.get('HOST_IP', '%h'),
+        '--without-gossip',
+        '--max-tasks-per-child=1',
+        '--concurrency=1',
+        '-E',
+        '--prefetch-multiplier=1',
+        '-Q', 'preview_queue'
+    ]
+    if loglevel:
+        celery_args.append('--loglevel=%s' % loglevel)
+    if logfile:
+        celery_args.append('--logfile=%s' % logfile)
+    with app.app_context():
+        return celery_main(celery_args)
+
+
 def setup_logger(loglevel=None, logfile=None):
     if logfile:
         file_handler = logging.FileHandler(logfile)

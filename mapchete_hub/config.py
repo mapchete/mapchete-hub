@@ -2,10 +2,7 @@ import os
 
 
 def _get_host_options():
-    default = dict(
-        host_ip='0.0.0.0',
-        port=5000
-    )
+    default = dict(host_ip='0.0.0.0', port=5000)
     return _get_opts(default)
 
 
@@ -18,7 +15,10 @@ def _get_flask_options():
         task_serializer='pickle',
         event_serializer='pickle',
         accept_content=['pickle', 'json'],
-        task_routes={'mapchete_hub.workers.zone_worker.*': {'queue': 'zone_queue'}},
+        task_routes={
+            'mapchete_hub.workers.zone_worker.*': {'queue': 'zone_queue'},
+            'mapchete_hub.workers.preview_worker.*': {'queue': 'preview_queue'}
+        },
         task_acks_late=True,
         worker_send_task_events=True,
         task_send_sent_event=True,
