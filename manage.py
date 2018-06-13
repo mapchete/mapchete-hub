@@ -13,6 +13,7 @@ https://github.com/Robpol86/Flask-Large-Application-Example/blob/master/manage.p
 from celery.bin.celery import main as celery_main
 import click
 import logging
+import os
 
 import mapchete_hub
 from mapchete_hub.application import flask_app
@@ -69,7 +70,7 @@ def start_zone_worker(ctx, loglevel, logfile):
     celery_args = [
         'celery',
         'worker',
-        '-n', 'zone_worker@%h',
+        '-n', 'zone_worker@' + os.environ.get('HOST_IP', '%h'),
         '--without-gossip',
         '--max-tasks-per-child=1',
         '--concurrency=1',
