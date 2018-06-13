@@ -15,6 +15,8 @@ RUN apt -y update \
   && apt install -y \
     libapache2-mod-fastcgi \
     apache2 \
+    gdal-bin \
+    libgdal-dev \
   && a2enmod actions cgi alias
 
 # get naturalearth data
@@ -27,5 +29,5 @@ RUN apt install -y wget unzip \
   && unzip ne_10m_ocean.zip
 
 EXPOSE 80
-RUN mkdir /map && chmod 755 /map
+RUN mkdir /map && chmod 755 /map && mkdir /indexes
 CMD apachectl -D FOREGROUND
