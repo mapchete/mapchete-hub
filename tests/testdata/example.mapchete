@@ -1,6 +1,6 @@
 # mandatory parameters
 process_file: example_process.py
-process_bounds: [3.0, 1.0, 4.0, 2.0]
+bounds: [3.0, 1.0, 4.0, 2.0]
 zoom_levels:
     min: 7
     max: 11
