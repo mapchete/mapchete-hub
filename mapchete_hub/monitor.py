@@ -41,24 +41,28 @@ def status_monitor(celery_app):
             logger.error('task failed: %s: %s', task.uuid, event)
             status_handler.update(task.uuid, event)
 
-        with celery_app.connection(flask_options["broker_url"]) as connection:
-            logger.debug("connection: %s", connection)
-            recv = celery_app.events.Receiver(
-                connection,
-                handlers={
-                    'task-sent': announce_task_state,
-                    'task-received': announce_task_state,
-                    'task-started': announce_task_state,
-                    'task-succeeded': announce_task_state,
-                    'task-failed': announce_failed_task_state,
-                    'task-rejected': announce_task_state,
-                    'task-revoked': announce_task_state,
-                    'task-retried': announce_task_state,
-                    'task-progress': announce_task_state,
-                }
-            )
-            logger.debug("ready to capture events")
-            recv.capture(limit=None, timeout=None, wakeup=True)
+        while True:
+            try:
+                with celery_app.connection(flask_options["broker_url"]) as connection:
+                    logger.debug("connection: %s", connection)
+                    recv = celery_app.events.Receiver(
+                        connection,
+                        handlers={
+                            'task-sent': announce_task_state,
+                            'task-received': announce_task_state,
+                            'task-started': announce_task_state,
+                            'task-succeeded': announce_task_state,
+                            'task-failed': announce_failed_task_state,
+                            'task-rejected': announce_task_state,
+                            'task-revoked': announce_task_state,
+                            'task-retried': announce_task_state,
+                            'task-progress': announce_task_state,
+                        }
+                    )
+                    logger.debug("ready to capture events")
+                    recv.capture(limit=None, timeout=None, wakeup=True)
+            except ConnectionResetError as e:
+                logger.error(e)
 
 
 class StatusHandler():
