@@ -58,10 +58,11 @@ def stop(ctx):
 
 @mhub.command(short_help='Shows job status.')
 @click.argument('job_id', type=click.STRING)
+@click.option('--geojson', is_flag=True)
 @click.pass_context
-def status(ctx, job_id):
+def status(ctx, job_id, geojson):
     try:
-        get_status(job_id, host=ctx.obj['host'])
+        get_status(job_id, host=ctx.obj['host'], as_geojson=geojson)
     except ConnectionError:
         click.echo("No mapchete hub running under given endpoint.")
 
@@ -106,7 +107,7 @@ def start_job(job_id, mapchete_file, bounds, host=None):
         raise ValueError("unknown status code: %s", res.status_code)
 
 
-def get_status(job_id, host=None):
+def get_status(job_id, host=None, as_geojson=False):
     url = "http://%s/jobs/%s" % (host, job_id)
     try:
         res = _get_json(url)
@@ -123,6 +124,9 @@ def get_status(job_id, host=None):
             time.sleep(1)
 
     if res["properties"]["state"] in job_states["doing"]:
+        if as_geojson:
+            print_as_geojson(res)
+            return
 
         def print_verbose_state(state):
             if state == "STARTED":
@@ -173,11 +177,17 @@ def get_status(job_id, host=None):
                 time.sleep(1)
 
     if res["properties"]["state"] == "SUCCESS":
+        if as_geojson:
+            print_as_geojson(res)
+            return
         click.echo(
             "job %s successfully finished in %ss" % (job_id, res["properties"]["runtime"])
         )
 
     elif res["properties"]["state"] == "FAILURE":
+        if as_geojson:
+            print_as_geojson(res)
+            return
         click.echo("job %s failed:" % job_id)
         click.echo("traceback:")
         click.echo(res["properties"]["traceback"])
@@ -190,28 +200,7 @@ def get_jobs(as_geojson=False, host=None):
     url = "http://%s/jobs" % host
     res = _get_json(url)
     if as_geojson:
-        click.echo(
-            '{\n'
-            '  "type": "FeatureCollection",\n'
-            '  "features": ['
-        )
-        features = (i for i in res)
-        try:
-            feature = next(features)
-            while True:
-                gj = '    %s' % geojson.Feature(**feature)
-                try:
-                    feature = next(features)
-                    click.echo(gj + ',')
-                except StopIteration:
-                    click.echo(gj)
-                    raise
-        except StopIteration:
-            pass
-        click.echo(
-            '  ]\n'
-            '}'
-        )
+        print_as_geojson(res)
     else:
         for feature in res:
             click.echo(
@@ -219,6 +208,35 @@ def get_jobs(as_geojson=False, host=None):
                     feature["properties"]["job_id"], feature["properties"]["state"]
                 )
             )
+
+
+def print_as_geojson(res):
+    click.echo(
+            '{\n'
+            '  "type": "FeatureCollection",\n'
+            '  "features": ['
+        )
+    if isinstance(res, dict):
+        res = [res]
+    features = (i for i in res)
+    try:
+        feature = next(features)
+        while True:
+            gj = '    %s' % geojson.Feature(**feature)
+            parsed = json.loads(gj)
+            gj = json.dumps(parsed, indent=4, sort_keys=True)
+            try:
+                feature = next(features)
+                click.echo(gj + ',')
+            except StopIteration:
+                click.echo(gj)
+                raise
+    except StopIteration:
+        pass
+    click.echo(
+        '  ]\n'
+        '}'
+    )
 
 
 def _get_json(url, headers={}):
