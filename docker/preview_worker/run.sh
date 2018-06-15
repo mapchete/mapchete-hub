@@ -9,6 +9,8 @@ MHUB_CONFIG_DIR='/mnt/processes'
 INDEX_OUTPUT_DIR='/mnt/data/indexes'
 PREVIEW_PERMALINK='http://18.185.13.154/'
 SLACK_WEBHOOK_URL='REDACTED_API_KEY'
+LOGLEVEL='DEBUG'
+LOGFILE='/mnt/data/log/preview_worker.log'
 
 
 # install docker
@@ -45,6 +47,7 @@ docker run \
 
 # launch preview_worker container
 docker run \
+  --rm \
   --name preview_worker \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
