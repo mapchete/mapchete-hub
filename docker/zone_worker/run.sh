@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CI_JOB_TOKEN=REDACTED_API_KEY
-LOGLEVEL=DEBUG
+LOGLEVEL='DEBUG'
 LOGFILE=/mnt/data/log/worker.log
 AWS_ACCESS_KEY_ID='REDACTED_API_KEY'
 AWS_SECRET_ACCESS_KEY='REDACTED_API_KEY'
@@ -28,6 +28,7 @@ sudo apt install -y htop
 
 # launch docker
 docker run \
+  --rm \
   --name zone_worker \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
