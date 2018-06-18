@@ -106,4 +106,4 @@ RUN cp -R $ROOTDIR/src/mapchete_hub/processes /mnt/
 ARG MHUB_BROKER_URL
 ARG MHUB_RESULT_BACKEND
 
-ENTRYPOINT ./manage.py start_preview_worker --loglevel=$LOGLEVEL --logfile=$LOGFILE
+ENTRYPOINT ./manage.py start_subprocess_worker --loglevel=$LOGLEVEL --logfile=$LOGFILE
