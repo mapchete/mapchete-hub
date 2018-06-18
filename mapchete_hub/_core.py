@@ -30,6 +30,7 @@ def mapchete_index(
     zoom=None,
     geojson=False,
     gpkg=False,
+    shapefile=False,
     txt=False,
     out_dir=None,
     fieldname=None,
@@ -37,9 +38,9 @@ def mapchete_index(
     for_gdal=False
 ):
     config.update(config_dir=main_options['config_dir'])
-    if not any([geojson, gpkg, txt]):
+    if not any([geojson, gpkg, shapefile, txt]):
         raise ValueError(
-            "one of 'geojson', 'gpkg', or 'txt' must be provided")
+            "one of 'geojson', 'gpkg', 'shapefile' or 'txt' must be provided")
     if not out_dir:
         raise ValueError('no out_dir given')
 
@@ -74,6 +75,7 @@ def mapchete_index(
                 out_dir=out_dir,
                 geojson=geojson,
                 gpkg=gpkg,
+                shapefile=shapefile,
                 txt=txt,
                 fieldname=fieldname,
                 basepath=basepath,
@@ -82,7 +84,8 @@ def mapchete_index(
                 num_processed += 1
                 logger.debug("tile %s/%s finished", num_processed, total_tiles)
                 yield dict(process_tile=tile)
-            _gpkg_to_shp(tile.zoom)
+            if gpkg and not shapefile:
+                _gpkg_to_shp(tile.zoom)
 
     else:
         if process_area:
@@ -110,6 +113,7 @@ def mapchete_index(
                     out_dir=out_dir,
                     geojson=geojson,
                     gpkg=gpkg,
+                    shapefile=shapefile,
                     txt=txt,
                     fieldname=fieldname,
                     basepath=basepath,
@@ -118,6 +122,7 @@ def mapchete_index(
                     num_processed += 1
                     logger.debug("tile %s/%s finished", num_processed, total_tiles)
                     yield dict(process_tile=tile)
+            if gpkg and not shapefile:
                 _gpkg_to_shp(z)
 
 

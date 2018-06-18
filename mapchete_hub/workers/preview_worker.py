@@ -31,7 +31,7 @@ def run(self, *args, **kwargs):
         config=mapchete_config,
         process_area=process_area,
         out_dir=os.environ.get('INDEX_OUTPUT_DIR'),
-        gpkg=True
+        shapefile=True
     )
 
     # get total tiles
