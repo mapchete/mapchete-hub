@@ -76,6 +76,7 @@ def start_zone_worker(ctx, loglevel, logfile):
         '--concurrency=1',
         '-E',
         '--prefetch-multiplier=1',
+        '-Ofair',
         '-Q', 'zone_queue'
     ]
     if loglevel:
@@ -102,6 +103,7 @@ def start_preview_worker(ctx, loglevel, logfile):
         '--concurrency=1',
         '-E',
         '--prefetch-multiplier=1',
+        '-Ofair',
         '-Q', 'preview_queue'
     ]
     if loglevel:
