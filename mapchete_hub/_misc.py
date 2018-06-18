@@ -2,7 +2,7 @@ import datetime
 import json
 import logging
 
-from mapchete_hub.workers import zone_worker, preview_worker
+from mapchete_hub.workers import zone_worker, preview_worker, subprocess_worker
 from mapchete_hub._core import cleanup_config
 
 logger = logging.getLogger(__name__)
@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 workers = {
     'zone_worker': zone_worker,
-    'preview_worker': preview_worker
+    'preview_worker': preview_worker,
+    'subprocess_worker': subprocess_worker
 }
 
 

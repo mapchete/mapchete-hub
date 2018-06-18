@@ -87,6 +87,33 @@ def start_zone_worker(ctx, loglevel, logfile):
         return celery_main(celery_args)
 
 
+@cli.command(short_help='Launches Celery subprocess worker.')
+@click.option('--loglevel', type=click.Choice(['INFO', 'DEBUG']), default=None)
+@click.option('--logfile', type=click.Path(), default=None)
+@click.pass_context
+def start_subprocess_worker(ctx, loglevel, logfile):
+    click.echo("launch subprocess worker")
+    app = flask_app()
+    celery_args = [
+        'celery',
+        'worker',
+        '-n', 'subprocess_worker@' + os.environ.get('HOST_IP', '%h'),
+        '--without-gossip',
+        '--max-tasks-per-child=1',
+        '--concurrency=1',
+        '-E',
+        '--prefetch-multiplier=1',
+        '-Ofair',
+        '-Q', 'subprocess_queue'
+    ]
+    if loglevel:
+        celery_args.append('--loglevel=%s' % loglevel)
+    if logfile:
+        celery_args.append('--logfile=%s' % logfile)
+    with app.app_context():
+        return celery_main(celery_args)
+
+
 @cli.command(short_help='Launches Celery preview worker.')
 @click.option('--loglevel', type=click.Choice(['INFO', 'DEBUG']), default=None)
 @click.option('--logfile', type=click.Path(), default=None)

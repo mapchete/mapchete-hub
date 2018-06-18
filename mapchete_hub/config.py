@@ -17,6 +17,7 @@ def _get_flask_options():
         accept_content=['pickle', 'json'],
         task_routes={
             'mapchete_hub.workers.zone_worker.*': {'queue': 'zone_queue'},
+            'mapchete_hub.workers.subprocess_worker.*': {'queue': 'subprocess_queue'},
             'mapchete_hub.workers.preview_worker.*': {'queue': 'preview_queue'}
         },
         task_acks_late=True,

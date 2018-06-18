@@ -4,6 +4,7 @@ from shapely import wkt
 
 from mapchete_hub import mapchete_execute, cleanup_config
 from mapchete_hub.celery_app import celery_app
+from mapchete_hub.config import main_options
 
 
 logger = get_task_logger(__name__)
