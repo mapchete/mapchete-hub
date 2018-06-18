@@ -8,6 +8,7 @@ from mapchete.index import zoom_index_gen
 from mapchete.tile import BufferedTilePyramid
 from mapchete.errors import MapcheteNodataTile
 import os
+import signal
 import subprocess
 import time
 
@@ -146,7 +147,7 @@ def mapchete_execute(
         f = partial(_process_worker, mp)
         for zoom in zoom_levels:
             try:
-                pool = Pool(multi)
+                pool = Pool(multi, _worker_sigint_handler)
                 for tile, message in pool.imap_unordered(
                     f,
                     mp.get_process_tiles(zoom),
@@ -157,7 +158,7 @@ def mapchete_execute(
                     logger.debug("tile %s/%s finished", num_processed, total_tiles)
                     yield dict(process_tile=tile, **message)
             except KeyboardInterrupt:
-                logger.error("Caught KeyboardInterrupt, terminating workers")
+                logger.error("Caught KeyboardInterrupt")
                 raise
             except Exception as e:
                 logger.exception(e)
@@ -199,6 +200,11 @@ def _process_worker(process, process_tile):
             process=processor_message,
             write=writer_message
         )
+
+
+def _worker_sigint_handler():
+    # ignore SIGINT and let everything be handled by parent process
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 def _get_zoom_level(zoom, process):
