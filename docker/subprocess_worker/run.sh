@@ -29,7 +29,7 @@ sudo apt install -y htop
 # launch docker
 docker run \
   --rm \
-  --name preview_worker \
+  --name subprocess_worker \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
@@ -41,4 +41,4 @@ docker run \
   -e LOGFILE=$LOGFILE \
   -v /mnt/data:/mnt/data \
   -d \
-  registry.gitlab.eox.at/maps/mapchete_hub/preview_worker:latest
+  registry.gitlab.eox.at/maps/mapchete_hub/subprocess_worker:latest

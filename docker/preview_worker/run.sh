@@ -43,7 +43,7 @@ docker run \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -d \
-  registry.gitlab.eox.at/maps/mapchete_hub/mapserver
+  registry.gitlab.eox.at/maps/mapchete_hub/mapserver:latest
 
 # launch preview_worker container
 docker run \
