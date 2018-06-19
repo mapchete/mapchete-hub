@@ -33,7 +33,7 @@ def mapchete_index(
     shapefile=False,
     txt=False,
     out_dir=None,
-    fieldname=None,
+    fieldname='location',
     basepath=None,
     for_gdal=False
 ):
