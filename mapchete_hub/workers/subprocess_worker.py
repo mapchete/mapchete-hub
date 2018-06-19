@@ -5,6 +5,7 @@ import os
 from shapely import wkt
 from subprocess import Popen, PIPE, STDOUT
 import time
+from time import gmtime, strftime
 import yaml
 
 from mapchete_hub import cleanup_config
@@ -29,16 +30,19 @@ def run(self, *args, **kwargs):
     self.send_event('task-progress', progress_data=dict(current=None, total=None))
     mapchete_config = cleanup_config(config['mapchete_config'])
 
-    run_mapchete(mapchete_config, wkt.loads(process_area).bounds)
+    run_mapchete(mapchete_config, bounds=wkt.loads(process_area).bounds)
 
     logger.debug("processing successful.")
 
 
 def run_mapchete(
-    mapchete_config, bounds, mapchete_mode="continue", overload=1
+    mapchete_config, bounds=None, mapchete_mode="continue", overload=1
 ):
     mapchete_file = os.path.join(
-        main_options['config_dir'], '%s.mapchete' % "_".join(map(str, bounds))
+        main_options['config_dir'], '%s_%s.mapchete' % (
+            "_".join(map(str, bounds)),
+            strftime("%Y-%m-%d_%H:%M:%S", gmtime())
+        )
     )
     if os.path.isfile(mapchete_file):
         os.remove(mapchete_file)
@@ -49,21 +53,27 @@ def run_mapchete(
         )
 
     multi = str(int(cpu_count() * overload))
+
     """Execute mapchete in subprocess & collect output."""
-    process_logfile = "%s%s" % (
-        os.environ.get("LOGFILE", main_options['config_dir'] + 'log'),
+    logfile = os.environ.get('LOGFILE', None)
+    process_logfile = os.path.join(
+        os.path.dirname(logfile) if logfile else main_options['config_dir'],
         os.path.basename(mapchete_file)
-    )
+    ) + ".log"
 
     start = time.time()
     cmd = [
         "mapchete", "execute", mapchete_file,
         "--logfile", process_logfile,
-        "-m", multi
+        "-m", multi,
+        "--no_pbar"
     ]
+    if bounds:
+        cmd.append("--bounds")
+        cmd.extend(map(str, bounds))
     if mapchete_mode == "overwrite":
         cmd.append("--overwrite")
-    if os.environ.get("LOGLEVEL") == "DEBUG":
+    if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         cmd.append("--debug")
     logger.debug(" ".join(cmd))
     returncode, output = _execute(cmd)
