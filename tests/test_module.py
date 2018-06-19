@@ -1,0 +1,21 @@
+import os
+
+from mapchete_hub import mapchete_index, cleanup_config
+
+
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
+
+
+def test_cleanup_config(example_process):
+    assert [k for k in example_process.keys() if k.startswith("mhub_")]
+    cleaned = cleanup_config(example_process)
+    assert not [k for k in cleaned.keys() if k.startswith("mhub_")]
+
+
+def test_mapchete_index(mp_tmpdir, example_process):
+    assert(len(list(mapchete_index(
+        config=example_process,
+        shapefile=True,
+        out_dir=mp_tmpdir
+    ))))

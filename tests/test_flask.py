@@ -7,10 +7,7 @@
 #     assert response.json["status"] == "sent"
 
 
-def test_status(client, baseurl):
-    task_id = "jobs"
-    url = "%s/status/%s" % (baseurl, task_id)
+def test_flask_status(client, baseurl):
+    url = "%s/jobs/" % baseurl
     response = client.get(url)
     assert response.status_code == 200
-    assert response.json["task_id"] == task_id
-    assert response.json["status"] == "PENDING"

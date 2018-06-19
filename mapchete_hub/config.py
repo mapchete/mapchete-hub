@@ -54,7 +54,7 @@ def _get_main_options():
                 )
             )
         ),
-        config_dir="/home/ungarj/git/mapchete_hub/tests/testdata/"
+        config_dir="/tmp/"
     )
     return _get_opts(default)
 
