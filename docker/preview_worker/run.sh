@@ -26,7 +26,7 @@ MHUB_BROKER_URL='amqp://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
 MHUB_RESULT_BACKEND='rpc://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
 MHUB_CONFIG_DIR='/mnt/processes'
 INDEX_OUTPUT_DIR='/mnt/data/indexes'
-PREVIEW_PERMALINK='http://18.185.13.154/'
+PREVIEW_PERMALINK='http://18.184.146.112/'
 SLACK_WEBHOOK_URL='REDACTED_API_KEY'
 LOGLEVEL='DEBUG'
 LOGFILE='/mnt/data/log/preview_worker.log'
@@ -51,6 +51,7 @@ docker run \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
   -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
   -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
+  -e PREVIEW_PERMALINK=$PREVIEW_PERMALINK \
   -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
   -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
   -e INDEX_OUTPUT_DIR=$INDEX_OUTPUT_DIR \

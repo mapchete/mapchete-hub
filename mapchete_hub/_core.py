@@ -35,7 +35,7 @@ def mapchete_index(
     out_dir=None,
     fieldname='location',
     basepath=None,
-    for_gdal=False
+    for_gdal=True
 ):
     config.update(config_dir=main_options['config_dir'])
     if not any([geojson, gpkg, shapefile, txt]):
