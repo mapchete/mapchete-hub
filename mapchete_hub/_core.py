@@ -134,7 +134,7 @@ def mapchete_execute(
     process_area=None,
     multi=cpu_count(),
     max_chunksize=1,
-    max_attempts=3
+    max_attempts=20
 ):
     if config is None:
         raise AttributeError("no mapchete config given")
@@ -184,6 +184,8 @@ def mapchete_execute(
                         logger.exception(e)
                         raise
                 finally:
+                    logger.debug("terminate pool")
+                    pool.terminate()
                     logger.debug("close pool")
                     pool.close()
                     logger.debug("join pool")

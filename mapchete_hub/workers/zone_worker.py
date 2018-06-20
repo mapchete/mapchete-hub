@@ -26,7 +26,7 @@ def run(self, *args, **kwargs):
     # this may take a while
     executor = mapchete_execute(
         config=mapchete_config, process_area=wkt.loads(process_area),
-        max_attempts=kwargs.get("max_attempts", 3)
+        max_attempts=kwargs.get("max_attempts", 20)
     )
 
     # get total tiles
