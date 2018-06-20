@@ -1,12 +1,13 @@
 from billiard import cpu_count, current_process
+from billiard.exceptions import WorkerLostError
 from billiard.pool import Pool
 from celery.utils.log import get_task_logger
 from functools import partial
 import mapchete
 from mapchete.config import _map_to_new_config
+from mapchete.errors import MapcheteNodataTile, MapcheteProcessException
 from mapchete.index import zoom_index_gen
 from mapchete.tile import BufferedTilePyramid
-from mapchete.errors import MapcheteNodataTile
 import os
 import signal
 import subprocess
@@ -132,7 +133,8 @@ def mapchete_execute(
     zoom=None,
     process_area=None,
     multi=cpu_count(),
-    max_chunksize=1
+    max_chunksize=1,
+    max_attempts=3
 ):
     if config is None:
         raise AttributeError("no mapchete config given")
@@ -146,35 +148,51 @@ def mapchete_execute(
         total_tiles = mp.count_tiles(min(zoom_levels), max(zoom_levels))
         yield total_tiles
         if total_tiles == 0:
+            logger.debug("no tiles to be processed")
             return
         logger.debug(
             "run process on %s tiles using %s workers", total_tiles, multi)
         f = partial(_process_worker, mp)
         for zoom in zoom_levels:
-            try:
-                pool = Pool(multi, _worker_sigint_handler)
-                for tile, message in pool.imap_unordered(
-                    f,
-                    mp.get_process_tiles(zoom),
-                    # set chunksize to between 1 and max_chunksize
-                    chunksize=min([max([total_tiles // multi, 1]), max_chunksize])
-                ):
-                    num_processed += 1
-                    logger.debug("tile %s/%s finished", num_processed, total_tiles)
-                    yield dict(process_tile=tile, **message)
-            except KeyboardInterrupt:
-                logger.error("Caught KeyboardInterrupt")
-                raise
-            except Exception as e:
-                logger.exception(e)
-                raise
-            finally:
-                logger.debug("close pool")
-                pool.close()
-                logger.debug("join pool")
-                pool.join()
-            # for tile in mp.get_process_tiles(zoom):
-            #     yield dict(process_tile=tile, **_process_worker(mp, tile)[1])
+            missing = set(mp.get_process_tiles(zoom))
+            for attempt in range(max_attempts):
+                logger.debug(
+                    "attempt %s of %s to process %s tiles",
+                    attempt + 1, max_attempts, len(missing)
+                )
+                if not missing:
+                    logger.debug("all tiles processed")
+                    break
+                try:
+                    pool = Pool(multi, _worker_sigint_handler)
+                    for tile, message in pool.imap_unordered(
+                        f, missing,
+                        # set chunksize to between 1 and max_chunksize
+                        chunksize=min([max([total_tiles // multi, 1]), max_chunksize])
+                    ):
+                        missing.discard(tile)
+                        num_processed += 1
+                        logger.debug("tile %s/%s finished", num_processed, total_tiles)
+                        yield dict(process_tile=tile, **message)
+                except KeyboardInterrupt:
+                    logger.error("Caught KeyboardInterrupt")
+                    raise
+                except Exception as e:
+                    if isinstance(e.args[0].type, type(WorkerLostError)):
+                        logger.debug("Caught WorkerLostError")
+                    else:
+                        logger.exception(e)
+                        raise
+                finally:
+                    logger.debug("close pool")
+                    pool.close()
+                    logger.debug("join pool")
+                    pool.join()
+            if missing:
+                logger.debug("missing tiles: %s", missing)
+                raise MapcheteProcessException(
+                    "not all tiles processed after %s retries", max_attempts
+                )
         logger.debug("%s tile(s) iterated", (str(num_processed)))
 
 

@@ -1,6 +1,9 @@
+from mapchete.errors import MapcheteProcessException
 import os
+import pytest
+from shapely.geometry import box
 
-from mapchete_hub import mapchete_index, cleanup_config
+from mapchete_hub import mapchete_index, mapchete_execute, cleanup_config
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -19,3 +22,10 @@ def test_mapchete_index(mp_tmpdir, example_process):
         shapefile=True,
         out_dir=mp_tmpdir
     ))))
+
+
+def test_workerlost(mp_tmpdir, example_process):
+    mp_config = cleanup_config(dict(example_process, process_file="workerlost.py"))
+    executor = mapchete_execute(config=mp_config, process_area=box(3, 1, 4, 2))
+    with pytest.raises(MapcheteProcessException):
+        list(executor)

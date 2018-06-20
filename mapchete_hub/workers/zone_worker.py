@@ -4,7 +4,6 @@ from shapely import wkt
 
 from mapchete_hub import mapchete_execute, cleanup_config
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub.config import main_options
 
 
 logger = get_task_logger(__name__)
@@ -26,7 +25,8 @@ def run(self, *args, **kwargs):
     # first, the inputs get parsed, i.e. all metadata queried from catalogue
     # this may take a while
     executor = mapchete_execute(
-        config=mapchete_config, process_area=wkt.loads(process_area)
+        config=mapchete_config, process_area=wkt.loads(process_area),
+        max_attempts=kwargs.get("max_attempts", 3)
     )
 
     # get total tiles
