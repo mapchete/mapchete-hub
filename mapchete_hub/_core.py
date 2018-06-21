@@ -154,15 +154,16 @@ def mapchete_execute(
             "run process on %s tiles using %s workers", total_tiles, multi)
         f = partial(_process_worker, mp)
         for zoom in zoom_levels:
-            missing = set(mp.get_process_tiles(zoom))
+            process_tiles = set(mp.get_process_tiles(zoom))
+            missing, finished = process_tiles, set()
             for attempt in range(max_attempts):
+                if not missing:
+                    logger.debug("all tiles processed")
+                    break
                 logger.debug(
                     "attempt %s of %s to process %s tiles",
                     attempt + 1, max_attempts, len(missing)
                 )
-                if not missing:
-                    logger.debug("all tiles processed")
-                    break
                 try:
                     pool = Pool(multi, _worker_sigint_handler)
                     for tile, message in pool.imap_unordered(
@@ -170,26 +171,32 @@ def mapchete_execute(
                         # set chunksize to between 1 and max_chunksize
                         chunksize=min([max([total_tiles // multi, 1]), max_chunksize])
                     ):
-                        missing.discard(tile)
+                        finished.add(tile)
                         num_processed += 1
                         logger.debug("tile %s/%s finished", num_processed, total_tiles)
                         yield dict(process_tile=tile, **message)
                 except KeyboardInterrupt:
+                    logger.debug("terminate pool")
+                    pool.terminate()
                     logger.error("Caught KeyboardInterrupt")
                     raise
                 except Exception as e:
                     if isinstance(e.args[0].type, type(WorkerLostError)):
                         logger.debug("Caught WorkerLostError")
+                        logger.debug("terminate pool")
+                        pool.terminate()
                     else:
                         logger.exception(e)
+                        logger.debug("terminate pool")
+                        pool.terminate()
                         raise
                 finally:
-                    logger.debug("terminate pool")
-                    pool.terminate()
                     logger.debug("close pool")
                     pool.close()
                     logger.debug("join pool")
                     pool.join()
+                    missing = process_tiles.difference(finished)
+
             if missing:
                 logger.debug("missing tiles: %s", missing)
                 raise MapcheteProcessException(
