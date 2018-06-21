@@ -69,9 +69,13 @@ def status(ctx, job_id, geojson):
 
 @mhub.command(short_help='Shows current jobs.')
 @click.option('--geojson', is_flag=True)
+@click.option('--progress', is_flag=True)
 @click.pass_context
-def jobs(ctx, geojson):
-    return get_jobs(as_geojson=geojson, host=ctx.obj['host'])
+def jobs(ctx, geojson, progress):
+    if progress:
+        return get_jobs_progress(host=ctx.obj['host'])
+    else:
+        return get_jobs(as_geojson=geojson, host=ctx.obj['host'])
 
 
 def start_job(job_id, mapchete_file, bounds, host=None):
@@ -208,6 +212,50 @@ def get_jobs(as_geojson=False, host=None):
                     feature["properties"]["job_id"], feature["properties"]["state"]
                 )
             )
+
+
+def get_jobs_progress(host=None):
+    url = "http://%s/jobs" % host
+    res = _get_json(url)
+    progress_features = [
+        feature
+        for feature in res
+        if (
+            feature["properties"]["state"] == "PROGRESS" and
+            feature["properties"]["progress_data"].get("current") is not None
+        )
+    ]
+    try:
+        pbars = {
+            feature["properties"]["job_id"]: dict(
+                pbar=tqdm(
+                    desc=feature["properties"]["job_id"],
+                    position=-i,
+                    total=feature["properties"]["progress_data"]["total"],
+                    initial=feature["properties"]["progress_data"]["current"],
+                ),
+                last=0
+            )
+            for i, feature in enumerate(progress_features)
+            # for i, feature in enumerate([dict(properties=dict(job_id="z6-12-75"))])
+        }
+
+        def get_current(job_id):
+            url = "http://%s/jobs/%s" % (host, job_id)
+            res = _get_json(url)
+            return res["properties"]["progress_data"].get("current")
+
+        while True:
+            for job_id, d in pbars.items():
+                current = get_current(job_id)
+                last = d["last"]
+                d["last"] = current
+                if current and last and current > last:
+                    d["pbar"].update(current - d["last"])
+            time.sleep(2)
+    finally:
+        for k, v in pbars.items():
+            v["pbar"].close()
 
 
 def print_as_geojson(res):
