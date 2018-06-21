@@ -195,7 +195,7 @@ def mapchete_execute(
                         logger.exception(e)
                         logger.debug("terminate pool")
                         pool.terminate()
-                        raise
+                        # raise
                 finally:
                     logger.debug("close pool")
                     pool.close()
