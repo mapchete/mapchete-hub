@@ -154,15 +154,17 @@ def mapchete_execute(
             "run process on %s tiles using %s workers", total_tiles, multi)
         f = partial(_process_worker, mp)
         for zoom in zoom_levels:
-            process_tiles = set(mp.get_process_tiles(zoom))
+            process_tiles = set([t.id for t in mp.get_process_tiles(zoom)])
             missing, finished = process_tiles, set()
             for attempt in range(max_attempts):
                 if not missing:
-                    logger.debug("all tiles processed")
+                    logger.debug(
+                        "all tiles processed for zoom %s in %s attempts", zoom, attempt
+                    )
                     break
                 logger.debug(
-                    "attempt %s of %s to process %s tiles",
-                    attempt + 1, max_attempts, len(missing)
+                    "attempt %s of %s to process %s tiles for zoom %s",
+                    attempt + 1, max_attempts, len(missing), zoom
                 )
                 try:
                     pool = Pool(multi, _worker_sigint_handler)
@@ -171,7 +173,7 @@ def mapchete_execute(
                         # set chunksize to between 1 and max_chunksize
                         chunksize=min([max([total_tiles // multi, 1]), max_chunksize])
                     ):
-                        finished.add(tile)
+                        finished.add(tile.id)
                         num_processed += 1
                         logger.debug("tile %s/%s finished", num_processed, total_tiles)
                         yield dict(process_tile=tile, **message)
@@ -205,8 +207,9 @@ def mapchete_execute(
         logger.debug("%s tile(s) iterated", (str(num_processed)))
 
 
-def _process_worker(process, process_tile):
+def _process_worker(process, process_tile_id):
     """Worker function running the process."""
+    process_tile = process.config.process_pyramid.tile(*process_tile_id)
     logger.debug((process_tile.id, "running on %s" % current_process().name))
 
     # skip execution if overwrite is disabled and tile exists
