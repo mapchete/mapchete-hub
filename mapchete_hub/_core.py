@@ -183,11 +183,15 @@ def mapchete_execute(
                     logger.error("Caught KeyboardInterrupt")
                     raise
                 except Exception as e:
-                    if isinstance(e.args[0].type, type(WorkerLostError)):
+                    if (
+                        isinstance(e.args[0].exception, MapcheteProcessException) and
+                        isinstance(e.args[0].exception.old, WorkerLostError)
+                    ):
                         logger.debug("Caught WorkerLostError")
                         logger.debug("terminate pool")
                         pool.terminate()
                     else:
+                        logger.debug("Caught Exception")
                         logger.exception(e)
                         logger.debug("terminate pool")
                         pool.terminate()
@@ -200,7 +204,7 @@ def mapchete_execute(
                     missing = process_tiles.difference(finished)
 
             if missing:
-                logger.debug("missing tiles: %s", missing)
+                logger.debug("missing %s tiles: %s", len(missing), missing)
                 raise MapcheteProcessException(
                     "not all tiles processed after %s retries", max_attempts
                 )
