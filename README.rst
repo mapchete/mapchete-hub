@@ -103,7 +103,7 @@ create overviews and update index files for zone ``17-78``:
     mapchete execute overviews.mapchete --verbose --logfile missing.log -m 8 -b `tmx bounds $zone` -z 8 12 -o && mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b `tmx bounds $zone` -z 8 13
 
     # or use the script from the preview_worker home directory
-    ./update_overview_zone.sh 6 17 78
+    ./update_overviews_zone.sh 6 17 78
 
 
 create overviews and update index files for bounds ``-8.4375 36.5625 -5.625 39.375``:
