@@ -82,7 +82,7 @@ manually fix tiles
 
 NOTE: shut down ``preview_worker`` before updating index files!
 
-log into preview worker & start venv
+log into ``preview worker`` & start venv
 
 .. code-block:: shell
 
@@ -94,10 +94,11 @@ create overviews and update index files for zone ``17-78``:
 
 .. code-block:: shell
 
-    for zone in "6 17 78"
-      do
-        mapchete execute overviews.mapchete --verbose --logfile missing.log -m 8 -b `tmx bounds $zone` -z 8 12 -o && mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b `tmx bounds $zone` -z 8 13
-      done
+    zone="6 17 78"
+    mapchete execute overviews.mapchete --verbose --logfile missing.log -m 8 -b `tmx bounds $zone` -z 8 12 -o && mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b `tmx bounds $zone` -z 8 13
+
+    # or use the script from the preview_worker home directory
+    ./update_overview_zone.sh 6 17 78
 
 
 create overviews and update index files for bounds ``-8.4375 36.5625 -5.625 39.375``:
@@ -107,6 +108,9 @@ create overviews and update index files for bounds ``-8.4375 36.5625 -5.625 39.3
     bounds="-8.4375 36.5625 -5.625 39.375"
     mapchete execute overviews.mapchete --verbose --logfile missing.log -m 8 -b $bounds -z 8 12 -o && \
     mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b $bounds -z 8 13
+
+    # or use the script from the preview_worker home directory
+    ./update_overviews_bounds.sh -8.4375 36.5625 -5.625 39.375
 
 
 fix single tile over point
@@ -118,6 +122,9 @@ fix single tile over point
     mapchete execute mosaic_north_nocache.mapchete --verbose --logfile missing.log -m 8 -b $bounds -z 8 13 -o && \
     mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b $bounds -z 8 13
 
+    # or use the script from the preview_worker home directory
+    ./reprocess_point.sh 6.5504 59.9003
+
 
 fix smaller area over bounds ``5.7689 59.4053 6.1759 59.5111``
 
@@ -126,6 +133,9 @@ fix smaller area over bounds ``5.7689 59.4053 6.1759 59.5111``
     bounds="5.7689 59.4053 6.1759 59.5111"
     mapchete execute mosaic_north_nocache.mapchete --verbose --logfile missing.log -m 8 -b $bounds -z 8 13 -o && \
     mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b $bounds -z 8 13
+
+    # or use the script from the preview_worker home directory
+    ./reprocess_bounds.sh 5.7689 59.4053 6.1759 59.5111
 
 
 broker
