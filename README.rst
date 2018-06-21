@@ -80,8 +80,6 @@ inspect commands:
 manually fix tiles
 ------------------
 
-NOTE: shut down ``preview_worker`` before updating index files!
-
 log into ``preview worker`` & start venv
 
 .. code-block:: shell
@@ -89,6 +87,13 @@ log into ``preview worker`` & start venv
     ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.184.146.112
     workon mapchete
     export AWS_ACCESS_KEY_ID=REDACTED_API_KEY AWS_SECRET_ACCESS_KEY=REDACTED_API_KEY
+
+NOTE: shut down ``preview_worker`` before updating index files!
+
+.. code-block:: shell
+
+    docker container stop preview_worker
+
 
 create overviews and update index files for zone ``17-78``:
 
@@ -162,8 +167,6 @@ Celery will remove all tasks from queue unless they are currently processed by a
 generate index files
 --------------------
 
-NOTE: shut down ``preview_worker`` before updating index files!
-
 log into preview worker & start venv
 
 .. code-block:: shell
@@ -171,6 +174,13 @@ log into preview worker & start venv
     ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.184.146.112
     workon mapchete
     export AWS_ACCESS_KEY_ID=REDACTED_API_KEY AWS_SECRET_ACCESS_KEY=REDACTED_API_KEY
+
+NOTE: shut down ``preview_worker`` before updating index files!
+
+.. code-block:: shell
+
+    docker container stop preview_worker
+
 
 for all zoom levels:
 
