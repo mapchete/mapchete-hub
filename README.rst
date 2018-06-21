@@ -77,11 +77,6 @@ inspect commands:
     mhub status --geojson <job_id>
 
 
-add new zones to queue:
-
-TODO
-
-
 manually fix tiles
 ------------------
 
@@ -93,6 +88,7 @@ log into preview worker & start venv
 
     ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.184.146.112
     workon mapchete
+    export AWS_ACCESS_KEY_ID=REDACTED_API_KEY AWS_SECRET_ACCESS_KEY=REDACTED_API_KEY
 
 create overviews and update index files for zone ``17-78``:
 
@@ -101,17 +97,6 @@ create overviews and update index files for zone ``17-78``:
     for zone in "6 17 78"
       do
         mapchete execute overviews.mapchete --verbose --logfile missing.log -m 8 -b `tmx bounds $zone` -z 8 12 -o && mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b `tmx bounds $zone` -z 8 13
-      done
-
-
-create overviews and update index files for zone ``17-78``:
-
-.. code-block:: shell
-
-    for zone in "6 17 78"
-      do
-        mapchete execute overviews.mapchete --verbose --logfile missing.log -m 8 -b `tmx bounds $zone` -z 8 12 -o && \
-        mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b `tmx bounds $zone` -z 8 13
       done
 
 
@@ -175,6 +160,7 @@ log into preview worker & start venv
 
     ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.184.146.112
     workon mapchete
+    export AWS_ACCESS_KEY_ID=REDACTED_API_KEY AWS_SECRET_ACCESS_KEY=REDACTED_API_KEY
 
 for all zoom levels:
 
@@ -208,6 +194,39 @@ Use ``run.sh`` scripts as user data when launching instances.
 * ``docker/server/run.sh`` starts monitor container & devserver container
 * ``docker/preview_worker/run.sh`` starts preview_worker container & mapserver container
 * ``docker/zone_worker/run.sh`` starts zone_worker container
+
+
+update instances
+----------------
+
+.. code-block:: shell
+
+    docker container stop zone_worker
+    docker pull registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
+    LOGLEVEL='DEBUG'
+    LOGFILE=/mnt/data/log/worker.log
+    AWS_ACCESS_KEY_ID='REDACTED_API_KEY'
+    AWS_SECRET_ACCESS_KEY='REDACTED_API_KEY'
+    MHUB_BROKER_URL='amqp://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
+    MHUB_RESULT_BACKEND='rpc://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
+    MHUB_CONFIG_DIR='/mnt/processes'
+    WORKER='zone_worker'
+    docker run \
+      --rm \
+      --name $WORKER \
+      -e WORKER=$WORKER \
+      -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+      -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+      -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
+      -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
+      -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
+      -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+      -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
+      -e LOGLEVEL=$LOGLEVEL \
+      -e LOGFILE=$LOGFILE \
+      -v /mnt/data:/mnt/data \
+      -d \
+      registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
 
 
 -------
