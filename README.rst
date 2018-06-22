@@ -222,6 +222,7 @@ update instances
 .. code-block:: shell
 
     docker container stop zone_worker
+    rm -f /mnt/data/cache/*
     docker pull registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
     LOGLEVEL='DEBUG'
     LOGFILE=/mnt/data/log/worker.log
