@@ -37,6 +37,20 @@ Current instances:
   * ``54.93.230.150``
   * ``18.184.5.111``
   * ``18.185.84.249``
+  * ``18.185.96.71``
+  * ``18.194.139.178``
+  * ``54.93.251.52``
+  * ``52.59.218.16``
+  * ``54.93.227.131``
+  * ``18.185.114.166``
+  * ``54.93.168.155``
+  * ``35.158.207.30``
+  * ``18.185.41.150``
+  * ``54.93.246.225``
+  * ``54.93.255.86``
+  * ``35.159.26.45``
+  * ``18.184.222.238``
+  * ``18.197.151.107``
 
 
 mhub
@@ -62,6 +76,8 @@ inspect commands:
     mhub jobs | grep FAILURE
     # list currently processing
     mhub jobs | grep PROGRESS
+    # list progress of all currently progressing
+    mhub jobs --progress
     # dump as GeoJSON
     mhub jobs --geojson > current_jobs.geojson
 
@@ -75,6 +91,12 @@ inspect commands:
     # print job as GeoJSON
     ## use this to find out IP of worker processing the job
     mhub status --geojson <job_id>
+
+add job:
+
+.. code-block:: shell
+
+    zone="6 15 75"; mhub start z${zone// /-}_a2 mosaic_north.mapchete --bounds `tmx bounds $zone`
 
 
 manually fix tiles
@@ -248,6 +270,19 @@ update instances
       -v /mnt/data:/mnt/data \
       -d \
       registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
+
+
+---------------
+Useful commands
+---------------
+
+Execute command via ssh on multiple workers
+
+.. code-block:: shell
+
+    for ip in `cat worker_ips.txt`;do ssh -A -i ~/.ssh/eox_specops.pem ubuntu@$ip -t "tail /mnt/data/log/worker.log";done
+    ## for example to check if all workers are still processing
+    for ip in `cat worker_ips.txt`;do ssh -A -i ~/.ssh/eox_specops.pem ubuntu@$ip -t "tail /mnt/data/log/worker.log";done|grep heartbeat_tick
 
 
 -------
