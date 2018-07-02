@@ -291,6 +291,19 @@ Execute command via ssh on multiple workers
     for ip in `cat worker_ips.txt`;do ssh -A -i ~/.ssh/eox_specops.pem ubuntu@$ip -t "tail /mnt/data/log/worker.log";done|grep heartbeat_tick
 
 
+Get all worker logs
+
+.. code-block:: shell
+
+for ip in `cat worker_ips.txt`
+  do
+    echo "get logs for worker ${ip}"
+    mkdir ${ip}
+    ssh -oStrictHostKeyChecking=no -A -i ~/.ssh/eox_specops.pem ubuntu@$ip -t "cp /mnt/data/log/worker.log worker.log && tar -czvf worker_log.tar.gz worker.log" && scp -i ~/.ssh/eox_specops.pem ubuntu@$ip:~/worker_log.tar.gz ${ip}/ && tar -xzvf ${ip}/worker_log.tar.gz -C ${ip}/ && rm ${ip}/worker_log.tar.gz
+  done
+
+
+
 -------
 License
 -------
