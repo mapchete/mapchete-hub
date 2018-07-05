@@ -16,7 +16,8 @@ def execute(
     read_threads=2,
     read_timeout=600,
     read_max_attempts=10,
-    average_over=3
+    average_over=3,
+    **kwargs
 ):
     with mp.open("s2") as src:
         try:
