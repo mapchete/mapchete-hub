@@ -14,7 +14,8 @@ def execute(
     mask_clouds=True,
     mask_white_areas=True,
     read_threads=2,
-    timeout=600,
+    read_timeout=600,
+    read_max_attempts=10,
     average_over=3
 ):
     with mp.open("s2") as src:
@@ -26,7 +27,8 @@ def execute(
                     mask_clouds=mask_clouds,
                     mask_white_areas=mask_white_areas,
                     threads=read_threads,
-                    timeout=timeout
+                    timeout=read_timeout,
+                    max_attempts=read_max_attempts
                 ),
                 average_over=average_over
             )
