@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 MAINTAINER Joachim Ungar
 
 ENV ROOTDIR /usr/local
-ENV RASTERIO_VERSION 1.0a12
+ENV RASTERIO_VERSION 1.0.2
 # strange fix for remote rasters
 ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 # set lang variables & allow celery to run as root
@@ -60,6 +60,7 @@ RUN pip install --no-binary :all: numpy \
   && git clone git@gitlab.eox.at:maps/orgonite.git \
   && cd orgonite \
   && pip install -r requirements.txt \
+  && git checkout L1C-masks_final \
   && python setup.py build_ext --inplace \
   && python setup.py develop \
   && python setup.py test \

@@ -94,7 +94,7 @@ def execute(
             return "empty"
 
     logger.debug("read %s slices", len(stack.data))
-    logger.debug("stack read in %ss", t)
+    logger.debug("stack read in %s", t)
 
     # extract mosaic
     logger.debug("extract mosaic")
@@ -130,7 +130,7 @@ def execute(
             )
         elif method == "max_ndvi":
             mosaic = cloudless.max_ndvi(stack.data)
-    logger.debug("extracted in %ss", t)
+    logger.debug("extracted in %s", t)
     logger.debug("mosaic shape: %s", mosaic.shape)
 
     if sharpen_output:
