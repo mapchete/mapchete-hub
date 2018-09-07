@@ -11,7 +11,6 @@ __all__ = [
 ]
 
 # suppress spam loggers
-logging.getLogger("botocore").setLevel(logging.ERROR)
-logging.getLogger("boto3").setLevel(logging.ERROR)
-logging.getLogger("rasterio").setLevel(logging.ERROR)
-logging.getLogger("smart_open").setLevel(logging.ERROR)
+SPAM_LOGGERS = ["botocore", "boto3", "rasterio", "smart_open", "urllib"]
+for l in SPAM_LOGGERS:
+    logging.getLogger(l).setLevel(logging.ERROR)
