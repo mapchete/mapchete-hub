@@ -9,6 +9,8 @@ ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 ENV C_FORCE_ROOT True
+# set AWS request payer variable
+ENV AWS_REQUEST_PAYER=requester
 
 WORKDIR $ROOTDIR/src
 
@@ -82,8 +84,8 @@ RUN pip install --no-binary :all: numpy \
   && cd mapchete_hub  \
   && pip install -r requirements.txt \
   && python setup.py install \
-  # && python setup.py test \
   && cd $ROOTDIR/src \
+  # && python setup.py test \
   && rm /root/.ssh/id_rsa \
   && cp -R $ROOTDIR/src/mapchete_hub/processes /mnt/
 

@@ -9,6 +9,8 @@ ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 ENV C_FORCE_ROOT True
+# set AWS request payer variable
+ENV AWS_REQUEST_PAYER=requester
 
 WORKDIR $ROOTDIR/src
 
