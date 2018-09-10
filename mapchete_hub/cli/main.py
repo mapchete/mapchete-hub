@@ -21,7 +21,7 @@ job_states = {
 
 
 @click.version_option(version=mapchete_hub.__version__, message='%(version)s')
-@click.group()
+@click.group(help="Process control on Mapchete Hub.")
 @click.option(
     '--host', '-h',
     type=click.STRING,
@@ -43,8 +43,11 @@ def capabilities(ctx):
 @click.argument('job_id', type=click.STRING)
 @click.argument('mapchete_file', type=click.STRING)
 @click.option('--bounds', '-b', type=float, nargs=4)
+@click.option(
+    '--mode', '-m', type=click.Choice(["continue", "overwrite"]), default="overwrite"
+)
 @click.pass_context
-def start(ctx, job_id, mapchete_file, bounds=None):
+def start(ctx, job_id, mapchete_file, bounds=None, mode=None):
     start_job(job_id, mapchete_file, bounds, host=ctx.obj['host'])
 
 
@@ -78,13 +81,13 @@ def jobs(ctx, geojson, progress):
         return get_jobs(as_geojson=geojson, host=ctx.obj['host'])
 
 
-def start_job(job_id, mapchete_file, bounds, host=None):
+def start_job(job_id, mapchete_file, bounds, host=None, mode=None):
 
     url = "http://%s/jobs/%s" % (host, job_id)
     data = mapchete_hub.cleanup_datetime(
         dict(
             mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
-            mode="continue",
+            mode=mode,
             zoom=None,
             bounds=bounds,
             point=None,
