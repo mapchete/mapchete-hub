@@ -21,12 +21,12 @@ setup(
     url='https://gitlab.eox.at/maps/orgonite',
     license='MIT',
     packages=[
-        'mapchete_hub.cli',
+        'mapchete_hub.cli'
     ],
     entry_points={
-        'console_scripts': [
-            'mhub=mapchete_hub.cli:mhub'
-        ]
+        'console_scripts': ['mhub=mapchete_hub.cli:mhub'],
+        'mapchete.cli.commands': ["mhub=mapchete_hub.cli:mhub"],
+        'mapchete.processes': ['extract_mosaic=mapchete_hub.processes.extract_mosaic']
     },
     install_requires=[
         'celery',

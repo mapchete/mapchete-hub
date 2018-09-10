@@ -1,29 +1,4 @@
-"""
-Template to extract mosaics by various methods.
-
-This process requires Sentinel-2 bands 4, 3, 2 and 8 (in exactly this order) and returns
-6 bands:
-- red
-- green
-- blue
-- nir
-- slice index
-- NDVI
-
-Required mapchete parameters:
-
-bands: [4, 3, 2, 8]
-resampling: <resampling_method>
-mask_clouds: true or false
-mask_white_areas: true or false
-read_threads: <int>
-method: brightness or ndvi
-    brightness:
-        average_over: 0, 3 or 5
-    ndvi:
-        min_ndvi: float between -1 and 1
-        max_ndvi: float between -1 and 1
-"""
+"""Template to extract mosaics by various methods."""
 import json
 from mapchete import Timer
 from mapchete.log import user_process_logger
@@ -60,6 +35,30 @@ def execute(
     sharpen_output=True,
     **kwargs
 ):
+    """
+    This process requires Sentinel-2 bands 4, 3, 2 and 8 (in exactly this order) and
+    returns 6 bands:
+    - red
+    - green
+    - blue
+    - nir
+    - slice index
+    - NDVI
+
+    Required mapchete parameters:
+
+    bands: [4, 3, 2, 8]
+    resampling: <resampling_method>
+    mask_clouds: true or false
+    mask_white_areas: true or false
+    read_threads: <int>
+    method: brightness or ndvi
+        brightness:
+            average_over: 0, 3 or 5
+        ndvi:
+            min_ndvi: float between -1 and 1
+            max_ndvi: float between -1 and 1
+    """
     if method not in ["brightness", "ndvi_linreg", "weighted_avg", "max_ndvi"]:
         raise ValueError("invalid extraction method given")
     if add_indexes and method != "brightness":
