@@ -48,7 +48,7 @@ def capabilities(ctx):
 )
 @click.pass_context
 def start(ctx, job_id, mapchete_file, bounds=None, mode=None):
-    start_job(job_id, mapchete_file, bounds, host=ctx.obj['host'])
+    start_job(job_id, mapchete_file, bounds, host=ctx.obj['host'], mode=mode)
 
 
 @mhub.command(short_help='Stops job.')
