@@ -25,7 +25,7 @@ def test_mapchete_index(mp_tmpdir, example_process):
 
 
 def test_workerlost(mp_tmpdir, example_process):
-    mp_config = cleanup_config(dict(example_process, process_file="workerlost.py"))
+    mp_config = cleanup_config(dict(example_process, process="workerlost.py"))
     executor = mapchete_execute(
         config=mp_config, process_area=box(3, 1, 4, 2), zoom=11, max_attempts=3
     )

@@ -77,7 +77,8 @@ def start_zone_worker(ctx, loglevel, logfile):
         '-E',
         '--prefetch-multiplier=1',
         '-Ofair',
-        '-Q', 'zone_queue'
+        '-Q', 'zone_queue',
+        '--pool', 'solo'
     ]
     if loglevel:
         celery_args.append('--loglevel=%s' % loglevel)
