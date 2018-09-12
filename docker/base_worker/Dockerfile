@@ -87,7 +87,7 @@ RUN pip install --no-binary :all: numpy \
   && cd $ROOTDIR/src \
   # && python setup.py test \
   && rm /root/.ssh/id_rsa \
-  && cp -R $ROOTDIR/src/mapchete_hub/processes /mnt/
+  && cp -R $ROOTDIR/src/mapchete_hub/mapchete_hub/processes /mnt/
 
 WORKDIR $ROOTDIR/src/mapchete_hub/
 ENTRYPOINT ./manage.py start_${WORKER} --loglevel=$LOGLEVEL --logfile=$LOGFILE
