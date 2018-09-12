@@ -1,12 +1,17 @@
-from multiprocessing import cpu_count
+from billiard import cpu_count, current_process
+from billiard.exceptions import WorkerLostError
+from billiard.pool import Pool
 from celery.utils.log import get_task_logger
+from functools import partial
 import mapchete
 from mapchete.config import _map_to_new_config
+from mapchete.errors import MapcheteNodataTile, MapcheteProcessException
 from mapchete.index import zoom_index_gen
 from mapchete.tile import BufferedTilePyramid
 import os
+import signal
 import subprocess
-
+import time
 
 from mapchete_hub.config import main_options
 
@@ -137,6 +142,7 @@ def mapchete_execute(
 
     with mapchete.open(config, mode=mode, zoom=zoom, bounds=process_area.bounds) as mp:
         logger.debug("run with multiprocessing")
+        num_processed = 0
         zoom_levels = list(_get_zoom_level(zoom, mp))
         assert zoom_levels
         total_tiles = mp.count_tiles(min(zoom_levels), max(zoom_levels))
@@ -144,10 +150,100 @@ def mapchete_execute(
         if total_tiles == 0:
             logger.debug("no tiles to be processed")
             return
-        for process_info in mp.batch_processor(
-            zoom=zoom, multi=multi, max_chunksize=max_chunksize
-        ):
-            yield process_info
+        logger.debug(
+            "run process on %s tiles using %s workers", total_tiles, multi)
+        f = partial(_process_worker, mp)
+        for zoom in zoom_levels:
+            process_tiles = set([t.id for t in mp.get_process_tiles(zoom)])
+            missing, finished = process_tiles, set()
+            for attempt in range(max_attempts):
+                if not missing:
+                    logger.debug(
+                        "all tiles processed for zoom %s in %s attempts", zoom, attempt
+                    )
+                    break
+                logger.debug(
+                    "attempt %s of %s to process %s tiles for zoom %s",
+                    attempt + 1, max_attempts, len(missing), zoom
+                )
+                try:
+                    pool = Pool(multi, _worker_sigint_handler)
+                    for tile, message in pool.imap_unordered(
+                        f, missing,
+                        # set chunksize to between 1 and max_chunksize
+                        chunksize=min([max([total_tiles // multi, 1]), max_chunksize])
+                    ):
+                        finished.add(tile.id)
+                        num_processed += 1
+                        logger.debug("tile %s/%s finished", num_processed, total_tiles)
+                        yield dict(process_tile=tile, **message)
+                except KeyboardInterrupt:
+                    logger.error("terminate pool")
+                    pool.terminate()
+                    logger.error("Caught KeyboardInterrupt")
+                    raise
+                except Exception as e:
+                    if (
+                        isinstance(e.args[0].exception, MapcheteProcessException) and
+                        isinstance(e.args[0].exception.old, WorkerLostError)
+                    ):
+                        logger.error("Caught WorkerLostError: %s", e)
+                        # logger.error("terminate pool")
+                        # pool.terminate()
+                    else:
+                        logger.error("Caught Exception")
+                        logger.exception(e)
+                        # logger.error("terminate pool")
+                        # pool.terminate()
+                        # raise
+                finally:
+                    logger.debug("close pool")
+                    pool.close()
+                    logger.debug("join pool")
+                    pool.join()
+                    missing = process_tiles.difference(finished)
+
+            if missing:
+                logger.error("missing %s tiles: %s", len(missing), missing)
+                raise MapcheteProcessException(
+                    "not all tiles processed after %s retries", max_attempts
+                )
+        logger.debug("%s tile(s) iterated", (str(num_processed)))
+
+
+def _process_worker(process, process_tile_id):
+    """Worker function running the process."""
+    process_tile = process.config.process_pyramid.tile(*process_tile_id)
+    logger.debug((process_tile.id, "running on %s" % current_process().name))
+
+    # skip execution if overwrite is disabled and tile exists
+    if process.config.mode == "continue" and (
+        process.config.output.tiles_exist(process_tile)
+    ):
+        logger.debug((process_tile.id, "tile exists, skipping"))
+        return process_tile, dict(
+            process="output already exists",
+            write="nothing written")
+
+    # execute on process tile
+    else:
+        start = time.time()
+        try:
+            output = process.execute(process_tile, raise_nodata=True)
+        except MapcheteNodataTile:
+            output = None
+        processor_message = "processed in %ss" % round(time.time() - start, 3)
+        logger.debug((process_tile.id, processor_message))
+        writer_message = process.write(process_tile, output)
+        return process_tile, dict(
+            process=processor_message,
+            write=writer_message
+        )
+
+
+def _worker_sigint_handler():
+    # ignore SIGINT and let everything be handled by parent process
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 def _get_zoom_level(zoom, process):

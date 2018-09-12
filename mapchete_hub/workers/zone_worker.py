@@ -8,19 +8,13 @@ from mapchete_hub.celery_app import celery_app
 
 logger = get_task_logger(__name__)
 
-# suppress spam loggers
-logging.getLogger("botocore").setLevel(logging.ERROR)
-logging.getLogger("boto3").setLevel(logging.ERROR)
-logging.getLogger("rasterio").setLevel(logging.ERROR)
-logging.getLogger("smart_open").setLevel(logging.ERROR)
-
 
 # ignore_result=True important, otherwise it will be stored in broker
 @celery_app.task(bind=True, ignore_result=True)
 def run(self, *args, **kwargs):
     config = kwargs["config"]
+    logger.debug("got job %s", self.request.id)
     process_area = kwargs["process_area"]
-    logger.debug("initialize process")
     self.send_event('task-progress', progress_data=dict(current=None, total=None))
     mapchete_config = cleanup_config(config['mapchete_config'])
     # first, the inputs get parsed, i.e. all metadata queried from catalogue
