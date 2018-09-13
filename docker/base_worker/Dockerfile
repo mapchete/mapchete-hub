@@ -2,7 +2,7 @@ FROM ubuntu:16.04
 MAINTAINER Joachim Ungar
 
 ENV ROOTDIR /usr/local
-ENV RASTERIO_VERSION 1.0.2
+ENV RASTERIO_VERSION 1.0.3.post1
 # strange fix for remote rasters
 ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 # set lang variables & allow celery to run as root
