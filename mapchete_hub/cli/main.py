@@ -173,13 +173,12 @@ def get_status(job_id, host=None, as_geojson=False):
                     break
 
                 elif res["properties"]["state"] == "PROGRESS":
-                    last = current
 
                     if res["properties"]["progress_data"]:
                         current = res["properties"]["progress_data"]["current"]
 
-                        if current and last and current > last:
-                            pbar.update(current - last)
+                        if current and pbar.last_print_n and current > pbar.last_print_n:
+                            pbar.update(current - pbar.last_print_n)
 
                 time.sleep(1)
 
@@ -251,10 +250,8 @@ def get_jobs_progress(host=None):
         while True:
             for job_id, d in pbars.items():
                 current = get_current(job_id)
-                last = d["last"]
-                d["last"] = current
-                if current and last and current > last:
-                    d["pbar"].update(current - d["last"])
+                if current and current > d["pbar"].last_print_n:
+                    d["pbar"].update(current - d["pbar"].last_print_n)
             time.sleep(2)
     finally:
         for k, v in pbars.items():
