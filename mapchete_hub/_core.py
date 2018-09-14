@@ -188,14 +188,14 @@ def mapchete_execute(
                         isinstance(e.args[0].exception.old, WorkerLostError)
                     ):
                         logger.error("Caught WorkerLostError: %s", e)
-                        # logger.error("terminate pool")
-                        # pool.terminate()
+                        logger.error("terminate pool")
+                        pool.terminate()
                     else:
                         logger.error("Caught Exception")
                         logger.exception(e)
-                        # logger.error("terminate pool")
-                        # pool.terminate()
-                        # raise
+                        logger.error("terminate pool")
+                        pool.terminate()
+                        raise
                 finally:
                     logger.debug("close pool")
                     pool.close()
