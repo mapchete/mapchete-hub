@@ -1,11 +1,14 @@
 """Example process file."""
-from billiard.exceptions import WorkerLostError
-from random import randint
+import ctypes
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def execute(mp):
     """User defined process."""
-    if not randint(0, 5) or mp.tile.id == (11, 253, 520):
-        raise WorkerLostError("test")
+    if mp.tile.id == (11, 253, 520):
+        logger.debug("force segfault")
+        ctypes.string_at(0)
     else:
         return "empty"
