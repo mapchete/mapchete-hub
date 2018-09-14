@@ -178,12 +178,14 @@ def mapchete_execute(
                         logger.debug("tile %s/%s finished", num_processed, total_tiles)
                         yield dict(process_tile=tile, **message)
                 except KeyboardInterrupt:
+                    logger.error("Caught KeyboardInterrupt")
                     logger.error("terminate pool")
                     pool.terminate()
-                    logger.error("Caught KeyboardInterrupt")
                     raise
                 except Exception as e:
                     if (
+                        isinstance(e.args[0].exception, WorkerLostError)
+                    ) or (
                         isinstance(e.args[0].exception, MapcheteProcessException) and
                         isinstance(e.args[0].exception.old, WorkerLostError)
                     ):
