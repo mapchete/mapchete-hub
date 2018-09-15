@@ -10,7 +10,3 @@ __all__ = [
     "get_next_jobs", "cleanup_datetime"
 ]
 
-# suppress spam loggers
-SPAM_LOGGERS = ["botocore", "boto3", "rasterio", "smart_open", "urllib"]
-for l in SPAM_LOGGERS:
-    logging.getLogger(l).setLevel(logging.ERROR)

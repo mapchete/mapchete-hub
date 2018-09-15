@@ -22,6 +22,7 @@ def _get_flask_options():
         },
         task_acks_late=True,
         worker_send_task_events=True,
+        worker_hijack_root_logger=False,
         task_send_sent_event=True,
         event_queue_expires=604800  # one week in seconds
     )

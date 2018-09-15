@@ -14,16 +14,12 @@ from mapchete_hub.config import main_options
 
 
 logger = get_task_logger(__name__)
-# suppress spam loggers
-logging.getLogger("botocore").setLevel(logging.ERROR)
-logging.getLogger("boto3").setLevel(logging.ERROR)
-logging.getLogger("rasterio").setLevel(logging.ERROR)
-logging.getLogger("smart_open").setLevel(logging.ERROR)
 
 
 # ignore_result=True important, otherwise it will be stored in broker
 @celery_app.task(bind=True, ignore_result=True)
 def run(self, *args, **kwargs):
+    logger.info("got job %s", self.request.id)
     config = kwargs["config"]
     process_area = kwargs["process_area"]
     logger.debug("initialize process")
@@ -32,7 +28,7 @@ def run(self, *args, **kwargs):
 
     run_mapchete(mapchete_config, bounds=wkt.loads(process_area).bounds)
 
-    logger.debug("processing successful.")
+    logger.info("processing successful.")
 
 
 def run_mapchete(

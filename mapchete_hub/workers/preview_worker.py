@@ -19,6 +19,7 @@ logging.getLogger("smart_open").setLevel(logging.ERROR)
 # ignore_result=True important, otherwise it will be stored in broker
 @celery_app.task(bind=True, ignore_result=True)
 def run(self, *args, **kwargs):
+    logger.info("got job %s", self.request.id)
     config = kwargs["config"]
     logger.debug(config)
     process_area = wkt.loads(kwargs["process_area"])
@@ -45,10 +46,10 @@ def run(self, *args, **kwargs):
         logger.debug("tile %s/%s finished", i, total_tiles)
         self.send_event('task-progress', progress_data=dict(current=i, total=total_tiles))
 
-    logger.debug("processing successful.")
+    logger.info("processing successful.")
     logger.debug(config['mapchete_config'].keys())
     if config['mapchete_config'].get("mhub_announce_on_slack", False):
-        logger.debug("announce on slack")
+        logger.info("announce on slack")
         zone_lat, zone_lon = process_area.centroid.y, process_area.centroid.x
         permalink = "%s#zoom=8&lon=%s&lat=%s" % (
             os.environ.get("PREVIEW_PERMALINK"), zone_lon, zone_lat
