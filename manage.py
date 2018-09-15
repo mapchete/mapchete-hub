@@ -37,7 +37,9 @@ opt_loglevel = click.option(
     '--loglevel', type=click.Choice(['INFO', 'DEBUG', 'ERROR']), default='ERROR',
     callback=_set_log_level
 )
-opt_logfile = click.option('--logfile', type=click.Path(), default=None)
+opt_logfile = click.option(
+    '--logfile', type=click.Path(), default=None, callback=_setup_logfile
+)
 
 
 @click.version_option(version=mapchete_hub.__version__, message='%(version)s')
