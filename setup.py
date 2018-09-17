@@ -26,7 +26,10 @@ setup(
     entry_points={
         'console_scripts': ['mhub=mapchete_hub.cli:mhub'],
         'mapchete.cli.commands': ["mhub=mapchete_hub.cli:mhub"],
-        'mapchete.processes': ['extract_mosaic=mapchete_hub.processes.extract_mosaic']
+        'mapchete.processes': [
+            'extract_mosaic=mapchete_hub.processes.extract_mosaic',
+            'extract_mosaic_read_all=mapchete_hub.processes.extract_mosaic_read_all'
+        ]
     },
     install_requires=[
         'celery',
