@@ -34,7 +34,7 @@ def execute(
     min_stack_height=10,
     input_values_threshold_multiplier=10,
     sharpen_output=True,
-    target_date = None,
+    target_date=None,
     **kwargs
 ):
     """
@@ -68,14 +68,14 @@ def execute(
             "add_indexes option only works with 'brigtness' extraction method"
         )
 
-    stack = None
+    primary_stack = None
     primary_min_height = 0
-    stack_height = None
-    # read stack
+    primary_stack_height = None
+    # read primary stack
     with Timer() as t:
         primary = mp.open("primary")
         try:
-            stack = primary.read_cube(
+            primary_stack = primary.read_cube(
                 indexes=bands,
                 resampling=resampling,
                 mask_clouds=mask_clouds,
@@ -85,9 +85,9 @@ def execute(
         except EmptyStackException:
             pass
 
-    if not stack == None:
-        stack_height = get_stack_height(stack.data)
-        primary_min_height = np.min(stack_height)
+    if primary_stack is not None:
+        primary_stack_height = get_stack_height(primary_stack.data)
+        primary_min_height = np.min(primary_stack_height)
         logger.debug("primary stack min height %s", primary_min_height)
 
     # read secondary stack if nessesary, fill only some pixels
@@ -105,27 +105,22 @@ def execute(
                 resampling=resampling,
                 mask_clouds=mask_clouds,
                 mask_white_areas=mask_white_areas,
-                previous_stack_height=stack_height
-                )
-            if secondary_stack == 'empty':
-                logger.debug("no data or enough data in primary, skipping secondary cube")
-                pass
-            elif not stack == None:
+                previous_stack_height=primary_stack_height
+            )
+            if primary_stack is not None:
                 logger.debug("merging cubes")
-                stack =_read.S2Cube(
-                        np.concatenate([stack.data, secondary_stack.data]),
-                        np.concatenate([stack.mask, secondary_stack.mask]),
-                        stack.timestamps + secondary_stack.timestamps,
-                        stack.datastrip_ids + secondary_stack.datastrip_ids
-                )
+                stack = primary_stack + secondary_stack
             else:
                 logger.debug("no primary cube, use secondary cube only")
                 stack = secondary_stack
         except EmptyStackException:
-            pass
+            logger.debug("no data or enough data in primary, skipping secondary cube")
+            stack = primary_stack
+    else:
+        stack = primary_stack
 
     if stack is None:
-        raise  EmptyStackException("no data over the Tile")
+        return "empty"
 
     logger.debug("read %s slices", len(stack.data))
     logger.debug("stack read in %s", t)
