@@ -163,8 +163,8 @@ def mapchete_execute(
                     )
                     break
                 logger.debug(
-                    "attempt %s of %s to process %s tiles for zoom %s",
-                    attempt + 1, max_attempts, len(missing), zoom
+                    "attempt %s of %s to process %s tiles for zoom %s on %s subprocesses",
+                    attempt + 1, max_attempts, len(missing), zoom, multi
                 )
                 try:
                     pool = Pool(multi, _worker_sigint_handler)
@@ -192,6 +192,19 @@ def mapchete_execute(
                         logger.error("Caught WorkerLostError: %s", e)
                         logger.error("terminate pool")
                         pool.terminate()
+                    elif (
+                        isinstance(e, MemoryError) or
+                        isinstance(e.args[0].exception, MemoryError)
+                    ):
+                        logger.error("Caught MemoryError")
+                        # reduce number of subprocesses for next run
+                        multi -= 1
+                        # retry if it will still be running on at least half of the
+                        # available cores and there will be a next attempt
+                        if (multi >= cpu_count() // 2) and (attempt + 1 < max_attempts):
+                            logger.debug("try again using %s subprocesses", multi)
+                        else:
+                            raise
                     else:
                         logger.error("Caught Exception")
                         logger.exception(e)
