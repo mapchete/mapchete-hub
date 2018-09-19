@@ -120,7 +120,7 @@ def execute(
 
     logger.debug("stack read in %s", t)
 
-    if stack.data is None:
+    if stack is None or stack.data is None:
         return "empty"
 
     logger.debug("read %s slices", len(stack.data))
