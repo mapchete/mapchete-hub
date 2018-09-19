@@ -4,13 +4,12 @@ from mapchete import Timer
 from mapchete.log import user_process_logger
 from mapchete_s2aws.exceptions import EmptyStackException
 from mapchete_s2aws import read_min_cubes
-from mapchete_s2aws import _read
 import numpy as np
 from orgonite import cloudless
 from scipy import ndimage
 
 
-logger = user_process_logger("extract_mosaic")
+logger = user_process_logger("extract_mosaic_read_all")
 
 
 def execute(
