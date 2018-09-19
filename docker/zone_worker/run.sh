@@ -57,6 +57,7 @@ retry 10 docker run \
   -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
   -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
   -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+  -e GML_SKIP_CORRUPTED_FEATURES=YES \
   -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
   -e LOGLEVEL=$LOGLEVEL \
   -e LOGFILE=$LOGFILE \
