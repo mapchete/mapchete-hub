@@ -85,45 +85,46 @@ def execute(
         except EmptyStackException:
             pass
 
-    if primary_stack is not None:
-        primary_stack_height = get_stack_height(primary_stack.data)
-        primary_min_height = np.min(primary_stack_height)
-        logger.debug("primary stack min height %s", primary_min_height)
+        if primary_stack is not None:
+            primary_stack_height = get_stack_height(primary_stack.data)
+            primary_min_height = np.min(primary_stack_height)
+            logger.debug("primary stack min height %s", primary_min_height)
 
-    # read secondary stack if nessesary, fill only some pixels
-    if "secondary" in mp.params["input"] and primary_min_height < min_stack_height:
-        logger.debug("open secondary cube and read sorted by time")
-        secondary = mp.open("secondary")
+        # read secondary stack if nessesary, fill only some pixels
+        if "secondary" in mp.params["input"] and primary_min_height < min_stack_height:
+            logger.debug("open secondary cube and read sorted by time")
+            secondary = mp.open("secondary")
 
-        sorted_datastrips = secondary.sorted_datastrip_ids(sort_by="time_difference")
-        try:
-            secondary_stack = read_min_cubes(
-                (secondary, ),
-                datastrip_ids=(sorted_datastrips, ),
-                min_height=min_stack_height,
-                indexes=bands,
-                resampling=resampling,
-                mask_clouds=mask_clouds,
-                mask_white_areas=mask_white_areas,
-                previous_stack_height=primary_stack_height
-            )
-            if primary_stack is not None:
-                logger.debug("merging cubes")
-                stack = primary_stack + secondary_stack
-            else:
-                logger.debug("no primary cube, use secondary cube only")
-                stack = secondary_stack
-        except EmptyStackException:
-            logger.debug("no data or enough data in primary, skipping secondary cube")
+            sorted_datastrips = secondary.sorted_datastrip_ids(sort_by="time_difference")
+            try:
+                secondary_stack = read_min_cubes(
+                    (secondary, ),
+                    datastrip_ids=(sorted_datastrips, ),
+                    min_height=min_stack_height,
+                    indexes=bands,
+                    resampling=resampling,
+                    mask_clouds=mask_clouds,
+                    mask_white_areas=mask_white_areas,
+                    previous_stack_height=primary_stack_height
+                )
+                if primary_stack is not None:
+                    logger.debug("merging cubes")
+                    stack = primary_stack + secondary_stack
+                else:
+                    logger.debug("no primary cube, use secondary cube only")
+                    stack = secondary_stack
+            except EmptyStackException:
+                logger.debug("no data or enough data in primary, skipping secondary cube")
+                stack = primary_stack
+        else:
             stack = primary_stack
-    else:
-        stack = primary_stack
 
-    if stack is None:
+    logger.debug("stack read in %s", t)
+
+    if stack.data is None:
         return "empty"
 
     logger.debug("read %s slices", len(stack.data))
-    logger.debug("stack read in %s", t)
 
     # extract mosaic
     logger.debug("extract mosaic")
