@@ -1,5 +1,26 @@
 #!/bin/bash
 
+# from https://gist.github.com/sj26/88e1c6584397bb7c13bd11108a579746
+function retry {
+  local retries=$1
+  shift
+
+  local count=0
+  until "$@"; do
+    exit=$?
+    wait=$((2 ** $count))
+    count=$(($count + 1))
+    if [ $count -lt $retries ]; then
+      echo "Retry $count/$retries exited $exit, retrying in $wait seconds..."
+      sleep $wait
+    else
+      echo "Retry $count/$retries exited $exit, no more retries left."
+      return $exit
+    fi
+  done
+  return 0
+}
+
 # install docker
 curl -fsSL get.docker.com -o get-docker.sh && sudo sh get-docker.sh
 sudo usermod -aG docker ubuntu
@@ -15,7 +36,7 @@ sudo apt install -y htop
 
 # log into registry
 CI_JOB_TOKEN=REDACTED_API_KEY
-docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.eox.at
+retry 10 docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.eox.at
 
 # set environment and run container
 LOGLEVEL='DEBUG'
@@ -26,7 +47,7 @@ MHUB_BROKER_URL='amqp://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
 MHUB_RESULT_BACKEND='rpc://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
 MHUB_CONFIG_DIR='/mnt/processes'
 WORKER='zone_worker'
-docker run \
+retry 10 docker run \
   --rm \
   --name $WORKER \
   -e WORKER=$WORKER \
