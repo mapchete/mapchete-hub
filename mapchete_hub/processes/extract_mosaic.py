@@ -73,12 +73,12 @@ def execute(
             secondary = mp.open("secondary")
             cubes = (primary, secondary)
             datastrip_ids = (
-                primary.sorted_datastrip_ids(),
-                secondary.sorted_datastrip_ids()
+                primary.sorted_datastrip_ids("time_difference"),
+                secondary.sorted_datastrip_ids("time_difference")
             )
         else:
             cubes = (primary, )
-            datastrip_ids = (primary.sorted_datastrip_ids(), )
+            datastrip_ids = (primary.sorted_datastrip_ids("time_difference"), )
         try:
             stack = read_min_cubes(
                 cubes,
