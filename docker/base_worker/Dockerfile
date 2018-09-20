@@ -177,10 +177,9 @@ COPY id_rsa /root/.ssh/
 RUN chmod 600 /root/.ssh/id_rsa \
     && ssh-keyscan gitlab.eox.at >> /root/.ssh/known_hosts
 
-
 # install python packages
 #########################
-RUN pip install cython numpy --no-binary numpy \
+RUN pip install cython numpy boto3==1.7.32 --no-binary numpy \
   && pip install --no-binary :all: rasterio==${RASTERIO_VERSION} \
   && pip install --upgrade setuptools \
   && git clone https://github.com/ungarj/mapchete.git \
