@@ -46,8 +46,9 @@ AWS_SECRET_ACCESS_KEY='REDACTED_API_KEY'
 MHUB_BROKER_URL='amqp://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
 MHUB_RESULT_BACKEND='rpc://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
 MHUB_CONFIG_DIR='/mnt/processes'
+MPS2AWS_CACHE_PATH=/mnt/data/cache
 WORKER='zone_worker'
-retry 10 docker run \
+docker run \
   --rm \
   --name $WORKER \
   -e WORKER=$WORKER \
@@ -56,6 +57,7 @@ retry 10 docker run \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
   -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
   -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
+  -e MPS2AWS_CACHE_PATH=$MPS2AWS_CACHE_PATH \
   -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
   -e GML_SKIP_CORRUPTED_FEATURES=YES \
   -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
@@ -63,4 +65,4 @@ retry 10 docker run \
   -e LOGFILE=$LOGFILE \
   -v /mnt/data:/mnt/data \
   -d \
-  registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
+  registry.gitlab.eox.at/maps/mapchete_hub/base_worker:stable
