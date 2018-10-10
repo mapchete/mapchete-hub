@@ -17,6 +17,7 @@ def execute(
     bands=None,
     resampling="cubic_spline",
     mask_clouds=True,
+    cloudmask_types="all",
     mask_white_areas=False,
     read_threads=1,
     add_indexes=False,
@@ -87,6 +88,10 @@ def execute(
                 min_height=min_stack_height,
                 resampling=resampling,
                 mask_clouds=mask_clouds,
+                cloudmask_types=(
+                    tuple(cloudmask_types)
+                    if isinstance(cloudmask_types, list) else cloudmask_types
+                ),
                 mask_white_areas=mask_white_areas
             )
         except EmptyStackException:
