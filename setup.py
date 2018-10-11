@@ -27,6 +27,7 @@ setup(
         'console_scripts': ['mhub=mapchete_hub.cli:mhub'],
         'mapchete.cli.commands': ["mhub=mapchete_hub.cli:mhub"],
         'mapchete.processes': [
+            'color_correction=mapchete_hub.processes.color_correction',
             'extract_mosaic=mapchete_hub.processes.extract_mosaic',
             'extract_mosaic_read_all=mapchete_hub.processes.extract_mosaic_read_all'
         ]
