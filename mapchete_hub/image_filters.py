@@ -22,7 +22,7 @@ def _apply_filter(arr, img_filter):
         raise TypeError("input array type must be uint8")
     if arr.ndim != 3:
         raise TypeError("input array must be 3-dimensional")
-    if arr.shape[1] != 3:
+    if arr.shape[0] != 3:
         raise TypeError("input array must have exactly three bands")
     return np.clip(
         reshape_as_raster(
