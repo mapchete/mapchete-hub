@@ -3,12 +3,13 @@
 from mapchete.log import user_process_logger
 from mapchete_s2aws.exceptions import EmptyStackException
 import numpy as np
-from rasterio.plot import reshape_as_raster, reshape_as_image
-from PIL import Image, ImageFilter
 from rio_color import operations
+
+from mapchete_hub import image_filters
 
 
 logger = user_process_logger("color_correction")
+
 
 def execute(
     mp,
@@ -69,7 +70,7 @@ def execute(
         logger.debug("smooth water areas")
         enhanced = np.where(
             water_mask,
-            image_smoothing(enhanced),
+            image_filters.smooth(enhanced),
             enhanced
         )
 
@@ -80,22 +81,10 @@ def execute(
             enhanced = np.where(
                 water_mask,
                 enhanced,
-                image_sharpening(enhanced)
+                image_filters.sharpen(enhanced)
             )
         else:
-            enhanced = image_sharpening(enhanced)
+            enhanced = image_filters.sharpen(enhanced)
 
     # (6) use original nodata mask and return
     return np.where(nodata_mask, mp.params["output"].nodata, enhanced)
-
-
-def image_sharpening(src):
-    return np.clip(reshape_as_raster(
-        Image.fromarray(reshape_as_image(src)).filter(ImageFilter.SHARPEN)
-    ), 1, 255).astype("uint8")
-
-
-def image_smoothing(src):
-    return np.clip(reshape_as_raster(
-        Image.fromarray(reshape_as_image(src)).filter(ImageFilter.SMOOTH_MORE)
-    ), 1, 255).astype("uint8")
