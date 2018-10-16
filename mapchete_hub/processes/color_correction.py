@@ -12,7 +12,9 @@ logger = user_process_logger("color_correction")
 
 def execute(
     mp,
-    bands=[1, 2, 3],
+    bands=[1, 2, 3, 4],
+    smooth_water=True,
+    ndwi_threshold=0.65,
     red_gamma=1.43,
     green_gamma=1.3,
     blue_gamma=1.13,
@@ -26,12 +28,23 @@ def execute(
     # (1) read mosaic
     with mp.open("mosaic") as mosaic:
         try:
-            rgb = np.clip(mosaic.read(indexes=bands) / 16., 0, 255)
+            rgbnir = mosaic.read(indexes=bands)
+            nodata_mask = rgbnir[0].mask
         except EmptyStackException:
             return "empty"
 
-    # (2) scale rgb bands to 0 to 1 for filters
-    red, green, blue = rgb / 255.
+    if smooth_water:
+        if len(bands) != 4:
+            raise ValueError("smooth_water only works with RGBNir bands")
+        red, green, blue, nir = rgbnir
+        water_mask = np.where(
+            (green - nir) / (green + nir) < ndwi_threshold,
+            True,
+            False
+        ).astype("bool")
+
+    # (2) scale from 0 to 1 for color correction
+    red, green, blue = np.clip(rgbnir[:3] / 16, 0, 255) / 255.
 
     # (3) color correction using rio-color
     enhanced = np.clip(
@@ -49,17 +62,40 @@ def execute(
         ) * 255,    # scale back to 8bit
         1, 255      # clip valid values to 1 and 255 to avoid nodata
     ).astype("uint8")
+    enhanced = np.where(nodata_mask, 255, enhanced)
 
-    # (5) sharpen image
+    # (4) sharpen image and smooth out water areas
+    if smooth_water and water_mask.any():
+        logger.debug("smooth water areas")
+        enhanced = np.where(
+            water_mask,
+            image_smoothing(enhanced),
+            enhanced
+        )
+
+    # (5) sharpen output image
     if sharpen_output:
         logger.debug("sharpen output")
-        enhanced = image_sharpening(enhanced)
+        if smooth_water and water_mask.any():
+            enhanced = np.where(
+                water_mask,
+                enhanced,
+                image_sharpening(enhanced)
+            )
+        else:
+            enhanced = image_sharpening(enhanced)
 
-    # (4) use original nodata mask and return
-    return np.where(rgb.mask, mp.params["output"].nodata, enhanced)
+    # (6) use original nodata mask and return
+    return np.where(nodata_mask, mp.params["output"].nodata, enhanced)
 
 
 def image_sharpening(src):
     return np.clip(reshape_as_raster(
         Image.fromarray(reshape_as_image(src)).filter(ImageFilter.SHARPEN)
-    ), 1, 255)
+    ), 1, 255).astype("uint8")
+
+
+def image_smoothing(src):
+    return np.clip(reshape_as_raster(
+        Image.fromarray(reshape_as_image(src)).filter(ImageFilter.SMOOTH_MORE)
+    ), 1, 255).astype("uint8")
