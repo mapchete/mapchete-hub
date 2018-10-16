@@ -49,7 +49,8 @@ RUN apt -y update \
     libxerces-c-dev \
     language-pack-de \
     wget \
-    cmake
+    cmake \
+  && rm -rf /var/lib/apt/lists/*
 
 # PROJ
 RUN cd $APP_DIR \
@@ -218,4 +219,4 @@ RUN pip install cython numpy boto3==1.7.32 --no-binary numpy \
   && cp -R $ROOTDIR/src/mapchete_hub/mapchete_hub/processes /mnt/
 
 WORKDIR $ROOTDIR/src/mapchete_hub/
-ENTRYPOINT ./manage.py start_${WORKER} --loglevel=$LOGLEVEL --logfile=$LOGFILE
+ENTRYPOINT ./manage.py start-`echo $WORKER | sed s/_/-/g` --loglevel=$LOGLEVEL --logfile=$LOGFILE
