@@ -265,15 +265,15 @@ for ip in `cat worker_ips.txt`
     ssh -oStrictHostKeyChecking=no -A -i ~/.ssh/eox_specops.pem ubuntu@$ip -t "cp /mnt/data/log/worker.log worker.log && tar -czvf worker_log.tar.gz worker.log" && scp -i ~/.ssh/eox_specops.pem ubuntu@$ip:~/worker_log.tar.gz ${ip}/ && tar -xzvf ${ip}/worker_log.tar.gz -C ${ip}/ && rm ${ip}/worker_log.tar.gz
   done
 
+parallel -k --no-notice 'mkdir {}; ssh -oStrictHostKeyChecking=no -A -i ~/.ssh/eox_specops.pem ubuntu@{} -t "cp /mnt/data/log/worker.log worker.log && tar -czvf worker_log.tar.gz worker.log" && scp -i ~/.ssh/eox_specops.pem ubuntu@{}:~/worker_log.tar.gz {}/ && tar -xzvf {}/worker_log.tar.gz -C {}/ && rm {}/worker_log.tar.gz' < worker_ips.txt
+
 
 Update all workers
 
 .. code-block:: shell
 
-for ip in `cat worker_ips.txt`; do \
-  scp -i ~/.ssh/eox_specops.pem ubuntu@$ip update_worker.sh ubuntu@${ip}:~
-  ssh -A -i ~/.ssh/eox_specops.pem ubuntu@${ip} -t "./update_worker.sh";
-done
+parallel -k --no-notice scp -i ~/.ssh/eox_specops.pem update_worker.sh ubuntu@{}:~ < worker_ips.txt
+parallel -k --no-notice ssh -A -i ~/.ssh/eox_specops.pem ubuntu@{} -t "./update_worker.sh" < worker_ips.txt
 
 
 -------
