@@ -181,7 +181,7 @@ RUN chmod 600 /root/.ssh/id_rsa \
 # install python packages
 #########################
 RUN pip install cython numpy boto3==1.7.32 --no-binary numpy \
-  && pip install --no-binary :all: rasterio==${RASTERIO_VERSION} \
+  && pip install "rasterio>=1.0.2" "fiona>=1.8b1" --no-binary :all: \
   && pip install --upgrade setuptools \
   && git clone https://github.com/ungarj/mapchete.git \
   && cd mapchete \
