@@ -29,7 +29,7 @@ def execute(
     # (1) read mosaic
     with mp.open("mosaic") as mosaic:
         try:
-            rgbnir = mosaic.read(indexes=bands)
+            rgbnir = mosaic.read(indexes=bands).astype(np.int16)
             nodata_mask = rgbnir[0].mask
         except EmptyStackException:
             return "empty"
