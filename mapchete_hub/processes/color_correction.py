@@ -15,27 +15,28 @@ def execute(
     mp,
     bands=[1, 2, 3, 4],
     smooth_water=True,
-    ndwi_threshold=0.65,
+    ndwi_threshold=0.2,
     red_gamma=1.43,
     green_gamma=1.3,
     blue_gamma=1.13,
     sigmoidal_contrast=8.3,
     sigmoidal_bias=0.4,
     saturation=1.3,
-    cc_vegetation=False,
-    ndvi_threshold=0.6,
-    veg_red_gamma=1.43,
-    veg_green_gamma=1.3,
-    veg_blue_gamma=1.13,
-    veg_sigmoidal_contrast=8.3,
-    veg_sigmoidal_bias=0.4,
-    veg_saturation=1.3,
+    cc_desert=False,
+    des_ndvi_min=-0.1,
+    des_ndvi_max=0.1,
+    des_red_gamma=1.43,
+    des_green_gamma=1.3,
+    des_blue_gamma=1.13,
+    des_sigmoidal_contrast=8.3,
+    des_sigmoidal_bias=0.4,
+    des_saturation=1.3,
     sharpen_output=False,
     **kwargs
 ):
     """Extract color-corrected, cloud-free image from Sentinel-2 mosaic."""
 
-    # (1) read mosaic
+    # read mosaic
     with mp.open("mosaic") as mosaic:
         try:
             raw = mosaic.read(indexes=bands).astype(np.int16)
@@ -49,14 +50,38 @@ def execute(
 
         red, green, blue, nir = raw
         water_mask = np.where(
-            (green - nir) / (green + nir) < ndwi_threshold,
+            (green - nir) / (green + nir) > ndwi_threshold,
             True,
             False
         ).astype("bool")
 
-    # (2) apply color correction
+    # scale down RGB bands to 8 bit and avoid nodata through interpolation
+    rgb = np.clip(raw[:3] / 16, 1, 255).astype(np.uint8)
+
+    # sharpen image and smooth out water areas
+    if smooth_water and water_mask.any():
+        logger.debug("smooth water areas")
+        rgb = np.where(
+            water_mask,
+            image_filters.smooth_more(rgb),
+            rgb
+        )
+
+    # sharpen output image
+    if sharpen_output:
+        logger.debug("sharpen output")
+        if smooth_water and water_mask.any():
+            rgb = np.where(
+                water_mask,
+                rgb,
+                image_filters.sharpen(rgb)
+            )
+        else:
+            rgb = image_filters.sharpen(rgb)
+
+    # apply color correction
     corrected = color_correct(
-        rgb=raw[:3],
+        rgb=rgb,
         red_gamma=red_gamma,
         green_gamma=green_gamma,
         blue_gamma=blue_gamma,
@@ -65,54 +90,35 @@ def execute(
         saturation=saturation
     )
 
-    # (3) apply color correction to vegetated areas and merge with corrected
-    if cc_vegetation:
+    # apply color correction to vegetated areas and merge with corrected
+    if cc_desert:
         if len(bands) != 4:
-            raise ValueError("vegetation color correction only works with RGBNir bands")
+            raise ValueError("desert color correction only works with RGBNir bands")
 
         red, green, blue, nir = raw
-        corrected = np.where(
-            # vegetation mask
-            np.where(
-                (nir - red) / (nir + red) > ndvi_threshold,
-                True,
-                False
-            ).astype("bool"),
-            # color correctioin using vegetation values
-            color_correct(
-                rgb=raw[:3],
-                red_gamma=veg_red_gamma,
-                green_gamma=veg_green_gamma,
-                blue_gamma=veg_blue_gamma,
-                sigmoidal_contrast=veg_sigmoidal_contrast,
-                sigmoidal_bias=veg_sigmoidal_bias,
-                saturation=veg_saturation
-            ),
-            corrected
-        )
-
-    # (4) sharpen image and smooth out water areas
-    if smooth_water and water_mask.any():
-        logger.debug("smooth water areas")
-        corrected = np.where(
-            water_mask,
-            image_filters.smooth(corrected),
-            corrected
-        )
-
-    # (5) sharpen output image
-    if sharpen_output:
-        logger.debug("sharpen output")
-        if smooth_water and water_mask.any():
+        ndvi = (nir - red) / (nir + red)
+        desert_mask = np.where(
+            (ndvi > des_ndvi_min) & (ndvi < des_ndvi_max), # & ~water_mask,
+            True,
+            False
+        ).astype("bool")
+        if desert_mask.any():
+            logger.debug("apply other color correction for desert areas")
             corrected = np.where(
-                water_mask,
-                corrected,
-                image_filters.sharpen(corrected)
+                desert_mask,
+                color_correct(
+                    rgb=rgb,
+                    red_gamma=des_red_gamma,
+                    green_gamma=des_green_gamma,
+                    blue_gamma=des_blue_gamma,
+                    sigmoidal_contrast=des_sigmoidal_contrast,
+                    sigmoidal_bias=des_sigmoidal_bias,
+                    saturation=des_saturation
+                ),
+                corrected
             )
-        else:
-            corrected = image_filters.sharpen(corrected)
 
-    # (6) use original nodata mask and return
+    # use original nodata mask and return
     return np.where(nodata_mask, mp.params["output"].nodata, corrected)
 
 
@@ -128,7 +134,7 @@ def color_correct(
     """
     Return color corrected 8 bit RGB array from 8 bit input RGB.
     """
-    red, green, blue = np.clip(rgb / 16, 0, 255) / 255.
+    red, green, blue = np.clip(rgb, 0, 255) / 255.
     # color correction using rio-color
     return np.clip(
         operations.saturation(         # add saturation
