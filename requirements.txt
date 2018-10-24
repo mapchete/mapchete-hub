@@ -6,10 +6,12 @@ Flask-Celery-py3
 flask_restful
 geojson
 mapchete>=0.21
+Pillow
 pysqlite3
+pyyaml
+rio-color
 scipy
 slacker
 shapely
 spatialite
 tqdm
-pyyaml
