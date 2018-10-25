@@ -2,6 +2,8 @@ import numpy as np
 from rasterio.plot import reshape_as_raster, reshape_as_image
 from PIL import Image, ImageFilter
 
+from mapchete.log import user_process_logger
+logger = user_process_logger(__name__)
 
 FILTERS = {
     "blur": ImageFilter.BLUR,
@@ -16,23 +18,40 @@ FILTERS = {
     "smooth_more": ImageFilter.SMOOTH_MORE,
 }
 
+FILTER_FUNCTIONS = {
+    "unsharp_mask": ImageFilter.UnsharpMask,
+    "median": ImageFilter.MedianFilter,
+    "gaussian_blur": ImageFilter.GaussianBlur
+}
 
-def _apply_filter(arr, img_filter):
+
+def _apply_filter(arr, img_filter, **kwargs):
     if arr.dtype != "uint8":
         raise TypeError("input array type must be uint8")
     if arr.ndim != 3:
         raise TypeError("input array must be 3-dimensional")
     if arr.shape[0] != 3:
         raise TypeError("input array must have exactly three bands")
-    return np.clip(
-        reshape_as_raster(
-            Image.fromarray(
-                reshape_as_image(arr)
-            ).filter(FILTERS[img_filter])
-        ),
-        1,
-        255
-    ).astype("uint8")
+    if img_filter in FILTERS:
+        return np.clip(
+            reshape_as_raster(
+                Image.fromarray(
+                    reshape_as_image(arr)
+                ).filter(FILTERS[img_filter])
+            ),
+            1,
+            255
+        ).astype("uint8")
+    elif img_filter in FILTER_FUNCTIONS:
+        return np.clip(
+            reshape_as_raster(
+                Image.fromarray(
+                    reshape_as_image(arr)
+                ).filter(FILTER_FUNCTIONS[img_filter](**kwargs))
+            ),
+            1,
+            255
+        ).astype("uint8")
 
 
 def blur(arr):
@@ -183,3 +202,51 @@ def smooth_more(arr):
     NumPy array
     """
     return _apply_filter(arr, "smooth_more")
+
+
+def unsharp_mask(arr, radius=2, percent=150, threshold=3):
+    """
+    Apply PIL UnsharpMask filter to array and return.
+
+    Parameters
+    ----------
+    arr : 3-dimensional uint8 NumPy array
+
+    Returns
+    -------
+    NumPy array
+    """
+    return _apply_filter(
+        arr, "unsharp_mask", radius=radius, percent=percent, threshold=threshold
+    )
+
+
+def median(arr, size=3):
+    """
+    Apply PIL MedianFilter to array and return.
+
+    Parameters
+    ----------
+    arr : 3-dimensional uint8 NumPy array
+
+    Returns
+    -------
+    NumPy array
+    """
+    return _apply_filter(arr, "median", size=size)
+
+
+def gaussian_blur(arr, radius=2):
+    """
+    Apply PIL GaussianBlur to array and return.
+
+    Parameters
+    ----------
+    arr : 3-dimensional uint8 NumPy array
+
+    Returns
+    -------
+    NumPy array
+    """
+    return _apply_filter(arr, "gaussian_blur", radius=radius)
+
