@@ -25,6 +25,7 @@ def execute(
     cc_desert=False,
     des_ndvi_min=-0.1,
     des_ndvi_max=0.1,
+    des_ndwi_threshold=0.,
     des_red_gamma=1.43,
     des_green_gamma=1.3,
     des_blue_gamma=1.13,
@@ -58,23 +59,26 @@ def execute(
     # scale down RGB bands to 8 bit and avoid nodata through interpolation
     rgb = np.clip(raw[:3] / 16, 1, 255).astype(np.uint8)
 
-    # sharpen image and smooth out water areas
+    # smooth out water areas
     if smooth_water and water_mask.any():
         logger.debug("smooth water areas")
         rgb = np.where(
             water_mask,
-            image_filters.smooth_more(rgb),
+            image_filters.gaussian_blur(image_filters.smooth(rgb), radius=1),
             rgb
         )
 
     # sharpen output image
     if sharpen_output:
-        logger.debug("sharpen output")
-        if smooth_water and water_mask.any():
+        if smooth_water and not water_mask.all():
+            logger.debug("sharpen output")
             rgb = np.where(
                 water_mask,
                 rgb,
-                image_filters.sharpen(rgb)
+                #image_filters.sharpen(rgb)
+                image_filters.unsharp_mask(
+                    rgb, radius=2, percent=80, threshold=2
+                )
             )
         else:
             rgb = image_filters.sharpen(rgb)
@@ -93,12 +97,19 @@ def execute(
     # apply color correction to vegetated areas and merge with corrected
     if cc_desert:
         if len(bands) != 4:
-            raise ValueError("desert color correction only works with RGBNir bands")
+            raise ValueError(
+                "desert color correction only works with RGBNir bands"
+            )
 
         red, green, blue, nir = raw
         ndvi = (nir - red) / (nir + red)
+        ndwi = (green - nir) / (green + nir)
         desert_mask = np.where(
-            (ndvi > des_ndvi_min) & (ndvi < des_ndvi_max), # & ~water_mask,
+            (
+                (ndvi > des_ndvi_min) &
+                (ndvi < des_ndvi_max) &
+                (ndwi < des_ndwi_threshold)
+            ),
             True,
             False
         ).astype("bool")
