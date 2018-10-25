@@ -1,0 +1,80 @@
+version: "3.6"
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3
+    ports:
+      - 5672:5672
+    networks:
+      - backend
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    environment:
+      - RABBITMQ_DEFAULT_USER=s2processor
+      - RABBITMQ_DEFAULT_PASS=REDACTED_API_KEY
+
+  monitor:
+    image: registry.gitlab.eox.at/maps/mapchete_hub/base_app:latest
+    networks:
+      - backend
+    depends_on:
+      - rabbitmq
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    env_file: server.env
+    environment:
+      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@@rabbitmq:5672//
+      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - SUBCOMMAND=monitor
+      - LOGFILE=/mnt/data/log/monitor.log
+    volumes:
+      - "/mnt/data:/mnt/data"
+
+  server:
+    image: registry.gitlab.eox.at/maps/mapchete_hub/base_app:latest
+    networks:
+      - backend
+    depends_on:
+      - rabbitmq
+      - monitor
+    ports:
+      - 5000
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    env_file: server.env
+    environment:
+      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - SUBCOMMAND=devserver
+      - LOGFILE=/mnt/data/log/server.log
+    volumes:
+      - "/mnt/data:/mnt/data"
+
+  zone_worker:
+    image: registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
+    networks:
+      - backend
+    depends_on:
+      - rabbitmq
+      - server
+      - monitor
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    env_file: zone_worker.env
+    environment:
+      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+    volumes:
+      - "/mnt/data:/mnt/data"
+
+networks:
+  backend:
