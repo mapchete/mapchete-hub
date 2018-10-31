@@ -28,12 +28,13 @@ services:
         condition: on-failure
     env_file: server.env
     environment:
-      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@@rabbitmq:5672//
-      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
       - SUBCOMMAND=monitor
-      - LOGFILE=/mnt/data/log/monitor.log
+      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
     volumes:
-      - "/mnt/data:/mnt/data"
+      - type: volume
+        source: status_data
+        target: /mnt/data
 
   server:
     image: registry.gitlab.eox.at/maps/mapchete_hub/base_app:latest
@@ -50,12 +51,13 @@ services:
         condition: on-failure
     env_file: server.env
     environment:
+      - SUBCOMMAND=devserver
       - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
       - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
-      - SUBCOMMAND=devserver
-      - LOGFILE=/mnt/data/log/server.log
     volumes:
-      - "/mnt/data:/mnt/data"
+      - type: volume
+        source: status_data
+        target: /mnt/data/
 
   zone_worker:
     image: registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
@@ -74,7 +76,13 @@ services:
       - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
       - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
     volumes:
-      - "/mnt/data:/mnt/data"
+      - type: volume
+        source: worker_data
+        target: /mnt/data/
 
 networks:
   backend:
+
+volumes:
+  status_data:
+  worker_data:
