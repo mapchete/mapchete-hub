@@ -2,7 +2,8 @@ FROM ubuntu:16.04
 MAINTAINER Joachim Ungar
 
 ENV ROOTDIR /usr/local
-ENV RASTERIO_VERSION 1.0.2
+ENV RASTERIO_VERSION=1.0.9
+ENV FIONA_VERSION=1.8.rc1
 # strange fix for remote rasters
 ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 # set lang variables & allow celery to run as root
@@ -51,20 +52,20 @@ RUN chmod 600 /root/.ssh/id_rsa \
 
 # install NumPy & rasterio
 ##########################
-RUN pip install --no-binary :all: numpy \
-  && pip install rasterio==${RASTERIO_VERSION} \
+RUN pip install cython numpy boto3==1.7.32 --no-binary numpy \
+  && pip install "rasterio>=$RASTERIO_VERSION" "fiona>=$FIONA_VERSION" --no-binary :all: \
   && pip install --upgrade setuptools \
   && git clone https://github.com/ungarj/mapchete.git \
   && cd mapchete \
   && pip install -r requirements.txt \
   && python setup.py develop \
-  && cd .. \
+  && cd $ROOTDIR/src \
   && git clone git@gitlab.eox.at:maps/mapchete_hub.git \
   && cd mapchete_hub  \
-  && pip install -r requirements.txt \
+  && pip install -r requirements.txt -r requirements_test.txt \
   && python setup.py install \
-  # && python setup.py test \
-  && cd .. \
+  && cd $ROOTDIR/src \
+  && python setup.py test \
   && rm /root/.ssh/id_rsa \
   && cp -R $ROOTDIR/src/mapchete_hub/processes /mnt/
 
