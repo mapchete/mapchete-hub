@@ -41,7 +41,8 @@ RUN apt -y update \
     libspatialite7 \
     libspatialite-dev \
     libsqlite3-mod-spatialite \
-    language-pack-de
+    language-pack-de \
+  && rm -rf /var/lib/apt/lists/*
 
 # get deploy key for gitlab.eox.at
 ##################################
@@ -65,9 +66,7 @@ RUN pip install cython numpy boto3==1.7.32 --no-binary numpy \
   && pip install -r requirements.txt -r requirements_test.txt \
   && python setup.py install \
   && cd $ROOTDIR/src \
-  && python setup.py test \
-  && rm /root/.ssh/id_rsa \
-  && cp -R $ROOTDIR/src/mapchete_hub/processes /mnt/
+  && rm /root/.ssh/id_rsa
 
 WORKDIR $ROOTDIR/src/mapchete_hub/
 ENTRYPOINT ./manage.py $SUBCOMMAND --loglevel=$LOGLEVEL --logfile=$LOGFILE
