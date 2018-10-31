@@ -12,7 +12,7 @@ input:
         zoom>=10: dummy1.tif
     file2: dummy2.tif
 output:
-    path: test
+    path: tmp
     format: GTiff
     dtype: float32
     bands: 1
@@ -33,7 +33,7 @@ mhub_worker: zone_worker
 mhub_announce_on_slack: true
 mhub_next_process:
     mhub_worker: preview_worker
-    process_file: example_process.py
+    process: example_process.py
     bounds: [3.0, 1.0, 4.0, 2.0]
     zoom_levels:
         min: 7
