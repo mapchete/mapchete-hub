@@ -191,7 +191,6 @@ RUN pip install cython numpy boto3==1.7.32 --no-binary numpy \
   && git clone git@gitlab.eox.at:maps/orgonite.git \
   && cd orgonite \
   && pip install -r requirements.txt \
-  && git checkout L1C-masks_final \
   && python setup.py build_ext --inplace \
   && python setup.py develop \
   && python setup.py test \
