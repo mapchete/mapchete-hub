@@ -204,7 +204,7 @@ def execute(
         clipped = mp.clip(
             np.where(nodata_mask, mp.params["output"].nodata, corrected),
             clip_geom,
-            clip_pixelbuffer=clip_buffer,
+            clip_buffer=clip_pixelbuffer,
             inverted=True
         )
         return np.where(clipped.mask, clipped, mp.params["output"].nodata)
