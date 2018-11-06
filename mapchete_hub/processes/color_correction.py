@@ -193,12 +193,17 @@ def execute(
                 corrected
             )
 
-    # apply original nodata mask and clip
-    return mp.clip(
-        np.where(nodata_mask, mp.params["output"].nodata, corrected),
-        clip_geom,
-        clip_buffer=clip_buffer
-    )
+    if clip_geom:
+        # apply original nodata mask and clip
+        clipped = mp.clip(
+            np.where(nodata_mask, mp.params["output"].nodata, corrected),
+            clip_geom,
+            clip_buffer=clip_buffer,
+            inverted=True
+        )
+        return np.where(clipped.mask, clipped, mp.params["output"].nodata)
+    else:
+        return  np.where(nodata_mask, mp.params["output"].nodata, corrected)
 
 
 def color_correct(
