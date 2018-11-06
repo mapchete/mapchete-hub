@@ -8,7 +8,7 @@ except ImportError:
 try:
     from mapchete_satellite.utils import read_leveled_cubes
 except ImportError:
-    from mapchete_s2aws.utils import read_min_cubes as read_leveled_cubes
+    from mapchete_s2aws import read_min_cubes as read_leveled_cubes
 from orgonite import cloudless
 
 from mapchete_hub import image_filters
