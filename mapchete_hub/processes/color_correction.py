@@ -1,5 +1,5 @@
 from mapchete.log import user_process_logger
-from mapchete_s2aws.exceptions import EmptyStackException
+from mapchete_satellite.exceptions import EmptyStackException
 import numpy as np
 from rio_color import operations
 
@@ -31,16 +31,18 @@ def execute(
     des_sigmoidal_bias=0.4,
     des_saturation=1.3,
     sharpen_output=False,
-    clip_buffer=0,
+    clip_pixelbuffer=0,
     **kwargs
 ):
     """
-    Extract color-corrected, cloud-free image from Sentinel-2 mosaic.
+    Extract color-corrected image from Sentinel-2 mosaic.
 
     Inputs:
     -------
-    mosaic : 3 or 4 band 12bit data
-    clip : vector data used to clip output
+    mosaic
+        3 or 4 band 12bit data
+    clip (optional)
+        vector data used to clip output
 
     Parameters
     ----------
@@ -89,7 +91,8 @@ def execute(
 
     Output
     ------
-    8bit RGB
+    np.ndarray
+        8bit RGB
     """
     # read clip geometry
     if "clip" in mp.params["input"]:
@@ -198,12 +201,12 @@ def execute(
         clipped = mp.clip(
             np.where(nodata_mask, mp.params["output"].nodata, corrected),
             clip_geom,
-            clip_buffer=clip_buffer,
+            clip_pixelbuffer=clip_pixelbuffer,
             inverted=True
         )
         return np.where(clipped.mask, clipped, mp.params["output"].nodata)
     else:
-        return  np.where(nodata_mask, mp.params["output"].nodata, corrected)
+        return np.where(nodata_mask, mp.params["output"].nodata, corrected)
 
 
 def color_correct(
@@ -221,8 +224,8 @@ def color_correct(
     red, green, blue = np.clip(rgb, 0, 255) / 255.
     # color correction using rio-color
     return np.clip(
-        operations.saturation(         # add saturation
-            operations.sigmoidal(      # add sigmoidal contrast & bias
+        operations.saturation(          # add saturation
+            operations.sigmoidal(       # add sigmoidal contrast & bias
                 np.stack([              # apply gamma correction to each band
                     operations.gamma(red, red_gamma),
                     operations.gamma(green, green_gamma),

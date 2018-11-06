@@ -1,9 +1,16 @@
 import numpy as np
-from rasterio.plot import reshape_as_raster, reshape_as_image
 from PIL import Image, ImageFilter
+from rasterio.plot import reshape_as_raster, reshape_as_image
+from scipy import ndimage
 
 from mapchete.log import user_process_logger
+
+
 logger = user_process_logger(__name__)
+
+
+# filters for 8 bit data:
+#########################
 
 FILTERS = {
     "blur": ImageFilter.BLUR,
@@ -250,3 +257,57 @@ def gaussian_blur(arr, radius=2):
     """
     return _apply_filter(arr, "gaussian_blur", radius=radius)
 
+
+# filters for 16 bit data:
+##########################
+
+
+def sharpen_16bit(src):
+    # kernel_3x3_highpass = np.array([
+    #     0, -1, 0,
+    #     -1, 5, -1,
+    #     0, -1, 0
+    # ]).reshape((3, 3))
+    # kernel_3x3_highpass = np.array([
+    #     0, -1/4, 0,
+    #     -1/4, 2, -1/4,
+    #     0, -1/4, 0
+    # ]).reshape((3, 3))
+    # kernel_5x5_highpass = np.array([
+    #     0, -1, -1, -1, 0,
+    #     -1, -2, -4, 2, -1,
+    #     -1, -4, 13, -4, -1,
+    #     -1, 2, -4, 2, -1,
+    #     0, -1, -1, -1, 0
+    # ]).reshape((5, 5))
+    # kernel_mean = np.array([
+    #     1, 1, 1,
+    #     1, 1, 1,
+    #     1, 1, 1
+    # ]).reshape((3, 3))
+    # kernel = np.array([
+    #     [1, 1, 1],
+    #     [1, 1, 0],
+    #     [1, 0, 0]
+    # ]).reshape((3, 3))
+    # kernel = np.array([
+    #     0, -1, 0,
+    #     -1, 8, -1,
+    #     0, -1, 0
+    # ]).reshape((3, 3))
+    # Various High Pass Filters
+    # b = ndimage.minimum_filter(b, 3)
+    # b = ndimage.percentile_filter(b, 50, 3)
+    # imgsharp = ndimage.convolve(b_smoothed, kernel_3x3_highpass, mode='nearest')
+    # imgsharp = ndimage.median_filter(imgsharp, 2)
+    # imgsharp = reshape_as_raster(np.asarray(imgsharp))
+    # Official SciPy unsharpen mask filter not working
+
+    # Unshapen Mask Filter, working version as the one above is not working
+    return np.stack([
+        ndimage.percentile_filter(
+            b + (b - ndimage.percentile_filter(b, 35, 4, mode='nearest')),
+            45, 2, mode='nearest'
+        )
+        for b in src
+    ]).astype(np.uint16)

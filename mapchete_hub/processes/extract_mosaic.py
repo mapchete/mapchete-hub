@@ -1,12 +1,11 @@
-"""Template to extract mosaics by various methods."""
 import json
 from mapchete import Timer
 from mapchete.log import user_process_logger
-from mapchete_s2aws import read_min_cubes
-from mapchete_s2aws.exceptions import EmptyStackException
-import numpy as np
+from mapchete_satellite.exceptions import EmptyStackException
+from mapchete_satellite.utils import read_leveled_cubes
 from orgonite import cloudless
-from scipy import ndimage
+
+from mapchete_hub import image_filters
 
 
 logger = user_process_logger("extract_mosaic")
@@ -16,12 +15,13 @@ def execute(
     mp,
     bands=None,
     resampling="cubic_spline",
+    stack_target_height=10,
     mask_clouds=True,
     cloudmask_types="all",
     mask_white_areas=False,
     read_threads=1,
     add_indexes=False,
-    method="brighntess",
+    method="brightness",
     considered_bands=4,
     average_over=3,
     simulation_value=1.25,
@@ -37,28 +37,69 @@ def execute(
     **kwargs
 ):
     """
-    This process requires Sentinel-2 bands 4, 3, 2 and 8 (in exactly this order) and
-    returns 6 bands:
-    - red
-    - green
-    - blue
-    - nir
-    - slice index
-    - NDVI
+    Extract cloudless mosaic from time series.
 
-    Required mapchete parameters:
+    Inputs:
+    -------
+    primary
+        S2AWS or S2Mundi time series cube
+    secondary (optional)
+        S2AWS or S2Mundi time series cube
 
-    bands: [4, 3, 2, 8]
-    resampling: <resampling_method>
-    mask_clouds: true or false
-    mask_white_areas: true or false
-    read_threads: <int>
-    method: brightness or ndvi
-        brightness:
-            average_over: 0, 3 or 5
-        ndvi:
-            min_ndvi: float between -1 and 1
-            max_ndvi: float between -1 and 1
+
+    Parameters:
+    -----------
+    bands : list
+        List of band indexes. Depending on extraction method, at least RGB or RGBNir bands
+        are required.
+    resampling : bool
+        Resampling method used for input data. (default: "cubic_spline")
+    stack_target_height : int
+        Read until all pixels in stack have height n. (default: 10)
+    mask_clouds : bool
+        Mask out clouds from input data. (default: True)
+    cloudmask_types : string
+        Use certain cloud mask types only. (default: "all")
+    mask_white_areas : bool
+        Mask out white areas. (default: False)
+    read_threads : int
+        Use threads to read input slices concurrently. (default: 1)
+    add_indexes : bool
+        Add slice indexes to output. (default: False)
+    method : string
+        Method to use when extracting mosaic. (default: "brightness")
+        Available methods:
+            - brightness
+            - ndvi_linreg
+            - weighted_avg
+            - max_ndvi
+    considered_bands : bool
+        Use first n bands to determine pixel brightness. (brightness method; default: 4)
+    average_over : int
+        Average over n pixels on time stack. (brightness method; default: 3)
+    simulation_value : float
+        NDVI simulation value. (ndvi_linreg method; default: 1.25)
+    value_range_min : int
+        Value range minimum. (ndvi_linreg and weighted_avg methods; default: 1500)
+    value_range_max : int
+        Value range minimum. (ndvi_linreg and weighted_avg methods; default: 1800)
+    value_range_weight : int
+        Value range weight. (ndvi_linreg and weighted_avg methods; default: 3)
+    core_value_range_min : int
+        Core value range minimum. (ndvi_linreg and weighted_avg methods; default: 700)
+    core_value_range_max : int
+        Core value range minimum. (ndvi_linreg and weighted_avg methods; default: 1500)
+    core_value_range_weight : int
+        Core value range weight. (ndvi_linreg and weighted_avg methods; default: 8)
+    input_values_threshold_multiplier : int
+        Threshold multiplier. (weighted_avg method; default: 10)
+    sharpen_output : bool
+        Apply sharpening filter on output. (default: True)
+
+    Output:
+    -------
+    np.ndarray
+        input bands + optional index band
     """
     if method not in ["brightness", "ndvi_linreg", "weighted_avg", "max_ndvi"]:
         raise ValueError("invalid extraction method given")
@@ -66,6 +107,12 @@ def execute(
         raise ValueError(
             "add_indexes option only works with 'brigtness' extraction method"
         )
+    if min_stack_height != 10:
+        raise DeprecationWarning(
+            "min_stack_height is deprecated and will be replaced by stack_target_height"
+        )
+        if stack_target_height == 10:
+            stack_target_height = min_stack_height
 
     # read stack
     with Timer() as t:
@@ -81,7 +128,7 @@ def execute(
             cubes = (primary, )
             datastrip_ids = (primary.sorted_datastrip_ids("time_difference"), )
         try:
-            stack = read_min_cubes(
+            stack = read_leveled_cubes(
                 cubes,
                 datastrip_ids,
                 indexes=bands,
@@ -139,7 +186,7 @@ def execute(
 
     if sharpen_output:
         logger.debug("sharpen output")
-        mosaic = image_sharpening(mosaic)
+        mosaic = image_filters.sharpen_16bit(mosaic)
 
     if add_indexes:
         logger.debug("generate tags")
@@ -155,41 +202,3 @@ def execute(
         return mosaic, {'datasets': json.dumps(tags)}
     else:
         return mosaic
-
-
-def get_stack_height(stack):
-    return np.sum(np.stack([i.all(axis=0) for i in stack]), axis=0)
-
-
-def image_sharpening(src):
-    """
-    kernel_3x3_highpass = np.array([0, -1, 0, -1, 5, -1, 0, -1, 0]).reshape((3, 3))
-    kernel_3x3_highpass = np.array([0, -1/4, 0, -1/4, 2, -1/4, 0, -1/4, 0]).reshape((3, 3))
-    kernel_5x5_highpass = np.array([0, -1, -1, -1, 0, -1, -2, -4, 2, -1, -1, -4, 13, -4, -1, -1, 2, -4, 2, -1, 0, -1, -1, -1, 0]).reshape((5, 5))
-
-    kernel_mean = np.array([1, 1, 1, 1, 1, 1, 1, 1, 1]).reshape((3, 3))
-    kernel = np.array([[1, 1, 1], [1, 1, 0], [1, 0, 0]]).reshape((3, 3))
-    kernel = np.array([0, -1, 0, -1, 8, -1, 0, -1, 0]).reshape((3, 3))
-    """
-    stack = None
-    for b in src:
-        # Various High Pass Filters
-        # b = ndimage.minimum_filter(b, 3)
-        # b = ndimage.percentile_filter(b, 50, 3)
-        # imgsharp = ndimage.convolve(b_smoothed, kernel_3x3_highpass, mode='nearest')
-        # imgsharp = ndimage.median_filter(imgsharp, 2)
-        # imgsharp = reshape_as_raster(np.asarray(imgsharp))
-        # Official SciPy unsharpen mask filter not working
-
-        # Unshapen Mask Filter, working version as the one above is not working
-        b_smoothed = ndimage.percentile_filter(b, 35, 4, mode='nearest')
-        mask = b - b_smoothed
-        imgsharp = b + mask
-        imgsharp = ndimage.percentile_filter(imgsharp, 45, 2, mode='nearest')
-
-        if stack is None:
-            stack = np.expand_dims(imgsharp, axis=0).astype(np.uint16)
-        else:
-            target = np.expand_dims(imgsharp, axis=0).astype(np.uint16)
-            stack = np.append(stack, target, axis=0)
-    return stack
