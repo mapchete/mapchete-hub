@@ -1,8 +1,14 @@
 import json
 from mapchete import Timer
 from mapchete.log import user_process_logger
-from mapchete_satellite.exceptions import EmptyStackException
-from mapchete_satellite.utils import read_leveled_cubes
+try:
+    from mapchete_satellite.exceptions import EmptyStackException
+except ImportError:
+    from mapchete_s2aws.exceptions import EmptyStackException
+try:
+    from mapchete_satellite.utils import read_leveled_cubes
+except ImportError:
+    from mapchete_s2aws.utils import read_min_cubes as read_leveled_cubes
 from orgonite import cloudless
 
 from mapchete_hub import image_filters

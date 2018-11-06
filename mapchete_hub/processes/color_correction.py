@@ -1,5 +1,8 @@
 from mapchete.log import user_process_logger
-from mapchete_satellite.exceptions import EmptyStackException
+try:
+    from mapchete_satellite.exceptions import EmptyStackException
+except ImportError:
+    from mapchete_s2aws.exceptions import EmptyStackException
 import numpy as np
 from rio_color import operations
 
