@@ -9,6 +9,7 @@ try:
     from mapchete_satellite.utils import read_leveled_cubes
 except ImportError:
     from mapchete_s2aws import read_min_cubes as read_leveled_cubes
+import numpy as np
 from orgonite import cloudless
 
 from mapchete_hub import image_filters
@@ -40,6 +41,7 @@ def execute(
     min_stack_height=10,
     input_values_threshold_multiplier=10,
     sharpen_output=True,
+    clip_pixelbuffer=0,
     **kwargs
 ):
     """
@@ -120,6 +122,15 @@ def execute(
         if stack_target_height == 10:
             stack_target_height = min_stack_height
 
+    # read clip geometry
+    if "clip" in mp.params["input"]:
+        clip_geom = mp.open("clip").read()
+        if not clip_geom:
+            logger.debug("no clip data over tile")
+            return "empty"
+    else:
+        clip_geom = []
+
     # read stack
     with Timer() as t:
         primary = mp.open("primary")
@@ -190,10 +201,22 @@ def execute(
     logger.debug("extracted in %s", t)
     logger.debug("mosaic shape: %s", mosaic.shape)
 
+    # optional sharpen
     if sharpen_output:
         logger.debug("sharpen output")
         mosaic = image_filters.sharpen_16bit(mosaic)
 
+    # optional clip
+    if clip_geom:
+        clipped = mp.clip(
+            mosaic,
+            clip_geom,
+            clip_buffer=clip_pixelbuffer,
+            inverted=True
+        )
+        mosaic = np.where(clipped.mask, clipped, mp.params["output"].nodata)
+
+    # optional index band
     if add_indexes:
         logger.debug("generate tags")
         tags = {
