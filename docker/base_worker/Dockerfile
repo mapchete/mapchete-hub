@@ -201,6 +201,7 @@ RUN pip install cython numpy boto3==1.7.32 --no-binary numpy \
   && pip install GDAL==$GDAL_VERSION --global-option=build_ext --global-option="-I/usr/include/gdal" \
   && pip install -r requirements.txt \
   && pip install -r requirements_aws.txt \
+  && pip install -r requirements_mundi.txt \
   && python setup.py develop \
   && python setup.py test \
   && cd $ROOTDIR/src \
