@@ -196,16 +196,11 @@ RUN pip install cython numpy boto3==1.7.32 --no-binary numpy \
   && python setup.py develop \
   && python setup.py test \
   && cd $ROOTDIR/src \
-  && git clone git@gitlab.eox.at:maps/mapchete_s2aws.git \
-  && cd mapchete_s2aws \
+  && git clone git@gitlab.eox.at:maps/mapchete_satellite.git \
+  && cd mapchete_satellite \
   && pip install GDAL==$GDAL_VERSION --global-option=build_ext --global-option="-I/usr/include/gdal" \
   && pip install -r requirements.txt \
-  && python setup.py develop \
-  && python setup.py test \
-  && cd $ROOTDIR/src \
-  && git clone https://github.com/ungarj/mapchete-s3.git \
-  && cd mapchete-s3 \
-  && pip install -r requirements.txt \
+  && pip install -r requirements_aws.txt \
   && python setup.py develop \
   && python setup.py test \
   && cd $ROOTDIR/src \
