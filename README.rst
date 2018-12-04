@@ -273,7 +273,7 @@ Update all workers
 .. code-block:: shell
 
 parallel -k --no-notice scp -i ~/.ssh/eox_specops.pem update_worker.sh ubuntu@{}:~ < worker_ips.txt
-parallel -k --no-notice ssh -A -i ~/.ssh/eox_specops.pem ubuntu@{} -t "./update_worker.sh" < worker_ips.txt
+parallel -k --no-notice ssh -oStrictHostKeyChecking=no -A -i ~/.ssh/eox_specops.pem ubuntu@{} -t "./update_worker.sh" < worker_ips.txt
 
 
 -------
