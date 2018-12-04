@@ -63,7 +63,7 @@ MAP
       END
     END
   END
-LAYER
+  LAYER
     NAME rgb_z8
     MINSCALEDENOM 750000
     STATUS ON
