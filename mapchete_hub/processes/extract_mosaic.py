@@ -53,7 +53,8 @@ def execute(
         S2AWS or S2Mundi time series cube
     secondary (optional)
         S2AWS or S2Mundi time series cube
-
+    clip (optional)
+        vector data used to clip output
 
     Parameters:
     -----------
