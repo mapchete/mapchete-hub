@@ -9,6 +9,7 @@ sudo chmod g+rwx "/home/$USER/.docker" -R
 # make dirs
 sudo mkdir -p /mnt/data/log
 sudo mkdir -p /mnt/data/indexes
+sudo mkdir -p /mnt/data/mapdata
 sudo mkdir -p /mnt/data/map/html
 sudo chown -R ubuntu:ubuntu /mnt/data
 # TODO: copy mapfile into /mnt/data/map and index.html into /mnt/data/map/html
@@ -39,6 +40,7 @@ docker run \
   -v /mnt/data/map/html:/var/www/html \
   -v /mnt/data/map:/map \
   -v /mnt/data/indexes:/indexes \
+  -v /mnt/data/mapdata:/mapdata \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -d \
