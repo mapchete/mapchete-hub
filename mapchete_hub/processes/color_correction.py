@@ -114,6 +114,9 @@ def execute(
         except EmptyStackException:
             logger.debug("no mosaic data over tile")
             return "empty"
+        if mosaic.is_empty:
+            logger.debug("no mosaic data over tile")
+            return "empty"
 
     if smooth_water:
         if len(bands) != 4:
