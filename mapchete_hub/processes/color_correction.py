@@ -108,14 +108,17 @@ def execute(
 
     # read mosaic
     with mp.open("mosaic") as mosaic:
+        if mosaic.is_empty():
+            logger.debug("mosaic empty")
+            return "empty"
         try:
             raw = mosaic.read(indexes=bands).astype(np.int16)
             nodata_mask = raw[0].mask
         except EmptyStackException:
-            logger.debug("no mosaic data over tile")
+            logger.debug("mosaic empty: EmptyStackException")
             return "empty"
-        if mosaic.is_empty:
-            logger.debug("no mosaic data over tile")
+        if nodata_mask.all():
+            logger.debug("mosaic empty: all masked")
             return "empty"
 
     if smooth_water:
