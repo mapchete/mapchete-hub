@@ -15,6 +15,11 @@ logger = user_process_logger("color_correction")
 def execute(
     mp,
     bands=[1, 2, 3, 4],
+    td_resampling="nearest",
+    td_matching_method="gdal",
+    td_matching_max_zoom=None,
+    td_matching_precision=8,
+    td_fallback_to_higher_zoom=False,
     smooth_water=True,
     ndwi_threshold=0.2,
     red_gamma=1.43,
@@ -51,6 +56,26 @@ def execute(
     ----------
     bands : list
         List of band indexes.
+    td_resampling : str (default: 'nearest')
+        Resampling used when reading from mosaic.
+    td_matching_method : str ('gdal' or 'min') (default: 'gdal')
+        gdal: Uses GDAL's standard method. Here, the target resolution is
+            calculated by averaging the extent's pixel sizes over both x and y
+            axes. This approach returns a zoom level which may not have the
+            best quality but will speed up reading significantly.
+        min: Returns the zoom level which matches the minimum resolution of the
+            extents four corner pixels. This approach returns the zoom level
+            with the best possible quality but with low performance. If the
+            tile extent is outside of the destination pyramid, a
+            TopologicalError will be raised.
+    td_matching_max_zoom : int (optional, default: None)
+        If set, it will prevent reading from zoom levels above the maximum.
+    td_matching_precision : int (default: 8)
+        Round resolutions to n digits before comparing.
+    td_fallback_to_higher_zoom : bool (default: False)
+        In case no data is found at zoom level, try to read data from higher
+        zoom levels. Enabling this setting can lead to many IO requests in
+        areas with no data.
     clip_pixelbuffer : int
         Use pixelbuffer when clipping output by geometry. (default: 0)
     smooth_water : bool
@@ -107,12 +132,20 @@ def execute(
         clip_geom = []
 
     # read mosaic
-    with mp.open("mosaic") as mosaic:
+    with mp.open(
+        "mosaic",
+        matching_method=td_matching_method,
+        matching_max_zoom=td_matching_max_zoom,
+        matching_precision=td_matching_precision,
+        fallback_to_higher_zoom=td_fallback_to_higher_zoom,
+    ) as mosaic:
         if mosaic.is_empty():
             logger.debug("mosaic empty")
             return "empty"
         try:
-            raw = mosaic.read(indexes=bands).astype(np.int16)
+            raw = mosaic.read(
+                indexes=bands, resampling=td_resampling
+            ).astype(np.int16)
             nodata_mask = raw[0].mask
         except EmptyStackException:
             logger.debug("mosaic empty: EmptyStackException")
