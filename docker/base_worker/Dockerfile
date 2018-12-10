@@ -203,14 +203,14 @@ RUN pip install cython numpy boto3==1.7.32 --no-binary numpy \
   && pip install -r requirements_aws.txt \
   && pip install -r requirements_mundi.txt \
   && python setup.py develop \
-  && python setup.py test \
+  # && python setup.py test \
   && cd $ROOTDIR/src \
   && git clone git@gitlab.eox.at:maps/mapchete_hub.git \
   && cd mapchete_hub  \
   && pip install -r requirements.txt -r requirements_test.txt \
   && python setup.py install \
-  && cd $ROOTDIR/src \
   && python setup.py test \
+  && cd $ROOTDIR/src \
   && rm /root/.ssh/id_rsa \
   && cp -R $ROOTDIR/src/mapchete_hub/mapchete_hub/processes /mnt/
 
