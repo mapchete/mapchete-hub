@@ -24,7 +24,6 @@ def execute(
     resampling="cubic_spline",
     stack_target_height=10,
     mask_clouds=True,
-    cloudmask_types="all",
     mask_white_areas=False,
     read_threads=1,
     add_indexes=False,
@@ -67,8 +66,6 @@ def execute(
         Read until all pixels in stack have height n. (default: 10)
     mask_clouds : bool
         Mask out clouds from input data. (default: True)
-    cloudmask_types : string
-        Use certain cloud mask types only. (default: "all")
     mask_white_areas : bool
         Mask out white areas. (default: False)
     read_threads : int
@@ -139,24 +136,20 @@ def execute(
             secondary = mp.open("secondary")
             cubes = (primary, secondary)
             datastrip_ids = (
-                primary.sorted_datastrip_ids("time_difference"),
-                secondary.sorted_datastrip_ids("time_difference")
+                primary.sorted_slice_ids("time_difference"),
+                secondary.sorted_slice_ids("time_difference")
             )
         else:
             cubes = (primary, )
-            datastrip_ids = (primary.sorted_datastrip_ids("time_difference"), )
+            datastrip_ids = (primary.sorted_slice_ids("time_difference"), )
         try:
             stack = read_leveled_cubes(
                 cubes,
                 datastrip_ids,
                 indexes=bands,
-                min_height=min_stack_height,
+                target_height=stack_target_height,
                 resampling=resampling,
                 mask_clouds=mask_clouds,
-                cloudmask_types=(
-                    tuple(cloudmask_types)
-                    if isinstance(cloudmask_types, list) else cloudmask_types
-                ),
                 mask_white_areas=mask_white_areas
             )
         except EmptyStackException:
