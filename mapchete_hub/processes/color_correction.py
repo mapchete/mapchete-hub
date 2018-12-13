@@ -9,7 +9,6 @@ from rio_color import operations
 
 from mapchete_hub import image_filters
 
-
 logger = user_process_logger("color_correction")
 
 
@@ -136,10 +135,11 @@ def execute(
         clip_geom = []
 
     # read and merge mosaics
-    merged = None
+    mosaic, nodata_mask = None, None
     for mosaic_name in ["mosaic", "mosaic2"]:
+        logger.debug("trying to read from %s", mosaic_name)
         if mosaic_name in mp.params["input"]:
-            mosaic = read_mosaic(
+            raw = read_mosaic(
                 mp=mp,
                 mosaic_name=mosaic_name,
                 bands=bands,
@@ -149,32 +149,43 @@ def execute(
                 td_fallback_to_higher_zoom=td_fallback_to_higher_zoom,
                 td_resampling=td_resampling
             )
-            if mosaic != "empty":
-                if merged is None:
-                    merged = mosaic
+            if isinstance(raw, np.ndarray):
+                if mosaic is None:
+                    mosaic = raw
+                    nodata_mask = raw[0].mask
                 else:
-                    merged = ma.MaskedArray(
-                        data=np.where(merged[0].mask, mosaic, merged).astype(np.uint16),
-                        mask=np.where(merged[0].mask, mosaic.mask, merged.mask)
-                    )
-    if merged is None or merged.mask.all():
+                    logger.debug("merging %s with other", mosaic_name)
+                    mosaic = np.where(
+                        mosaic.mask, raw.data, mosaic.data
+                    ).astype(np.int16)
+                    nodata_mask = np.where(
+                        nodata_mask, raw[0].mask, nodata_mask
+                    ).astype(np.bool)
+                if nodata_mask is not None and not nodata_mask.any():
+                    logger.debug("tile fully covered")
+                    continue
+            else:
+                logger.debug("%s is empty", mosaic_name)
+        else:
+            logger.debug("%s is not specified", mosaic_name)
+    if nodata_mask is None or nodata_mask.all():
+        logger.debug("all mosaics are masked")
         return "empty"
-    else:
-        raw = merged
 
     if smooth_water:
         if len(bands) != 4:
             raise ValueError("smooth_water only works with RGBNir bands")
 
-        red, green, blue, nir = raw
+        red, green, blue, nir = mosaic
         water_mask = np.where(
             (green - nir) / (green + nir) > ndwi_threshold,
             True,
             False
         ).astype("bool")
+        logger.debug("%s%% water", percent_masked(water_mask, nodata_mask))
 
     # scale down RGB bands to 8 bit and avoid nodata through interpolation
-    rgb = np.clip(raw[:3] / 16, 1, 255).astype(np.uint8)
+    rgb = np.clip(mosaic[:3] / 16, 1, 255).astype(np.uint8)
 
     # smooth out water areas
     if smooth_water and water_mask.any():
@@ -193,9 +204,6 @@ def execute(
                 water_mask,
                 rgb,
                 image_filters.sharpen(rgb)
-                # image_filters.unsharp_mask(
-                #     rgb, radius=2, percent=80, threshold=2
-                # )
             )
         else:
             rgb = image_filters.sharpen(rgb)
@@ -218,7 +226,7 @@ def execute(
                 "desert color correction only works with RGBNir bands"
             )
 
-        red, green, blue, nir = raw
+        red, green, blue, nir = mosaic
         ndvi = (nir - red) / (nir + red)
         ndwi = (green - nir) / (green + nir)
         desert_mask = np.where(
@@ -230,6 +238,7 @@ def execute(
             True,
             False
         ).astype("bool")
+        logger.debug("%s%% desert", percent_masked(desert_mask, nodata_mask))
         if desert_mask.any():
             logger.debug("apply other color correction for desert areas")
             corrected = np.where(
@@ -276,21 +285,33 @@ def read_mosaic(
         matching_max_zoom=td_matching_max_zoom,
         matching_precision=td_matching_precision,
         fallback_to_higher_zoom=td_fallback_to_higher_zoom,
-    ) as mosaic:
-        if mosaic.is_empty():
-            logger.debug("mosaic empty")
+    ) as mosaic_inp:
+        if mosaic_inp.is_empty():
+            logger.debug("%s empty", mosaic_name)
             return "empty"
         try:
-            raw = mosaic.read(
+            mosaic = mosaic_inp.read(
                 indexes=bands, resampling=td_resampling
             ).astype(np.int16)
         except EmptyStackException:
-            logger.debug("mosaic empty: EmptyStackException")
+            logger.debug("%s empty: EmptyStackException", mosaic_name)
             return "empty"
-        if raw[0].mask.all():
-            logger.debug("mosaic empty: all masked")
+        if mosaic[0].mask.all():
+            logger.debug("%s empty: all masked", mosaic_name)
             return "empty"
-        return raw
+        return mosaic
+
+def percent_masked(mask=None, nodata_mask=None, round_by=2):
+    # divide number of masked and valid pixels by number of valid pixels
+    return round(
+        100 * np.where(
+            nodata_mask, False, mask
+        ).sum() / (
+            nodata_mask.size - nodata_mask.sum()
+        ), 
+        round_by
+    )
+
 
 
 def color_correct(
