@@ -4,6 +4,7 @@ try:
 except ImportError:
     from mapchete_s2aws.exceptions import EmptyStackException
 import numpy as np
+import numpy.ma as ma
 from rio_color import operations
 
 from mapchete_hub import image_filters
@@ -49,6 +50,9 @@ def execute(
     -------
     mosaic
         3 or 4 band 12bit data
+    mosaic2
+        3 or 4 band 12bit data
+        optional backup mosaic in case first mosaic is empty
     clip (optional)
         vector data used to clip output
 
@@ -131,28 +135,32 @@ def execute(
     else:
         clip_geom = []
 
-    # read mosaic
-    with mp.open(
-        "mosaic",
-        matching_method=td_matching_method,
-        matching_max_zoom=td_matching_max_zoom,
-        matching_precision=td_matching_precision,
-        fallback_to_higher_zoom=td_fallback_to_higher_zoom,
-    ) as mosaic:
-        if mosaic.is_empty():
-            logger.debug("mosaic empty")
-            return "empty"
-        try:
-            raw = mosaic.read(
-                indexes=bands, resampling=td_resampling
-            ).astype(np.int16)
-            nodata_mask = raw[0].mask
-        except EmptyStackException:
-            logger.debug("mosaic empty: EmptyStackException")
-            return "empty"
-        if nodata_mask.all():
-            logger.debug("mosaic empty: all masked")
-            return "empty"
+    # read and merge mosaics
+    merged = None
+    for mosaic_name in ["mosaic", "mosaic2"]:
+        if mosaic_name in mp.params["input"]:
+            mosaic = read_mosaic(
+                mp=mp,
+                mosaic_name=mosaic_name,
+                bands=bands,
+                td_matching_method=td_matching_method,
+                td_matching_max_zoom=td_matching_max_zoom,
+                td_matching_precision=td_matching_precision,
+                td_fallback_to_higher_zoom=td_fallback_to_higher_zoom,
+                td_resampling=td_resampling
+            )
+            if mosaic != "empty":
+                if merged is None:
+                    merged = mosaic
+                else:
+                    merged = ma.MaskedArray(
+                        data=np.where(merged[0].mask, mosaic, merged).astype(np.uint16),
+                        mask=np.where(merged[0].mask, mosaic.mask, merged.mask)
+                    )
+    if merged is None or merged.mask.all():
+        return "empty"
+    else:
+        raw = merged
 
     if smooth_water:
         if len(bands) != 4:
@@ -249,6 +257,40 @@ def execute(
         return np.where(clipped.mask, clipped, mp.params["output"].nodata)
     else:
         return np.where(nodata_mask, mp.params["output"].nodata, corrected)
+
+
+def read_mosaic(
+    mp=None,
+    mosaic_name=None,
+    bands=None,
+    td_matching_method=None,
+    td_matching_max_zoom=None,
+    td_matching_precision=None,
+    td_fallback_to_higher_zoom=None,
+    td_resampling=None
+):
+    # read mosaic
+    with mp.open(
+        mosaic_name,
+        matching_method=td_matching_method,
+        matching_max_zoom=td_matching_max_zoom,
+        matching_precision=td_matching_precision,
+        fallback_to_higher_zoom=td_fallback_to_higher_zoom,
+    ) as mosaic:
+        if mosaic.is_empty():
+            logger.debug("mosaic empty")
+            return "empty"
+        try:
+            raw = mosaic.read(
+                indexes=bands, resampling=td_resampling
+            ).astype(np.int16)
+        except EmptyStackException:
+            logger.debug("mosaic empty: EmptyStackException")
+            return "empty"
+        if raw[0].mask.all():
+            logger.debug("mosaic empty: all masked")
+            return "empty"
+        return raw
 
 
 def color_correct(
