@@ -4,7 +4,6 @@ try:
 except ImportError:
     from mapchete_s2aws.exceptions import EmptyStackException
 import numpy as np
-import numpy.ma as ma
 from rio_color import operations
 
 from mapchete_hub import image_filters
@@ -285,13 +284,14 @@ def read_mosaic(
         matching_max_zoom=td_matching_max_zoom,
         matching_precision=td_matching_precision,
         fallback_to_higher_zoom=td_fallback_to_higher_zoom,
-        resampling=td_resampling
     ) as mosaic_inp:
         if mosaic_inp.is_empty():
             logger.debug("%s empty", mosaic_name)
             return "empty"
         try:
-            mosaic = mosaic_inp.read(indexes=bands).astype(np.int16)
+            mosaic = mosaic_inp.read(
+                indexes=bands, resampling=td_resampling
+            ).astype(np.int16)
         except EmptyStackException:
             logger.debug("%s empty: EmptyStackException", mosaic_name)
             return "empty"
