@@ -31,6 +31,7 @@ RUN apt update -y \
 RUN pip install cython numpy "boto3==$BOTO3_VESION" --no-binary numpy \
   && pip install "rasterio==$RASTERIO_VERSION" "fiona==$FIONA_VERSION" --no-binary :all: \
   && pip install --upgrade setuptools \
+  # mapchete
   && git clone https://github.com/ungarj/mapchete.git \
   && cd mapchete \
   && git checkout $MAPCHETE_VERSION \
