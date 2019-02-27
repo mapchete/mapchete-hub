@@ -1,6 +1,6 @@
 import json
+import logging
 from mapchete import Timer
-from mapchete.log import user_process_logger
 try:
     from mapchete_satellite.exceptions import EmptyStackException
 except ImportError:
@@ -15,7 +15,7 @@ from orgonite import cloudless
 from mapchete_hub import image_filters
 
 
-logger = user_process_logger("extract_mosaic")
+logger = logging.getLogger(__name__)
 
 
 def execute(

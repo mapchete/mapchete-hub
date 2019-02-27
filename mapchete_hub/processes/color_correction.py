@@ -1,4 +1,4 @@
-from mapchete.log import user_process_logger
+import logging
 try:
     from mapchete_satellite.exceptions import EmptyStackException
 except ImportError:
@@ -8,7 +8,7 @@ from rio_color import operations
 
 from mapchete_hub import image_filters
 
-logger = user_process_logger("color_correction")
+logger = logging.getLogger(__name__)
 
 
 def execute(

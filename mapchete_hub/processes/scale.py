@@ -1,3 +1,4 @@
+import logging
 try:
     from mapchete_satellite.exceptions import EmptyStackException
 except ImportError:
@@ -5,9 +6,7 @@ except ImportError:
 import numpy as np
 import numpy.ma as ma
 
-
-from mapchete.log import user_process_logger
-logger = user_process_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def execute(
