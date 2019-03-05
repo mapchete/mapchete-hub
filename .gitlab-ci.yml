@@ -1,0 +1,10 @@
+image: registry.gitlab.eox.at/maps/docker-base/mapchete:latest
+
+before_script:
+  - git clone http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git && cd orgonite && pip install -r requirements.txt && python setup.py develop && cd ..
+  - pip install -r requirements.txt -r requirements_test.txt
+  - python setup.py develop
+
+test:
+  script:
+    - pytest -v --cov=mapchete_hub tests/

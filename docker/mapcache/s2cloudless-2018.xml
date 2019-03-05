@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mapcache>
+    <!-- Formats -->
+    <default_format>eox_jpeg</default_format>
+    <format name="eox_jpeg" type ="JPEG">
+        <quality>75</quality>
+        <photometric>ycbcr</photometric>
+    </format>
+
+    <!-- Services -->
+    <service type="wmts" enabled="true"/>
+    <service type="wms" enabled="true">
+        <full_wms>assemble</full_wms>
+        <resample_mode>bilinear</resample_mode>
+        <format>eox_jpeg</format>
+        <maxsize>4096</maxsize>
+    </service>
+    <service type="tms" enabled="true"/>
+    <!-- Enable demo service -->
+    <service type="demo" enabled="true"/>
+
+    <metadata>
+        <title>S2Maps</title>
+        <abstract>S2Maps are maps generated from Sentinel-2 data by EOX</abstract>
+        <keyword>maps</keyword>
+        <accessconstraints>Proper attribution is required for any usage. The attribution shall follow the example of the demo map at http://maps.eox.at in the lower right corner including the respective links e.g. "Terrain { Data © OpenStreetMap contributers and others, Rendering © EOX }" with links to http://www.openstreetmap.org/copyright, http://maps.eox.at/#data, and http://eox.at.</accessconstraints>
+        <contactname>Joachim Ungar, Stephan Meissl</contactname>
+        <contactorganization>EOX IT Services GmbH</contactorganization>
+        <contactcity>Vienna</contactcity>
+        <contactpostcode>1090</contactpostcode>
+        <contactcountry>Austria</contactcountry>
+        <contactelectronicmailaddress>office@eox.at</contactelectronicmailaddress>
+        <providername>EOX</providername>
+        <providerurl>http://maps.eox.at</providerurl>
+        <!-- INSPIRE -->
+        <inspire_profile>true</inspire_profile>
+        <inspire_metadataurl>TBD</inspire_metadataurl>
+        <defaultlanguage>eng</defaultlanguage>
+        <language>eng</language>
+    </metadata>
+
+    <errors>empty_img</errors>
+    <lock_dir>/tmp</lock_dir>
+
+    <!-- layers -->
+
+    <!-- s2cloudless-2018 (4326) -->
+    <cache name="s2cloudless-2018_4326" type="sqlite3">
+        <dbfile>/caches/s2cloudless-2018_4326_v1.0.0.sqlite</dbfile>
+        <detect_blank>true</detect_blank>
+    </cache>
+    <source type="wms" name="s2cloudless-2018_4326">
+        <getmap>
+            <params>
+                <LAYERS>map</LAYERS>
+                <TRANSPARENT>false</TRANSPARENT>
+            </params>
+        </getmap>
+        <http>
+            <url>http://localhost:80/cgi-bin/mapserv?map=/map/layer.map</url>
+        </http>
+        <connection_timeout>300</connection_timeout>
+    </source>
+    <tileset name="s2cloudless-2018">
+        <metadata>
+            <title>S2Cloudless</title>
+            <abstract>The S2Cloudless layer is part of the S2Maps, maps generated from Sentinel-2 data by EOX</abstract>
+        </metadata>
+        <source>s2cloudless-2018_4326</source>
+        <cache>s2cloudless-2018_4326</cache>
+        <format>eox_jpeg</format>
+<!--        <read-only>true</read-only>-->
+        <grid maxzoom="17" max-cached-zoom="13" out-of-zoom-strategy="reassemble">WGS84</grid>
+        <metatile>8 8</metatile>
+        <expires>1800</expires>
+    </tileset>
+
+    <!-- s2cloudless-2018 (3857) -->
+    <cache name="s2cloudless-2018_3857" type="sqlite3">
+        <dbfile>/caches/s2cloudless-2018_3857_v1.0.0.sqlite</dbfile>
+        <detect_blank>true</detect_blank>
+        <queries>
+            <create>create table if not exists tiles_custom(x integer, y integer, z integer, data blob, ctime datetime, primary key(x,y,z))</create>
+            <exists>select 1 from tiles_custom where x=:x and y=:y and z=:z</exists>
+            <get>select data,strftime("%s",ctime) from tiles_custom where x=:x and y=:y and z=:z</get>
+            <set>insert or replace into tiles_custom(x,y,z,data,ctime) values (:x,:y,:z,:data,datetime('now'))</set>
+            <delete>delete from tiles_custom where x=:x and y=:y and z=:z</delete>
+        </queries>
+    </cache>
+    <source type="wms" name="s2cloudless-2018_3857">
+        <getmap>
+            <params>
+                <LAYERS>map</LAYERS>
+                <TRANSPARENT>false</TRANSPARENT>
+            </params>
+        </getmap>
+        <http>
+            <url>http://localhost:80/cgi-bin/mapserv?map=/map/layer_3857.map</url>
+        </http>
+        <connection_timeout>300</connection_timeout>
+    </source>
+    <tileset name="s2cloudless-2018_3857">
+        <metadata>
+            <title>S2Cloudless</title>
+            <abstract>The S2Cloudless layer is part of the S2Maps, maps generated from Sentinel-2 data by EOX</abstract>
+        </metadata>
+        <source>s2cloudless-2018_3857</source>
+        <cache>s2cloudless-2018_3857</cache>
+        <format>eox_jpeg</format>
+        <grid maxzoom="17" max-cached-zoom="13" out-of-zoom-strategy="reassemble">GoogleMapsCompatible</grid>
+        <metatile>8 8</metatile>
+        <expires>1800</expires>
+    </tileset>
+
+</mapcache>
+

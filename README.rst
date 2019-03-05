@@ -4,6 +4,12 @@ mapchete Hub
 
 Distributed mapchete processing.
 
+.. image:: https://gitlab.eox.at/maps/mapchete_hub/badges/master/pipeline.svg
+    :target: https://gitlab.eox.at/maps/mapchete_hub/commits/master
+
+.. image:: https://gitlab.eox.at/maps/mapchete_hub/badges/master/coverage.svg
+    :target: https://gitlab.eox.at/maps/mapchete_hub/commits/master
+
 -----
 Usage
 -----

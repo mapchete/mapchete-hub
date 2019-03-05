@@ -6,6 +6,7 @@ Flask-Celery-py3
 flask_restful
 geojson
 mapchete>=0.21
+orgonite
 Pillow
 pysqlite3
 pyyaml

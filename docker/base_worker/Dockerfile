@@ -1,14 +1,10 @@
-FROM registry.gitlab.eox.at/maps/docker-base/gdal:latest
+FROM registry.gitlab.eox.at/maps/docker-base/mapchete:latest
 MAINTAINER Joachim Ungar
 
-ENV RASTERIO_VERSION=1.0.13
-ENV FIONA_VERSION=1.8.4
-ENV BOTO3_VESION=1.7.32
 ENV MAPCHETE_VERSION=master
-ENV ORGONITE_VERSION=master
+ENV ORGONITE_VERSION=0.3
 ENV MAPCHETE_SATELLITE_VERSION=master
 ENV MAPCHETE_HUB_VERSION=master
-ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ENV AWS_REQUEST_PAYER=requester
 ENV ROOTDIR=/usr/local
 ENV APP_DIR=/tmp/app
@@ -28,18 +24,8 @@ RUN apt update -y \
 
 # install python packages
 #########################
-RUN pip install cython numpy "boto3==$BOTO3_VESION" --no-binary numpy \
-  && pip install "rasterio==$RASTERIO_VERSION" "fiona==$FIONA_VERSION" --no-binary :all: \
-  && pip install --upgrade setuptools \
-  # mapchete
-  && git clone https://github.com/ungarj/mapchete.git \
-  && cd mapchete \
-  && git checkout $MAPCHETE_VERSION \
-  && pip install -r requirements.txt \
-  && python setup.py develop \
-  && cd $ROOTDIR/src \
   # orgonite
-  && git clone http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git \
+RUN git clone http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git \
   && cd orgonite \
   && git checkout $ORGONITE_VERSION \
   && pip install -r requirements.txt \
