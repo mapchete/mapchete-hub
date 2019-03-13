@@ -11,6 +11,7 @@ except ImportError:
     from mapchete_s2aws import read_min_cubes as read_leveled_cubes
 import numpy as np
 from orgonite import cloudless
+import warnings
 
 from mapchete_hub import image_filters
 
@@ -114,8 +115,11 @@ def execute(
             "add_indexes option only works with 'brigtness' extraction method"
         )
     if min_stack_height != 10:
-        raise DeprecationWarning(
-            "min_stack_height is deprecated and will be replaced by stack_target_height"
+        warnings.warn(
+            DeprecationWarning(
+                "min_stack_height is deprecated and will be replaced by "
+                "stack_target_height"
+            )
         )
         if stack_target_height == 10:
             stack_target_height = min_stack_height
