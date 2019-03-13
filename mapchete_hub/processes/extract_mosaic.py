@@ -1,14 +1,10 @@
 import json
+from functools import partial
 import logging
 from mapchete import Timer
-try:
-    from mapchete_satellite.exceptions import EmptyStackException
-except ImportError:
-    from mapchete_s2aws.exceptions import EmptyStackException
-try:
-    from mapchete_satellite.utils import read_leveled_cubes
-except ImportError:
-    from mapchete_s2aws import read_min_cubes as read_leveled_cubes
+from mapchete_satellite.exceptions import EmptyStackException
+from mapchete_satellite.masks import white
+from mapchete_satellite.utils import read_leveled_cubes
 import numpy as np
 from orgonite import cloudless
 import warnings
@@ -83,7 +79,7 @@ def execute(
     considered_bands : bool
         Use first n bands to determine pixel brightness. (brightness method; default: 4)
     average_over : int
-        Average over n pixels on time stack. (brightness method; default: 3)
+        Average over n pixels on time stack. (brightness or max_ndvi method; default: 3)
     simulation_value : float
         NDVI simulation value. (ndvi_linreg method; default: 1.25)
     value_range_min : int
@@ -110,9 +106,10 @@ def execute(
     """
     if method not in ["brightness", "ndvi_linreg", "weighted_avg", "max_ndvi"]:
         raise ValueError("invalid extraction method given")
-    if add_indexes and method != "brightness":
+    if add_indexes and method not in  ["brightness", "max_ndvi"]:
         raise ValueError(
-            "add_indexes option only works with 'brigtness' extraction method"
+            "add_indexes option only works with 'brigtness' or 'max_ndvi' extraction "
+            "methods"
         )
     if min_stack_height != 10:
         warnings.warn(
@@ -133,28 +130,32 @@ def execute(
     else:
         clip_geom = []
 
+    if mask_white_areas:
+        custom_masks = (partial(white), )
+    else:
+        custom_masks = None
     # read stack
     with Timer() as t:
         primary = mp.open("primary")
         if "secondary" in mp.params["input"]:
             secondary = mp.open("secondary")
             cubes = (primary, secondary)
-            datastrip_ids = (
+            slice_ids = (
                 primary.sorted_slice_ids("time_difference"),
                 secondary.sorted_slice_ids("time_difference")
             )
         else:
             cubes = (primary, )
-            datastrip_ids = (primary.sorted_slice_ids("time_difference"), )
+            slice_ids = (primary.sorted_slice_ids("time_difference"), )
         try:
             stack = read_leveled_cubes(
                 cubes,
-                datastrip_ids,
+                slice_ids,
                 indexes=bands,
                 target_height=stack_target_height,
                 resampling=resampling,
                 mask_clouds=mask_clouds,
-                mask_white_areas=mask_white_areas
+                custom_masks=custom_masks
             )
         except EmptyStackException:
             return "empty"
@@ -195,7 +196,11 @@ def execute(
                 input_values_threshold_multiplier=input_values_threshold_multiplier
             )
         elif method == "max_ndvi":
-            mosaic = cloudless.max_ndvi(stack.data)
+            mosaic = cloudless.max_ndvi(
+                stack.data,
+                from_brightness_average_over=average_over,
+                keep_slice_indexes=add_indexes
+            )
     logger.debug("extracted in %s", t)
     logger.debug("mosaic shape: %s", mosaic.shape)
 
@@ -218,7 +223,7 @@ def execute(
     if add_indexes:
         logger.debug("generate tags")
         tags = {
-            s_id: dict(timestamp=s.timestamp, datastrip_id=s.datastrip_id)
+            s_id: dict(timestamp=str(s.timestamp), slice_id=s.slice_id)
             for s_id, s in zip(
                 cloudless.gen_slice_indexes(
                     len(stack.data), nodata=mp.params["output"].nodata
