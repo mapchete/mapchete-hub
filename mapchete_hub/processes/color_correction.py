@@ -283,7 +283,7 @@ def read_mosaic(
         matching_method=td_matching_method,
         matching_max_zoom=td_matching_max_zoom,
         matching_precision=td_matching_precision,
-        fallback_to_higher_zoom=td_fallback_to_higher_zoom,
+        fallback_to_higher_zoom=td_fallback_to_higher_zoom
     ) as mosaic_inp:
         if mosaic_inp.is_empty():
             logger.debug("%s empty", mosaic_name)
@@ -300,6 +300,7 @@ def read_mosaic(
             return "empty"
         return mosaic
 
+
 def percent_masked(mask=None, nodata_mask=None, round_by=2):
     # divide number of masked and valid pixels by number of valid pixels
     return round(
@@ -307,10 +308,9 @@ def percent_masked(mask=None, nodata_mask=None, round_by=2):
             nodata_mask, False, mask
         ).sum() / (
             nodata_mask.size - nodata_mask.sum()
-        ), 
+        ),
         round_by
     )
-
 
 
 def color_correct(

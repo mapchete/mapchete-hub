@@ -1,12 +1,11 @@
+import logging
 import numpy as np
 from PIL import Image, ImageFilter
 from rasterio.plot import reshape_as_raster, reshape_as_image
 from scipy import ndimage
 
-from mapchete.log import user_process_logger
 
-
-logger = user_process_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # filters for 8 bit data:

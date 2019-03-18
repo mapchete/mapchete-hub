@@ -36,7 +36,7 @@ def execute(
     core_value_range_weight=8,
     min_stack_height=10,
     input_values_threshold_multiplier=10,
-    sharpen_output=True,
+    sharpen_output=False,
     clip_pixelbuffer=0,
     **kwargs
 ):
@@ -97,7 +97,7 @@ def execute(
     input_values_threshold_multiplier : int
         Threshold multiplier. (weighted_avg method; default: 10)
     sharpen_output : bool
-        Apply sharpening filter on output. (default: True)
+        Apply sharpening filter on output. (default: False)
 
     Output:
     -------
@@ -106,7 +106,7 @@ def execute(
     """
     if method not in ["brightness", "ndvi_linreg", "weighted_avg", "max_ndvi"]:
         raise ValueError("invalid extraction method given")
-    if add_indexes and method not in  ["brightness", "max_ndvi"]:
+    if add_indexes and method not in ["brightness", "max_ndvi"]:
         raise ValueError(
             "add_indexes option only works with 'brigtness' or 'max_ndvi' extraction "
             "methods"
@@ -207,7 +207,13 @@ def execute(
     # optional sharpen
     if sharpen_output:
         logger.debug("sharpen output")
-        mosaic = image_filters.sharpen_16bit(mosaic)
+        if add_indexes:
+            mosaic = np.concatenate((
+                image_filters.sharpen_16bit(mosaic[:-1]),
+                np.expand_dims(mosaic[-1], axis=0)
+            ))
+        else:
+            mosaic = image_filters.sharpen_16bit(mosaic)
 
     # optional clip
     if clip_geom:

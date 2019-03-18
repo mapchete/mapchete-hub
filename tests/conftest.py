@@ -2,6 +2,7 @@ from collections import OrderedDict
 import os
 import pytest
 import shutil
+from tempfile import TemporaryDirectory
 import yaml
 
 from mapchete_hub.application import flask_app
@@ -10,6 +11,41 @@ from mapchete_hub.config import host_options
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
 TEMP_DIR = os.path.join(TESTDATA_DIR, "tmp")
+
+TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
+S2_CACHE_DIR = os.path.join(TESTDATA_DIR, "s2_cache")
+
+
+def _dict_from_mapchete(path, tmpdir):
+    conf = dict(yaml.load(open(path).read()), config_dir=os.path.dirname(path))
+    for ip in ["primary", "secondary"]:
+        try:
+            conf["input"][ip]["cache"]["path"] = S2_CACHE_DIR
+        except KeyError:
+            pass
+    conf["output"].update(path=tmpdir)
+    return conf
+
+
+@pytest.fixture(scope="session")
+def aws_example_mapchete_cm_4b():
+    """Fixture for aws_example.mapchete."""
+    with TemporaryDirectory() as temp_dir:
+        yield _dict_from_mapchete(
+            os.path.join(TESTDATA_DIR, "aws_example_4bands.mapchete"), temp_dir
+        )
+
+
+@pytest.fixture
+def landpoly_geojson():
+    """Fixture for landpoly.geojson."""
+    return os.path.join(TESTDATA_DIR, "landpoly.geojson")
+
+
+@pytest.fixture
+def tile_13_1986_8557_geojson():
+    """Fixture for tile_13_1986_8557.geojson."""
+    return os.path.join(TESTDATA_DIR, "tile_13_1986_8557.geojson")
 
 
 @pytest.fixture
