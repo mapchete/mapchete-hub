@@ -3,7 +3,7 @@ from functools import partial
 import logging
 from mapchete import Timer
 from mapchete_satellite.exceptions import EmptyStackException
-from mapchete_satellite.masks import white
+from mapchete_satellite.masks import white, s2_landmask, s2_vegetationmask
 from mapchete_satellite.utils import read_leveled_cubes
 import numpy as np
 from orgonite import cloudless
@@ -21,7 +21,10 @@ def execute(
     resampling="cubic_spline",
     stack_target_height=10,
     mask_clouds=True,
+    clouds_buffer=0,
     mask_white_areas=False,
+    mask_s2_land=False,
+    mask_s2_vegetation=False,
     read_threads=1,
     add_indexes=False,
     method="brightness",
@@ -63,8 +66,14 @@ def execute(
         Read until all pixels in stack have height n. (default: 10)
     mask_clouds : bool
         Mask out clouds from input data. (default: True)
+    clouds_buffer : int
+        Apply buffer of n pixels to cloud masks. (default: 0)
     mask_white_areas : bool
         Mask out white areas. (default: False)
+    mask_s2_land : bool
+        Prefer land masked input pixels. (default: False)
+    mask_s2_vegetation : bool
+        Prefer vegetation masked input pixels. (default: False)
     read_threads : int
         Use threads to read input slices concurrently. (default: 1)
     add_indexes : bool
@@ -137,6 +146,7 @@ def execute(
     # read stack
     with Timer() as t:
         primary = mp.open("primary")
+        level = primary.processing_level.lower()
         if "secondary" in mp.params["input"]:
             secondary = mp.open("secondary")
             cubes = (primary, secondary)
@@ -155,6 +165,7 @@ def execute(
                 target_height=stack_target_height,
                 resampling=resampling,
                 mask_clouds=mask_clouds,
+                clouds_buffer=clouds_buffer,
                 custom_masks=custom_masks
             )
         except EmptyStackException:
@@ -163,46 +174,51 @@ def execute(
     logger.debug("read %s slices", len(stack.data))
     logger.debug("stack read in %s", t)
 
-    # extract mosaic
-    logger.debug("extract mosaic")
-    with Timer() as t:
-        if method == "brightness":
-            mosaic = cloudless.from_brightness(
-                stack.data,
-                average_over=average_over,
-                considered_bands=considered_bands,
-                keep_slice_indexes=add_indexes,
+    mosaic = _extract_mosaic(
+        stack.data,
+        method,
+        average_over=average_over,
+        considered_bands=considered_bands,
+        simulation_value=simulation_value,
+        value_range_weight=value_range_weight,
+        core_value_range_weight=core_value_range_weight,
+        value_range_min=value_range_min,
+        value_range_max=value_range_max,
+        core_value_range_min=core_value_range_min,
+        core_value_range_max=core_value_range_max,
+        input_values_threshold_multiplier=input_values_threshold_multiplier,
+        from_brightness_average_over=average_over,
+        keep_slice_indexes=add_indexes,
+    )
+
+    if mask_s2_land or mask_s2_vegetation:
+        if mask_s2_land and mask_s2_vegetation:
+            raise AttributeError(
+                "mask_s2_land and mask_s2_vegetation cannot be used at the same time"
             )
-        elif method == "ndvi_linreg":
-            mosaic = cloudless.ndvi_linreg(
-                stack.data,
-                simulation_value=simulation_value,
-                value_range_weight=value_range_weight,
-                core_value_range_weight=core_value_range_weight,
-                value_range_min=value_range_min,
-                value_range_max=value_range_max,
-                core_value_range_min=core_value_range_min,
-                core_value_range_max=core_value_range_max
-            )
-        elif method == "weighted_avg":
-            mosaic = cloudless.weighted_avg(
-                stack.data,
-                value_range_min=value_range_min,
-                value_range_max=value_range_max,
-                value_range_weight=value_range_weight,
-                core_value_range_min=core_value_range_min,
-                core_value_range_max=core_value_range_max,
-                core_value_range_weight=core_value_range_weight,
-                input_values_threshold_multiplier=input_values_threshold_multiplier
-            )
-        elif method == "max_ndvi":
-            mosaic = cloudless.max_ndvi(
-                stack.data,
-                from_brightness_average_over=average_over,
-                keep_slice_indexes=add_indexes
-            )
-    logger.debug("extracted in %s", t)
-    logger.debug("mosaic shape: %s", mosaic.shape)
+        logger.debug(
+            "extract mosaic from stack with masked %s pixels",
+            "land" if mask_s2_land else "vegetation"
+        )
+        _mask = s2_landmask if mask_s2_land else s2_vegetationmask
+        masked_moasic = _extract_mosaic(
+            np.stack([np.where(_mask(s.data, level=level), 0, s.data) for s in stack]),
+            method,
+            average_over=average_over,
+            considered_bands=considered_bands,
+            simulation_value=simulation_value,
+            value_range_weight=value_range_weight,
+            core_value_range_weight=core_value_range_weight,
+            value_range_min=value_range_min,
+            value_range_max=value_range_max,
+            core_value_range_min=core_value_range_min,
+            core_value_range_max=core_value_range_max,
+            input_values_threshold_multiplier=input_values_threshold_multiplier,
+            from_brightness_average_over=average_over,
+            keep_slice_indexes=add_indexes
+        )
+        logger.debug("merge mosaics")
+        mosaic = np.where(masked_moasic, masked_moasic, mosaic).astype(np.int16)
 
     # optional sharpen
     if sharpen_output:
@@ -240,3 +256,61 @@ def execute(
         return mosaic, {'datasets': json.dumps(tags)}
     else:
         return mosaic
+
+
+def _extract_mosaic(
+    stack_data,
+    method,
+    average_over=None,
+    considered_bands=None,
+    simulation_value=None,
+    value_range_weight=None,
+    core_value_range_weight=None,
+    value_range_min=None,
+    value_range_max=None,
+    core_value_range_min=None,
+    core_value_range_max=None,
+    input_values_threshold_multiplier=None,
+    from_brightness_average_over=None,
+    keep_slice_indexes=None,
+):
+    # extract mosaic
+    logger.debug("run orgonite '%s' method", method)
+    with Timer() as t:
+        if method == "brightness":
+            mosaic = cloudless.from_brightness(
+                stack_data,
+                average_over=average_over,
+                considered_bands=considered_bands,
+                keep_slice_indexes=keep_slice_indexes,
+            )
+        elif method == "ndvi_linreg":
+            mosaic = cloudless.ndvi_linreg(
+                stack_data,
+                simulation_value=simulation_value,
+                value_range_weight=value_range_weight,
+                core_value_range_weight=core_value_range_weight,
+                value_range_min=value_range_min,
+                value_range_max=value_range_max,
+                core_value_range_min=core_value_range_min,
+                core_value_range_max=core_value_range_max
+            )
+        elif method == "weighted_avg":
+            mosaic = cloudless.weighted_avg(
+                stack_data,
+                value_range_min=value_range_min,
+                value_range_max=value_range_max,
+                value_range_weight=value_range_weight,
+                core_value_range_min=core_value_range_min,
+                core_value_range_max=core_value_range_max,
+                core_value_range_weight=core_value_range_weight,
+                input_values_threshold_multiplier=input_values_threshold_multiplier
+            )
+        elif method == "max_ndvi":
+            mosaic = cloudless.max_ndvi(
+                stack_data,
+                from_brightness_average_over=average_over,
+                keep_slice_indexes=keep_slice_indexes
+            )
+    logger.debug("extracted in %s", t)
+    return mosaic

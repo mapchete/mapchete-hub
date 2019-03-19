@@ -15,22 +15,15 @@ def test_submit(example_config):
     assert len(jobs) == 1
 
 
-def test_extract_mosaic(
-    aws_example_mapchete_cm_4b, landpoly_geojson, tile_13_1986_8557_geojson
-):
+def test_extract_mosaic(aws_example_mapchete_cm_4b):
     zoom = 13
-
     with mapchete.open(aws_example_mapchete_cm_4b) as mp:
         process_tile = next(mp.get_process_tiles(zoom))
         process = MapcheteProcess(config=mp.config, tile=process_tile)
 
         def _run_with_params(**kwargs):
             return extract_mosaic.execute(
-                process,
-                **dict(
-                    mp.config.params_at_zoom(zoom),
-                    **kwargs
-                )
+                process, **dict(mp.config.params_at_zoom(zoom), **kwargs)
             )
 
         # default run
@@ -69,7 +62,9 @@ def test_extract_mosaic(
             process, **mp.config.params_at_zoom(zoom)
         ) == "empty"
 
-    # with secondary cube
+
+def test_extract_mosaic_secondary_cube(aws_example_mapchete_cm_4b):
+    zoom = 13
     with mapchete.open(
         dict(
             aws_example_mapchete_cm_4b,
@@ -84,7 +79,11 @@ def test_extract_mosaic(
             **mp.config.params_at_zoom(zoom)
         ).any()
 
-    # with clip geometry
+
+def test_extract_mosaic_clip(
+    aws_example_mapchete_cm_4b, landpoly_geojson, tile_13_1986_8557_geojson
+):
+    zoom = 13
     with mapchete.open(
         dict(
             aws_example_mapchete_cm_4b,
@@ -112,3 +111,25 @@ def test_extract_mosaic(
             MapcheteProcess(config=mp.config, tile=next(mp.get_process_tiles(zoom))),
             **mp.config.params_at_zoom(zoom)
         ).any()
+
+
+def test_extract_mosaic_land_vegetation_masks(aws_example_mapchete_cm_4b):
+    zoom = 13
+    with mapchete.open(aws_example_mapchete_cm_4b) as mp:
+        process_tile = next(mp.get_process_tiles(zoom))
+        process = MapcheteProcess(config=mp.config, tile=process_tile)
+
+        def _run_with_params(**kwargs):
+            return extract_mosaic.execute(
+                process, **dict(mp.config.params_at_zoom(zoom), **kwargs)
+            )
+
+        # run with s2_landmask
+        assert _run_with_params(mask_s2_land=True).any()
+
+        # run with s2_vegetationmask
+        assert _run_with_params(mask_s2_vegetation=True).any()
+
+        # usage of both at the same time is not allowed
+        with pytest.raises(AttributeError):
+            _run_with_params(mask_s2_land=True, mask_s2_vegetation=True)
