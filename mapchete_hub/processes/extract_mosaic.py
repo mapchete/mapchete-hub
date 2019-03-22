@@ -3,7 +3,7 @@ from functools import partial
 import logging
 from mapchete import Timer
 from mapchete_satellite.exceptions import EmptyStackException
-from mapchete_satellite.masks import white, s2_landmask, s2_vegetationmask
+from mapchete_satellite.masks import white, s2_landmask, s2_vegetationmask, s2_shadowmask, s2_cloudmask, s2_inverted_landmask
 from mapchete_satellite.utils import read_leveled_cubes
 import numpy as np
 from orgonite import cloudless
@@ -174,6 +174,27 @@ def execute(
     logger.debug("read %s slices", len(stack.data))
     logger.debug("stack read in %s", t)
 
+    # stack = np.stack([np.where(s2_shadowmask(s.data, level=level), s.data, False)
+    #                   for s in stack])
+    # logger.debug(stack.shape)
+    MASK_CONFIG = {
+        'buffer': 100,
+        'cvi_threshold': 1.5,
+        'ndvi_threshold': 0.0
+    }
+
+    SHADOWMASK_CONFIG = {
+        'buffer': 50,
+        'redgreen_threshold': 1250,
+        'blue_threshold': 1000,
+        'ndvi_threshold': 0.0,
+        'ndwi_threshold': 0.0,
+        'blue_notwater_threshold': 800,
+        'ndvi_notwater_threshold': 0.0,
+        'ndwi_notwater_threshold': -0.1
+    }
+
+    # Basic Mosaic
     mosaic = _extract_mosaic(
         stack.data,
         method,
@@ -190,7 +211,31 @@ def execute(
         from_brightness_average_over=average_over,
         keep_slice_indexes=add_indexes,
     )
+    _stack = np.stack([np.where(s2_shadowmask(s.data, level=level, mask_config=SHADOWMASK_CONFIG), False, s.data)
+                       for s in stack])
 
+    _stack = np.stack([np.where(s2_cloudmask(s, level=level), False, s)
+                       for s in _stack])
+
+    # No clouds, shadows mosaic
+    _mosaic = _extract_mosaic(
+        _stack,
+        method,
+        average_over=average_over,
+        considered_bands=considered_bands,
+        simulation_value=simulation_value,
+        value_range_weight=value_range_weight,
+        core_value_range_weight=core_value_range_weight,
+        value_range_min=value_range_min,
+        value_range_max=value_range_max,
+        core_value_range_min=core_value_range_min,
+        core_value_range_max=core_value_range_max,
+        input_values_threshold_multiplier=input_values_threshold_multiplier,
+        from_brightness_average_over=average_over,
+        keep_slice_indexes=add_indexes,
+    )
+
+    # Extra layer Mosaic
     if mask_s2_land or mask_s2_vegetation:
         if mask_s2_land and mask_s2_vegetation:
             raise AttributeError(
@@ -200,9 +245,12 @@ def execute(
             "extract mosaic from stack with masked %s pixels",
             "land" if mask_s2_land else "vegetation"
         )
-        _mask = s2_landmask if mask_s2_land else s2_vegetationmask
-        masked_moasic = _extract_mosaic(
-            np.stack([np.where(_mask(s.data, level=level), 0, s.data) for s in stack]),
+        _mask = s2_inverted_landmask if mask_s2_land else s2_vegetationmask
+        _stack = np.stack([np.where(_mask(s, level=level, mask_config=MASK_CONFIG), False, s)
+                           for s in _stack])
+
+        masked_mosaic = _extract_mosaic(
+            _stack,
             method,
             average_over=average_over,
             considered_bands=considered_bands,
@@ -218,7 +266,8 @@ def execute(
             keep_slice_indexes=add_indexes
         )
         logger.debug("merge mosaics")
-        mosaic = np.where(masked_moasic, masked_moasic, mosaic).astype(np.int16)
+        _mosaic = np.where(masked_mosaic, masked_mosaic, _mosaic).astype(np.int16)
+        mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16)
 
     # optional sharpen
     if sharpen_output:
@@ -250,7 +299,7 @@ def execute(
                 cloudless.gen_slice_indexes(
                     len(stack.data), nodata=mp.params["output"].nodata
                 ),
-                stack
+               stack
             )
         }
         return mosaic, {'datasets': json.dumps(tags)}
@@ -309,6 +358,8 @@ def _extract_mosaic(
         elif method == "max_ndvi":
             mosaic = cloudless.max_ndvi(
                 stack_data,
+                min_ndvi=0.2,
+                max_ndvi=0.95,
                 from_brightness_average_over=average_over,
                 keep_slice_indexes=keep_slice_indexes
             )
