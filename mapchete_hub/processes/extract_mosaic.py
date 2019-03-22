@@ -178,7 +178,7 @@ def execute(
     #                   for s in stack])
     # logger.debug(stack.shape)
     MASK_CONFIG = {
-        'buffer': 100,
+        'buffer': 75,
         'cvi_threshold': 1.5,
         'ndvi_threshold': 0.0
     }
@@ -192,6 +192,16 @@ def execute(
         'blue_notwater_threshold': 800,
         'ndvi_notwater_threshold': 0.0,
         'ndwi_notwater_threshold': -0.1
+    }
+    CLOUDMASK_CONFIG = {
+        'buffer': 40,
+        'ndvi_threshold': 0.2,
+        'ndwi_threshold': 0.1,
+        'red_threshold': 4500,
+        'green_threshold': 4500,
+        'blue_threshold': 4500,
+        'cvi_threshold': 2.5,
+        'ndvi_second_threshold': 0.0
     }
 
     # Basic Mosaic
@@ -214,7 +224,7 @@ def execute(
     _stack = np.stack([np.where(s2_shadowmask(s.data, level=level, mask_config=SHADOWMASK_CONFIG), False, s.data)
                        for s in stack])
 
-    _stack = np.stack([np.where(s2_cloudmask(s, level=level), False, s)
+    _stack = np.stack([np.where(s2_cloudmask(s, level=level, mask_config=CLOUDMASK_CONFIG), False, s)
                        for s in _stack])
 
     # No clouds, shadows mosaic
