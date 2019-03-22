@@ -165,7 +165,7 @@ def execute(
                 target_height=stack_target_height,
                 resampling=resampling,
                 mask_clouds=mask_clouds,
-                clouds_buffer=clouds_buffer,
+                clouds_buffer=75,
                 custom_masks=custom_masks
             )
         except EmptyStackException:
