@@ -184,7 +184,7 @@ def execute(
     }
 
     SHADOWMASK_CONFIG = {
-        'buffer': 50,
+        'buffer': 75,
         'redgreen_threshold': 1250,
         'blue_threshold': 1000,
         'ndvi_threshold': 0.0,
@@ -194,7 +194,7 @@ def execute(
         'ndwi_notwater_threshold': -0.1
     }
     CLOUDMASK_CONFIG = {
-        'buffer': 40,
+        'buffer': 75,
         'ndvi_threshold': 0.2,
         'ndwi_threshold': 0.1,
         'red_threshold': 4500,
