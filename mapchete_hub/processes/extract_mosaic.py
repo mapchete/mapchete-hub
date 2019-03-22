@@ -165,7 +165,7 @@ def execute(
                 target_height=stack_target_height,
                 resampling=resampling,
                 mask_clouds=mask_clouds,
-                clouds_buffer=75,
+                clouds_buffer=350,
                 custom_masks=custom_masks
             )
         except EmptyStackException:
@@ -178,13 +178,13 @@ def execute(
     #                   for s in stack])
     # logger.debug(stack.shape)
     MASK_CONFIG = {
-        'buffer': 75,
+        'buffer': 350,
         'cvi_threshold': 1.5,
         'ndvi_threshold': 0.0
     }
 
     SHADOWMASK_CONFIG = {
-        'buffer': 75,
+        'buffer': 350,
         'redgreen_threshold': 1250,
         'blue_threshold': 1000,
         'ndvi_threshold': 0.0,
@@ -194,7 +194,7 @@ def execute(
         'ndwi_notwater_threshold': -0.1
     }
     CLOUDMASK_CONFIG = {
-        'buffer': 75,
+        'buffer': 350,
         'ndvi_threshold': 0.2,
         'ndwi_threshold': 0.1,
         'red_threshold': 4500,
@@ -221,31 +221,33 @@ def execute(
         from_brightness_average_over=average_over,
         keep_slice_indexes=add_indexes,
     )
-    _stack = np.stack([np.where(s2_shadowmask(s.data, level=level, mask_config=SHADOWMASK_CONFIG), False, s.data)
-                       for s in stack])
+    # _stack = np.stack([np.where(s2_shadowmask(s.data, level=level, mask_config=SHADOWMASK_CONFIG), False, s.data)
+    #                    for s in stack])
+    #
+    # _stack = np.stack([np.where(s2_cloudmask(s, level=level, mask_config=CLOUDMASK_CONFIG), False, s)
+    #                    for s in _stack])
 
-    _stack = np.stack([np.where(s2_cloudmask(s, level=level, mask_config=CLOUDMASK_CONFIG), False, s)
-                       for s in _stack])
+    _stack = stack.data
 
-    # No clouds, shadows mosaic
-    _mosaic = _extract_mosaic(
-        _stack,
-        method,
-        average_over=average_over,
-        considered_bands=considered_bands,
-        simulation_value=simulation_value,
-        value_range_weight=value_range_weight,
-        core_value_range_weight=core_value_range_weight,
-        value_range_min=value_range_min,
-        value_range_max=value_range_max,
-        core_value_range_min=core_value_range_min,
-        core_value_range_max=core_value_range_max,
-        input_values_threshold_multiplier=input_values_threshold_multiplier,
-        from_brightness_average_over=average_over,
-        keep_slice_indexes=add_indexes,
-    )
-
-    # Extra layer Mosaic
+    # # No clouds, shadows mosaic
+    # _mosaic = _extract_mosaic(
+    #     _stack,
+    #     method,
+    #     average_over=average_over,
+    #     considered_bands=considered_bands,
+    #     simulation_value=simulation_value,
+    #     value_range_weight=value_range_weight,
+    #     core_value_range_weight=core_value_range_weight,
+    #     value_range_min=value_range_min,
+    #     value_range_max=value_range_max,
+    #     core_value_range_min=core_value_range_min,
+    #     core_value_range_max=core_value_range_max,
+    #     input_values_threshold_multiplier=input_values_threshold_multiplier,
+    #     from_brightness_average_over=average_over,
+    #     keep_slice_indexes=add_indexes,
+    # )
+    #
+    # # Extra layer Mosaic
     if mask_s2_land or mask_s2_vegetation:
         if mask_s2_land and mask_s2_vegetation:
             raise AttributeError(
@@ -276,8 +278,8 @@ def execute(
             keep_slice_indexes=add_indexes
         )
         logger.debug("merge mosaics")
-        _mosaic = np.where(masked_mosaic, masked_mosaic, _mosaic).astype(np.int16)
-        mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16)
+        mosaic = np.where(masked_mosaic, masked_mosaic, mosaic).astype(np.int16)
+        #mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16)
 
     # optional sharpen
     if sharpen_output:
