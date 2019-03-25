@@ -20,6 +20,7 @@ def execute(
     td_matching_precision=8,
     td_fallback_to_higher_zoom=False,
     smooth_water=True,
+    color_correction=None,
     ndwi_threshold=0.2,
     red_gamma=1.13,
     green_gamma=1.3,
@@ -184,7 +185,7 @@ def execute(
         logger.debug("%s%% water", percent_masked(water_mask, nodata_mask))
 
     # scale down RGB bands to 8 bit and avoid nodata through interpolation
-    rgb = np.clip(mosaic[:3] / 16, 1, 255).astype(np.uint8)
+    rgb = np.clip(mosaic[:3] / 8, 1, 255).astype(np.uint8)
 
     # smooth out water areas
     if smooth_water and water_mask.any():
@@ -208,16 +209,18 @@ def execute(
             rgb = image_filters.sharpen(rgb)
 
     # apply color correction
-    corrected = color_correct(
-        rgb=rgb,
-        red_gamma=red_gamma,
-        green_gamma=green_gamma,
-        blue_gamma=blue_gamma,
-        sigmoidal_contrast=sigmoidal_contrast,
-        sigmoidal_bias=sigmoidal_bias,
-        saturation=saturation
-    )
-
+    if color_correction:
+        corrected = color_correct(
+            rgb=rgb,
+            red_gamma=red_gamma,
+            green_gamma=green_gamma,
+            blue_gamma=blue_gamma,
+            sigmoidal_contrast=sigmoidal_contrast,
+            sigmoidal_bias=sigmoidal_bias,
+            saturation=saturation
+            )
+    else:
+        corrected = rgb
     # apply color correction to vegetated areas and merge with corrected
     if cc_desert:
         if len(bands) != 4:
