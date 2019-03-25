@@ -22,7 +22,7 @@ def scl_shadow_mask_no_water(scl=None, water_buffer=0, vegetation_buffer=0, buff
     #     False,
     #     masks.scl_cloud_shadows(scl=scl,buffer=buffer)
     # ).astype(np.bool)
-    mask = masks.scl_water(scl=scl).astype(np.bool)
+    mask = np.where(masks.scl_cloud_shadows(scl=scl), True, False).astype(np.bool)
     return masks.buffer_array(mask, buffer)
 
 
@@ -203,29 +203,30 @@ def execute(
         keep_slice_indexes=add_indexes,
     )
 
-    shadow_mask = scl_shadow_mask_no_water( water_buffer=15, vegetation_buffer=10, buffer=50)
+    if level == 'l2a':
+        shadow_mask = scl_shadow_mask_no_water( water_buffer=15, vegetation_buffer=10, buffer=50)
 
-    _stack = np.stack([np.where(shadow_mask, False, s)
-                            for s in stack])
+        _stack = np.stack([np.where(shadow_mask, False, s)
+                                for s in stack])
 
-    _mosaic = _extract_mosaic(
-            _stack,
-            method,
-            average_over=average_over,
-            considered_bands=considered_bands,
-            simulation_value=simulation_value,
-            value_range_weight=value_range_weight,
-            core_value_range_weight=core_value_range_weight,
-            value_range_min=value_range_min,
-            value_range_max=value_range_max,
-            core_value_range_min=core_value_range_min,
-            core_value_range_max=core_value_range_max,
-            input_values_threshold_multiplier=input_values_threshold_multiplier,
-            from_brightness_average_over=average_over,
-            keep_slice_indexes=add_indexes,
-            )
+        _mosaic = _extract_mosaic(
+                _stack,
+                method,
+                average_over=average_over,
+                considered_bands=considered_bands,
+                simulation_value=simulation_value,
+                value_range_weight=value_range_weight,
+                core_value_range_weight=core_value_range_weight,
+                value_range_min=value_range_min,
+                value_range_max=value_range_max,
+                core_value_range_min=core_value_range_min,
+                core_value_range_max=core_value_range_max,
+                input_values_threshold_multiplier=input_values_threshold_multiplier,
+                from_brightness_average_over=average_over,
+                keep_slice_indexes=add_indexes,
+                )
 
-    mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16)
+        mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16)
 
 
     # optional sharpen
