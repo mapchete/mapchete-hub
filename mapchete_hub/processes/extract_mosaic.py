@@ -4,6 +4,7 @@ import logging
 from mapchete import Timer
 from mapchete_satellite.exceptions import EmptyStackException
 from mapchete_satellite.masks import white, s2_landmask, s2_vegetationmask, s2_shadowmask, s2_cloudmask, s2_inverted_landmask
+from mapchete_satellite import masks
 from mapchete_satellite.utils import read_leveled_cubes
 import numpy as np
 from orgonite import cloudless
@@ -13,6 +14,15 @@ from mapchete_hub import image_filters
 
 
 logger = logging.getLogger(__name__)
+
+
+def scl_shadow_mask_no_water(scl=None, water_buffer=0, vegetation_buffer=0, buffer=0):
+    mask = np.where(
+        masks.scl_water(scl=scl, buffer=water_buffer) | masks.scl_vegetation(scl=scl, buffer=vegetation_buffer),
+        False,
+        masks.scl_cloud_shadows(scl=scl)
+    ).astype(np.bool)
+    return masks.buffer_array(mask, buffer)
 
 
 def execute(
@@ -140,7 +150,7 @@ def execute(
         clip_geom = []
 
     if mask_white_areas:
-        custom_masks = (partial(white), )
+        custom_masks=(partial(white), partial(scl_shadow_mask_no_water, water_buffer=15, vegetation_buffer=10, buffer=50))
     else:
         custom_masks = None
     # read stack
@@ -227,7 +237,7 @@ def execute(
     # _stack = np.stack([np.where(s2_cloudmask(s, level=level, mask_config=CLOUDMASK_CONFIG), False, s)
     #                    for s in _stack])
 
-    _stack = stack.data
+    # _stack = stack.data
 
     # # No clouds, shadows mosaic
     # _mosaic = _extract_mosaic(
@@ -248,37 +258,37 @@ def execute(
     # )
     #
     # # Extra layer Mosaic
-    if mask_s2_land or mask_s2_vegetation:
-        if mask_s2_land and mask_s2_vegetation:
-            raise AttributeError(
-                "mask_s2_land and mask_s2_vegetation cannot be used at the same time"
-            )
-        logger.debug(
-            "extract mosaic from stack with masked %s pixels",
-            "land" if mask_s2_land else "vegetation"
-        )
-        _mask = s2_inverted_landmask if mask_s2_land else s2_vegetationmask
-        _stack = np.stack([np.where(_mask(s, level=level, mask_config=MASK_CONFIG), False, s)
-                           for s in _stack])
-
-        masked_mosaic = _extract_mosaic(
-            _stack,
-            method,
-            average_over=average_over,
-            considered_bands=considered_bands,
-            simulation_value=simulation_value,
-            value_range_weight=value_range_weight,
-            core_value_range_weight=core_value_range_weight,
-            value_range_min=value_range_min,
-            value_range_max=value_range_max,
-            core_value_range_min=core_value_range_min,
-            core_value_range_max=core_value_range_max,
-            input_values_threshold_multiplier=input_values_threshold_multiplier,
-            from_brightness_average_over=average_over,
-            keep_slice_indexes=add_indexes
-        )
-        logger.debug("merge mosaics")
-        mosaic = np.where(masked_mosaic, masked_mosaic, mosaic).astype(np.int16)
+    # if mask_s2_land or mask_s2_vegetation:
+    #     if mask_s2_land and mask_s2_vegetation:
+    #         raise AttributeError(
+    #             "mask_s2_land and mask_s2_vegetation cannot be used at the same time"
+    #         )
+    #     logger.debug(
+    #         "extract mosaic from stack with masked %s pixels",
+    #         "land" if mask_s2_land else "vegetation"
+    #     )
+    #     _mask = s2_inverted_landmask if mask_s2_land else s2_vegetationmask
+    #     _stack = np.stack([np.where(_mask(s, level=level, mask_config=MASK_CONFIG), False, s)
+    #                        for s in _stack])
+    #
+    #     masked_mosaic = _extract_mosaic(
+    #         _stack,
+    #         method,
+    #         average_over=average_over,
+    #         considered_bands=considered_bands,
+    #         simulation_value=simulation_value,
+    #         value_range_weight=value_range_weight,
+    #         core_value_range_weight=core_value_range_weight,
+    #         value_range_min=value_range_min,
+    #         value_range_max=value_range_max,
+    #         core_value_range_min=core_value_range_min,
+    #         core_value_range_max=core_value_range_max,
+    #         input_values_threshold_multiplier=input_values_threshold_multiplier,
+    #         from_brightness_average_over=average_over,
+    #         keep_slice_indexes=add_indexes
+    #     )
+    #     logger.debug("merge mosaics")
+    #     mosaic = np.where(masked_mosaic, masked_mosaic, mosaic).astype(np.int16)
         #mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16)
 
     # optional sharpen
