@@ -16,14 +16,13 @@ from mapchete_hub import image_filters
 logger = logging.getLogger(__name__)
 
 
-def scl_shadow_mask_no_water(scl=None, water_buffer=0, vegetation_buffer=0, buffer=0):
+def scl_shadow_mask(scl=None, water_buffer=0, vegetation_buffer=0, buffer=0):
     # mask = np.where(
     #     masks.scl_water(scl=scl, buffer=water_buffer) | masks.scl_vegetation(scl=scl, buffer=vegetation_buffer),
     #     False,
     #     masks.scl_cloud_shadows(scl=scl,buffer=buffer)
     # ).astype(np.bool)
-    mask = np.where(masks.scl_cloud_shadows(scl=scl), True, False).astype(np.bool)
-    return masks.buffer_array(mask, buffer)
+    return masks.buffer_array(masks.scl_cloud_shadows(scl=scl), buffer)
 
 
 def execute(
@@ -150,21 +149,28 @@ def execute(
     else:
         clip_geom = []
 
-    if mask_white_areas:
-        custom_masks=(partial(white), )
-    else:
-        custom_masks = None
     # read stack
     with Timer() as t:
         primary = mp.open("primary")
         level = primary.processing_level.lower()
+
+        if mask_white_areas and level == 'l2a':
+            custom_masks_both=(partial(white), partial(scl_shadow_mask, buffer=50))
+            custom_masks_white=(partial(white), )
+        elif mask_white_areas:
+            custom_masks_both = None
+            custom_masks_white=(partial(white), )
+        else:
+            custom_masks_both = None
+            custom_masks_white = None
+
         if "secondary" in mp.params["input"]:
-            secondary = mp.open("secondary")
-            cubes = (primary, secondary)
-            slice_ids = (
-                primary.sorted_slice_ids("time_difference"),
-                secondary.sorted_slice_ids("time_difference")
-            )
+                    secondary = mp.open("secondary")
+                    cubes = (primary, secondary)
+                    slice_ids = (
+                        primary.sorted_slice_ids("time_difference"),
+                        secondary.sorted_slice_ids("time_difference")
+                    )
         else:
             cubes = (primary, )
             slice_ids = (primary.sorted_slice_ids("time_difference"), )
@@ -177,8 +183,19 @@ def execute(
                 resampling=resampling,
                 mask_clouds=mask_clouds,
                 clouds_buffer=350,
-                custom_masks=custom_masks
+                custom_masks=custom_masks_white
             )
+            if level == 'l2a':
+                _stack = read_leveled_cubes(
+                    cubes,
+                    slice_ids,
+                    indexes=bands,
+                    target_height=stack_target_height,
+                    resampling=resampling,
+                    mask_clouds=mask_clouds,
+                    clouds_buffer=350,
+                    custom_masks=custom_masks_both
+                )
         except EmptyStackException:
             return "empty"
 
@@ -204,13 +221,8 @@ def execute(
     )
 
     if level == 'l2a':
-        shadow_mask = scl_shadow_mask_no_water( water_buffer=15, vegetation_buffer=10, buffer=50)
-
-        _stack = np.stack([np.where(shadow_mask, False, s)
-                                for s in stack])
-
         _mosaic = _extract_mosaic(
-                _stack,
+                _stack.data,
                 method,
                 average_over=average_over,
                 considered_bands=considered_bands,
