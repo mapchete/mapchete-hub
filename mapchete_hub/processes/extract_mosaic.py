@@ -187,6 +187,7 @@ def execute(
                 clouds_buffer=350,
                 custom_masks=custom_masks_white
             )
+
         except EmptyStackException:
             return "empty"
 
@@ -212,18 +213,10 @@ def execute(
     )
 
     if level == 'l2a':
-        _stack = read_leveled_cubes(
-            cubes,
-            slice_ids,
-            indexes=bands,
-            target_height=stack_target_height,
-            resampling=resampling,
-            mask_clouds=mask_clouds,
-            clouds_buffer=350,
-            custom_masks=custom_masks_both
-        )
+        _stack = np.stack([np.where(masks.buffer_array(masks.scl_cloud_shadows(primary.read_scl_mask(s.slice_id)), buffer=75), 0, s.data) for s in stack])
+
         _mosaic = _extract_mosaic(
-                _stack.data,
+                _stack,
                 method,
                 average_over=average_over,
                 considered_bands=considered_bands,
