@@ -191,6 +191,8 @@ def execute(
     logger.debug("read %s slices", len(stack.data))
     logger.debug("stack read in %s", t)
 
+    stack.data = np.stack([np.where(masks.buffer_array(np.where(s < 25, False, s), buffer=50), 0, s) for s in stack.data])
+
     # Basic Mosaic
     mosaic = _extract_mosaic(
         stack.data,
