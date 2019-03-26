@@ -157,14 +157,11 @@ def execute(
         level = primary.processing_level.lower()
 
         if mask_white_areas and level == 'l2a':
-            custom_masks_both=(partial(white), partial(scl_shadow_mask, buffer=75))
-            custom_masks_white=(partial(white, threshold=2048), )
+            custom_masks=(partial(white, threshold=2048), )
         elif mask_white_areas:
-            custom_masks_both = None
-            custom_masks_white=(partial(white), )
+            custom_masks=(partial(white), )
         else:
-            custom_masks_both = None
-            custom_masks_white = None
+            custom_masks = None
 
         if "secondary" in mp.params["input"]:
                     secondary = mp.open("secondary")
@@ -185,7 +182,7 @@ def execute(
                 resampling=resampling,
                 mask_clouds=mask_clouds,
                 clouds_buffer=350,
-                custom_masks=custom_masks_white
+                custom_masks=custom_masks
             )
 
         except EmptyStackException:

@@ -305,7 +305,7 @@ def sharpen_16bit(src):
     # Unshapen Mask Filter, working version as the one above is not working
     return np.stack([
         ndimage.percentile_filter(
-            b + (b - ndimage.percentile_filter(b, 35, 4, mode='nearest')),
+            b + (b - ndimage.percentile_filter(b, 35, src.shape[0], mode='nearest')),
             45, 2, mode='nearest'
         )
         for b in src
