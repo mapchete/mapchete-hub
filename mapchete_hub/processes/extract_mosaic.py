@@ -189,18 +189,8 @@ def execute(
             return "empty"
 
     logger.debug("read %s slices", len(stack.data))
-    logger.debug("stack read in %s", t)
-
-    black_mask = np.full(mp.tile.shape, False)
-    for s in stack:
-        for b in s.data[:-1]:
-            black_mask = np.where(
-                    black_mask, black_mask, 
-                    masks.buffer_array(np.where((b < 25) & (b > 0), True, False), buffer=25)
-                                 )
-
-    # stack.data = np.stack([np.where(black_mask, False, s) for s in stack.data])
-
+    logger.debug("stack read in %s with height %s", t, stack.data.shape[0])
+  
     # Basic Mosaic
     mosaic = _extract_mosaic(
         stack.data,
@@ -221,7 +211,7 @@ def execute(
 
     if level == 'l2a':
         _stack = np.stack([np.where(masks.buffer_array(masks.scl_cloud_shadows(primary.read_scl_mask(s.slice_id)), buffer=75), 0, s.data) for s in stack])
-
+          
         _mosaic = _extract_mosaic(
                 _stack,
                 method,
