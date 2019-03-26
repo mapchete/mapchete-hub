@@ -186,7 +186,6 @@ def execute(
 
     # scale down RGB bands to 8 bit and avoid nodata through interpolation
     rgb = np.clip(mosaic[:3] / 8, 1, 255).astype(np.uint8)
-    rgb = np.where(np.sum(rgb) == 0, 255, rgb)
 
     # smooth out water areas
     if smooth_water and water_mask.any():

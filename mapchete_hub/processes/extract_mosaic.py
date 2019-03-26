@@ -193,13 +193,13 @@ def execute(
 
     black_mask = np.full(mp.tile.shape, False)
     for s in stack:
-        for b in s.data:
+        for b in s.data[:-1]:
             black_mask = np.where(
                     black_mask, black_mask, 
-                    masks.buffer_array(np.where((b < 5) & (b > 0), True, False), buffer=10)
+                    masks.buffer_array(np.where((b < 25) & (b > 0), True, False), buffer=25)
                                  )
 
-    stack.data = np.stack([np.where(black_mask, False, s) for s in stack.data])
+    # stack.data = np.stack([np.where(black_mask, False, s) for s in stack.data])
 
     # Basic Mosaic
     mosaic = _extract_mosaic(
