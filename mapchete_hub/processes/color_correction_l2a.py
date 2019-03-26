@@ -203,10 +203,10 @@ def execute(
             rgb = np.where(
                 water_mask,
                 rgb,
-                image_filters.sharpen(rgb)
+                image_filters.sharpen_16bit(rgb)
             )
         else:
-            rgb = image_filters.sharpen(rgb)
+            rgb = image_filters.sharpen_16bit(rgb)
 
     # apply color correction
     if color_correction:

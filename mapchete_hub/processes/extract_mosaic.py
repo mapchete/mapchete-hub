@@ -3,7 +3,9 @@ from functools import partial
 import logging
 from mapchete import Timer
 from mapchete_satellite.exceptions import EmptyStackException
-from mapchete_satellite.masks import white, s2_landmask, s2_vegetationmask, s2_shadowmask, s2_cloudmask, s2_inverted_landmask
+from mapchete_satellite.masks import white
+# from mapchete_satellite.masks s2_landmask, s2_vegetationmask, s2_shadowmask,
+# s2_cloudmask, s2_inverted_landmask
 from mapchete_satellite import masks
 from mapchete_satellite.utils import read_leveled_cubes
 import numpy as np
