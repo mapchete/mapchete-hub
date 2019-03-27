@@ -33,10 +33,10 @@ def execute(
     resampling="cubic_spline",
     stack_target_height=10,
     mask_clouds=True,
-    clouds_buffer=0,
+    clouds_buffer=300,
+    shadows_buffer=75,
     mask_white_areas=False,
-    mask_s2_land=False,
-    mask_s2_vegetation=False,
+    fill_nodata=True,
     read_threads=1,
     add_indexes=False,
     method="brightness",
@@ -181,7 +181,7 @@ def execute(
                 target_height=stack_target_height,
                 resampling=resampling,
                 mask_clouds=mask_clouds,
-                clouds_buffer=350,
+                clouds_buffer=clouds_buffer,
                 custom_masks=custom_masks
             )
 
@@ -210,7 +210,7 @@ def execute(
     )
 
     if level == 'l2a':
-        _stack = np.stack([np.where(masks.buffer_array(masks.scl_cloud_shadows(primary.read_scl_mask(s.slice_id)), buffer=75), 0, s.data) for s in stack])
+        _stack = np.stack([np.where(masks.buffer_array(masks.scl_cloud_shadows(primary.read_scl_mask(s.slice_id)), buffer=shadows_buffer), 0, s.data) for s in stack])
           
         _mosaic = _extract_mosaic(
                 _stack,
@@ -252,6 +252,12 @@ def execute(
             inverted=True
         )
         mosaic = np.where(clipped.mask, clipped, mp.params["output"].nodata)
+
+    # fill nodata
+    if level == 'l2a':
+        mosaic = mosaic.filled(2048)
+    else:
+        mosaic = mosaic.filled(4096)
 
     # optional index band
     if add_indexes:
