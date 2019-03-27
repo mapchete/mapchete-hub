@@ -210,10 +210,19 @@ def execute(
     )
 
     if level == 'l2a':
-        _stack = np.stack([np.where(masks.buffer_array(masks.scl_cloud_shadows(primary.read_scl_mask(s.slice_id)), buffer=shadows_buffer), 0, s.data) for s in stack])
+
+        primary_stack = np.stack([np.where(
+            masks.buffer_array(
+                masks.scl_cloud_shadows(primary.read_scl_mask(s.slice_id)),
+                buffer=shadows_buffer), 0, s.data) for s in stack])
+
+        if "secondary" in mp.params["input"]:
+            primary_stack += np.stack([np.where(masks.buffer_array(
+                masks.scl_cloud_shadows(secondary.read_scl_mask(s.slice_id)),
+                buffer=shadows_buffer), 0, s.data) for s in stack])
           
         _mosaic = _extract_mosaic(
-                _stack,
+                primary_stack,
                 method,
                 average_over=average_over,
                 considered_bands=considered_bands,
