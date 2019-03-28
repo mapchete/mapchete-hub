@@ -36,6 +36,7 @@ def execute(
     clouds_buffer=300,
     shadows_buffer=75,
     mask_white_areas=False,
+    custom_masks=None,
     fill_nodata=True,
     read_threads=1,
     add_indexes=False,
@@ -157,11 +158,11 @@ def execute(
         level = primary.processing_level.lower()
 
         if mask_white_areas and level == 'l2a':
-            custom_masks=(partial(white, threshold=2048), )
+            white_threshold = 2048
         elif mask_white_areas:
-            custom_masks=(partial(white), )
+            white_threshold = 4096
         else:
-            custom_masks = None
+            white_threshold = 4096
 
         if "secondary" in mp.params["input"]:
                     secondary = mp.open("secondary")
@@ -182,7 +183,9 @@ def execute(
                 resampling=resampling,
                 mask_clouds=mask_clouds,
                 clouds_buffer=clouds_buffer,
-                custom_masks=custom_masks
+                custom_masks=custom_masks,
+                mask_white_areas=mask_white_areas,
+                white_threshold=white_threshold
             )
 
         except EmptyStackException:
@@ -190,7 +193,7 @@ def execute(
 
     logger.debug("read %s slices", len(stack.data))
     logger.debug("stack read in %s with height %s", t, stack.data.shape[0])
-  
+
     # Basic Mosaic
     mosaic = _extract_mosaic(
         stack.data,
@@ -270,9 +273,9 @@ def execute(
         mosaic = np.where(clipped.mask, clipped, mp.params["output"].nodata)
 
     # fill nodata
-    if level == 'l2a':
+    if fill_nodata and level == 'l2a':
         mosaic = np.where(mosaic==0, 2048, mosaic)
-    else:
+    elif fill_nodata:
         mosaic = np.where(mosaic==0, 4096, mosaic)
 
     # optional index band
