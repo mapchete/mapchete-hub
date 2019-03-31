@@ -4,8 +4,8 @@ import logging
 from mapchete import Timer
 from mapchete_satellite.exceptions import EmptyStackException
 from mapchete_satellite.masks import white
-# from mapchete_satellite.masks s2_landmask, s2_vegetationmask, s2_shadowmask,
-# s2_cloudmask, s2_inverted_landmask
+from mapchete_satellite.masks import s2_landmask, s2_vegetationmask, s2_shadowmask, \
+                s2_cloudmask, s2_inverted_landmask
 from mapchete_satellite import masks
 from mapchete_satellite.utils import read_leveled_cubes
 import numpy as np
@@ -194,6 +194,7 @@ def execute(
     logger.debug("read %s slices", len(stack.data))
     logger.debug("stack read in %s with height %s", t, stack.data.shape[0])
 
+    stack.data = np.stack([np.where(s2_cloudmask(s.data, False, s.data))for s in stack])
     # Basic Mosaic
     mosaic = _extract_mosaic(
         stack.data,
@@ -230,7 +231,8 @@ def execute(
                 0,
                 s.data
             )
-            for s in stack]) 
+            for s in stack])
+        _stack = np.stack([np.where(stack[2,: , :] < 25, 0, s) for s in _stack])
         _mosaic = _extract_mosaic(
                 _stack,
                 method,
@@ -249,7 +251,6 @@ def execute(
                 )
 
         mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16)
-
 
     # optional sharpen
     if sharpen_output:
