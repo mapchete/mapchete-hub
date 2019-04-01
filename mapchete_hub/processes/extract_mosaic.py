@@ -194,7 +194,6 @@ def execute(
     logger.debug("read %s slices", len(stack.data))
     logger.debug("stack read in %s with height %s", t, stack.data.shape[0])
 
-    stack.data = np.stack([np.where(s2_cloudmask(s.data, False, s.data))for s in stack])
     # Basic Mosaic
     mosaic = _extract_mosaic(
         stack.data,
