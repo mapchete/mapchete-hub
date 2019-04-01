@@ -229,7 +229,7 @@ def execute(
                 s.data
             )
             for s in stack])
-        _stack = np.stack([np.where(stack[2,: , :] < 25, 0, s) for s in _stack])
+        _stack = np.stack([np.where(s[2,: , :] < 25, 0, s) for s in _stack])
         _mosaic = _extract_mosaic(
                 _stack,
                 method,
