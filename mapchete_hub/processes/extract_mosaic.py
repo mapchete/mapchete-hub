@@ -18,13 +18,13 @@ from mapchete_hub import image_filters
 logger = logging.getLogger(__name__)
 
 
-def scl_shadow_mask(scl=None, water_buffer=0, vegetation_buffer=0, buffer=0):
-    # mask = np.where(
-    #     masks.scl_water(scl=scl, buffer=water_buffer) | masks.scl_vegetation(scl=scl, buffer=vegetation_buffer),
-    #     False,
-    #     masks.scl_cloud_shadows(scl=scl,buffer=buffer)
-    # ).astype(np.bool)
-    return masks.buffer_array(masks.scl_cloud_shadows(scl=scl), buffer)
+def scl_shadow_mask_no_water(scl=None, water_buffer=15, vegetation_buffer=5, buffer=0):
+    mask = np.where(
+        masks.scl_water(scl=scl, buffer=water_buffer) | masks.scl_vegetation(scl=scl, buffer=vegetation_buffer),
+        False,
+        masks.scl_cloud_shadows(scl=scl,buffer=buffer)
+    ).astype(np.bool)
+    return masks.buffer_array(mask, buffer)
 
 
 def execute(
@@ -216,18 +216,16 @@ def execute(
     if level == 'l2a':
         _stack = np.stack([
             np.where(
-                masks.buffer_array(
-                    masks.scl_cloud_shadows(primary.read_scl_mask(s.slice_id)),
-                    buffer=shadows_buffer
-                ),
+                scl_shadow_mask_no_water(primary.read_scl_mask(s.slice_id),
+                                         buffer=shadows_buffer
+                                         ),
                 0,
                 s.data
             )
             if s.slice_id in primary.source_data else np.where(
-                masks.buffer_array(
-                    masks.scl_cloud_shadows(secondary.read_scl_mask(s.slice_id)),
-                    buffer=shadows_buffer
-                ),
+                scl_shadow_mask_no_water(secondary.read_scl_mask(s.slice_id),
+                                         buffer=shadows_buffer
+                                         ),
                 0,
                 s.data
             )
