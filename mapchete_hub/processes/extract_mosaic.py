@@ -5,7 +5,7 @@ from mapchete import Timer
 from mapchete_satellite.exceptions import EmptyStackException
 from mapchete_satellite.masks import white
 from mapchete_satellite.masks import s2_landmask, s2_vegetationmask, s2_shadowmask, \
-                s2_cloudmask, s2_inverted_landmask
+    s2_cloudmask, s2_inverted_landmask
 from mapchete_satellite import masks
 from mapchete_satellite.utils import read_leveled_cubes
 import numpy as np
@@ -28,33 +28,33 @@ def scl_shadow_mask_no_water(scl=None, water_buffer=15, vegetation_buffer=5, buf
 
 
 def execute(
-    mp,
-    bands=None,
-    resampling="cubic_spline",
-    stack_target_height=10,
-    mask_clouds=True,
-    clouds_buffer=300,
-    shadows_buffer=75,
-    mask_white_areas=False,
-    custom_masks=None,
-    fill_nodata=True,
-    read_threads=1,
-    add_indexes=False,
-    method="brightness",
-    considered_bands=4,
-    average_over=3,
-    simulation_value=1.25,
-    value_range_min=1500,
-    value_range_max=1800,
-    value_range_weight=3,
-    core_value_range_min=700,
-    core_value_range_max=1500,
-    core_value_range_weight=8,
-    min_stack_height=10,
-    input_values_threshold_multiplier=10,
-    sharpen_output=False,
-    clip_pixelbuffer=0,
-    **kwargs
+        mp,
+        bands=None,
+        resampling="cubic_spline",
+        stack_target_height=10,
+        mask_clouds=True,
+        clouds_buffer=300,
+        shadows_buffer=75,
+        mask_white_areas=False,
+        custom_masks=None,
+        fill_nodata=True,
+        read_threads=1,
+        add_indexes=False,
+        method="brightness",
+        considered_bands=4,
+        average_over=3,
+        simulation_value=1.25,
+        value_range_min=1500,
+        value_range_max=1800,
+        value_range_weight=3,
+        core_value_range_min=700,
+        core_value_range_max=1500,
+        core_value_range_weight=8,
+        min_stack_height=10,
+        input_values_threshold_multiplier=10,
+        sharpen_output=False,
+        clip_pixelbuffer=0,
+        **kwargs
 ):
     """
     Extract cloudless mosaic from time series.
@@ -157,12 +157,12 @@ def execute(
         primary = mp.open("primary")
         level = primary.processing_level.lower()
         if "secondary" in mp.params["input"]:
-                    secondary = mp.open("secondary")
-                    cubes = (primary, secondary)
-                    slice_ids = (
-                        primary.sorted_slice_ids("time_difference"),
-                        secondary.sorted_slice_ids("time_difference")
-                    )
+            secondary = mp.open("secondary")
+            cubes = (primary, secondary)
+            slice_ids = (
+                primary.sorted_slice_ids("time_difference"),
+                secondary.sorted_slice_ids("time_difference")
+            )
         else:
             cubes = (primary, )
             slice_ids = (primary.sorted_slice_ids("time_difference"), )
@@ -184,16 +184,19 @@ def execute(
     logger.debug("read %s slices", len(stack.data))
     logger.debug("stack read in %s with height %s", t, stack.data.shape[0])
 
+    # White masks
     if mask_white_areas and level == 'l2a':
         white_threshold = 2048
-    elif mask_white_areas:
+        _stack = np.stack([np.where(
+            masks.white(s.data,threshold=white_threshold), False, s.data)
+            for s in stack])
+    elif mask_white_areas and level == 'l1c':
         white_threshold = 4096
+        _stack = np.stack([np.where(
+            masks.white(s.data,threshold=white_threshold), False, s.data)
+            for s in stack])
     else:
-        white_threshold = 4096
-
-    _stack = np.stack([np.where(
-        masks.white(s.data,threshold=white_threshold), False, s.data)
-        for s in stack])
+        _stack = stack.data
 
     # Basic Mosaic
     mosaic = _extract_mosaic(
@@ -231,20 +234,20 @@ def execute(
             for s in _stack])
         _stack = np.stack([np.where(s[2,: , :] < 25, 0, s) for s in _stack])
         _mosaic = _extract_mosaic(
-                _stack,
-                method,
-                average_over=average_over,
-                considered_bands=considered_bands,
-                simulation_value=simulation_value,
-                value_range_weight=value_range_weight,
-                core_value_range_weight=core_value_range_weight,
-                value_range_min=value_range_min,
-                value_range_max=value_range_max,
-                core_value_range_min=core_value_range_min,
-                core_value_range_max=core_value_range_max,
-                input_values_threshold_multiplier=input_values_threshold_multiplier,
-                keep_slice_indexes=add_indexes,
-                )
+            _stack,
+            method,
+            average_over=average_over,
+            considered_bands=considered_bands,
+            simulation_value=simulation_value,
+            value_range_weight=value_range_weight,
+            core_value_range_weight=core_value_range_weight,
+            value_range_min=value_range_min,
+            value_range_max=value_range_max,
+            core_value_range_min=core_value_range_min,
+            core_value_range_max=core_value_range_max,
+            input_values_threshold_multiplier=input_values_threshold_multiplier,
+            keep_slice_indexes=add_indexes,
+        )
 
         mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16)
 
@@ -284,7 +287,7 @@ def execute(
                 cloudless.gen_slice_indexes(
                     len(stack.data), nodata=mp.params["output"].nodata
                 ),
-               stack
+                stack
             )
         }
         return mosaic, {'datasets': json.dumps(tags)}
@@ -293,20 +296,20 @@ def execute(
 
 
 def _extract_mosaic(
-    stack_data,
-    method,
-    average_over=None,
-    considered_bands=None,
-    simulation_value=None,
-    value_range_weight=None,
-    core_value_range_weight=None,
-    value_range_min=None,
-    value_range_max=None,
-    core_value_range_min=None,
-    core_value_range_max=None,
-    input_values_threshold_multiplier=None,
-    from_brightness_extract_method='third_quartile',
-    keep_slice_indexes=None,
+        stack_data,
+        method,
+        average_over=None,
+        considered_bands=None,
+        simulation_value=None,
+        value_range_weight=None,
+        core_value_range_weight=None,
+        value_range_min=None,
+        value_range_max=None,
+        core_value_range_min=None,
+        core_value_range_max=None,
+        input_values_threshold_multiplier=None,
+        from_brightness_extract_method='third_quartile',
+        keep_slice_indexes=None,
 ):
     # extract mosaic
     logger.debug("run orgonite '%s' method", method)
