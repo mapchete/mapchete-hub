@@ -279,9 +279,9 @@ def execute(
 
     # fill nodata
     if fill_nodata and level == 'l2a':
-        mosaic = np.where(mosaic[:-1, : ,: ] == 0, 2048, mosaic[:-1, : ,: ])
+        mosaic = np.where(mosaic[:-1, : ,: ] == 0, 2048, mosaic)
     elif fill_nodata:
-        mosaic = np.where(mosaic[:-1, : ,: ] == 0, 4096, mosaic[:-1, : ,: ])
+        mosaic = np.where(mosaic[:-1, : ,: ] == 0, 4096, mosaic)
 
     # optional index band
     if add_indexes:
