@@ -156,14 +156,6 @@ def execute(
     with Timer() as t:
         primary = mp.open("primary")
         level = primary.processing_level.lower()
-
-        if mask_white_areas and level == 'l2a':
-            white_threshold = 2048
-        elif mask_white_areas:
-            white_threshold = 4096
-        else:
-            white_threshold = 4096
-
         if "secondary" in mp.params["input"]:
                     secondary = mp.open("secondary")
                     cubes = (primary, secondary)
@@ -183,9 +175,7 @@ def execute(
                 resampling=resampling,
                 mask_clouds=mask_clouds,
                 clouds_buffer=clouds_buffer,
-                custom_masks=custom_masks,
-                mask_white_areas=mask_white_areas,
-                white_threshold=white_threshold
+                custom_masks=custom_masks
             )
 
         except EmptyStackException:
@@ -194,9 +184,20 @@ def execute(
     logger.debug("read %s slices", len(stack.data))
     logger.debug("stack read in %s with height %s", t, stack.data.shape[0])
 
+    if mask_white_areas and level == 'l2a':
+        white_threshold = 2048
+    elif mask_white_areas:
+        white_threshold = 4096
+    else:
+        white_threshold = 4096
+
+    _stack = np.stack([np.where(
+        masks.white(s.data,threshold=white_threshold), False, s.data)
+        for s in stack])
+
     # Basic Mosaic
     mosaic = _extract_mosaic(
-        stack.data,
+        _stack,
         method,
         average_over=average_over,
         considered_bands=considered_bands,
@@ -208,7 +209,6 @@ def execute(
         core_value_range_min=core_value_range_min,
         core_value_range_max=core_value_range_max,
         input_values_threshold_multiplier=input_values_threshold_multiplier,
-        from_brightness_average_over=average_over,
         keep_slice_indexes=add_indexes,
     )
 
@@ -228,7 +228,7 @@ def execute(
                 0,
                 s.data
             )
-            for s in stack])
+            for s in _stack])
         _stack = np.stack([np.where(s[2,: , :] < 25, 0, s) for s in _stack])
         _mosaic = _extract_mosaic(
                 _stack,
@@ -243,7 +243,6 @@ def execute(
                 core_value_range_min=core_value_range_min,
                 core_value_range_max=core_value_range_max,
                 input_values_threshold_multiplier=input_values_threshold_multiplier,
-                from_brightness_average_over=average_over,
                 keep_slice_indexes=add_indexes,
                 )
 
@@ -272,9 +271,9 @@ def execute(
 
     # fill nodata
     if fill_nodata and level == 'l2a':
-        mosaic = np.where(mosaic==0, 2048, mosaic)
+        mosaic = np.where(mosaic[:, :-1,: ,: ] == 0, 2048, mosaic[:, :-1,: ,: ])
     elif fill_nodata:
-        mosaic = np.where(mosaic==0, 4096, mosaic)
+        mosaic = np.where(mosaic[:, :-1,: ,: ] == 0, 4096, mosaic[:, :-1,: ,: ])
 
     # optional index band
     if add_indexes:
@@ -306,7 +305,7 @@ def _extract_mosaic(
     core_value_range_min=None,
     core_value_range_max=None,
     input_values_threshold_multiplier=None,
-    from_brightness_average_over=None,
+    from_brightness_extract_method='third_quartile',
     keep_slice_indexes=None,
 ):
     # extract mosaic
@@ -344,8 +343,9 @@ def _extract_mosaic(
         elif method == "max_ndvi":
             mosaic = cloudless.max_ndvi(
                 stack_data,
-                min_ndvi=0.2,
+                min_ndvi=0.4,
                 max_ndvi=0.95,
+                from_brightness_extract_method=from_brightness_extract_method,
                 from_brightness_average_over=average_over,
                 keep_slice_indexes=keep_slice_indexes
             )
