@@ -231,7 +231,12 @@ def execute(
                 0,
                 s.data
             )
-            for s in _stack])
+            for s in stack])
+        if mask_white_areas:
+            white_threshold = 2048
+            _stack = np.stack([np.where(
+                masks.white(s,threshold=white_threshold), False, s)
+                for s in _stack])
         _stack = np.stack([np.where(s[2,: , :] < 25, 0, s) for s in _stack])
         _mosaic = _extract_mosaic(
             _stack,
