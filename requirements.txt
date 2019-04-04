@@ -1,18 +1,18 @@
 celery
 celery-flower
-click
-fiona
 Flask-Celery-py3
 flask_restful
 geojson
 mapchete>=0.21
-orgonite
+mapchete_satellite @ git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@master
+orgonite @ git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master
 Pillow
 pysqlite3
 pyyaml
 rio-color
 scipy
 slacker
-shapely
 spatialite
-tqdm
+# dependencies from mapchete_satellite[mundi,s1]
+metis @ git+http://gitlab+deploy-token-6:_AHLpsvzLQq3j4a_w95R@gitlab.eox.at/maps/metis.git@master
+xml2dict

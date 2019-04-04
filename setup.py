@@ -1,6 +1,7 @@
 """Install Mapchete."""
 
-from setuptools import setup
+import os
+from setuptools import setup, find_packages
 
 # get version number
 # from https://github.com/mapbox/rasterio/blob/master/setup.py#L55
@@ -12,6 +13,14 @@ with open('mapchete_hub/__init__.py') as f:
             version = version.strip("'")
             continue
 
+
+def parse_requirements(file):
+    return sorted(set(
+        line.partition('#')[0].strip()
+        for line in open(os.path.join(os.path.dirname(__file__), file))
+    ) - set(''))
+
+
 setup(
     name='mapchete_hub',
     version=version,
@@ -20,9 +29,7 @@ setup(
     author_email='joachim.ungar@eox.at',
     url='https://gitlab.eox.at/maps/orgonite',
     license='MIT',
-    packages=[
-        'mapchete_hub.cli'
-    ],
+    packages=find_packages(),
     entry_points={
         'console_scripts': ['mhub=mapchete_hub.cli:mhub'],
         'mapchete.cli.commands': ["mhub=mapchete_hub.cli:mhub"],
@@ -32,22 +39,8 @@ setup(
             'scale=mapchete_hub.processes.scale',
         ]
     },
-    install_requires=[
-        'celery',
-        'celery-flower',
-        'click',
-        'fiona',
-        'Flask-Celery-py3',
-        'flask_restful',
-        'geojson',
-        'mapchete>=0.21',
-        'pysqlite3',
-        'slacker',
-        'shapely',
-        'spatialite',
-        'tqdm',
-        'pyyaml'
-    ],
+    install_requires=parse_requirements('requirements.txt'),
+    extras_require={'test': parse_requirements('requirements_test.txt')},
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
