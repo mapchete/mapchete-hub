@@ -8,9 +8,16 @@ from rio_color import operations
 
 from mapchete_hub import image_filters
 
-from mapchete_satellite.masks import white
+from mapchete_satellite.masks import white, buffer_array
 
 logger = logging.getLogger(__name__)
+
+
+def dark(bands=None, threshold=100, buffer=0):
+    return buffer_array(
+        np.where(bands < threshold, True, False).all(axis=0).astype(np.bool),
+        buffer=buffer
+    )
 
 
 def execute(
@@ -21,8 +28,10 @@ def execute(
     td_matching_max_zoom=None,
     td_matching_precision=8,
     td_fallback_to_higher_zoom=False,
-    white_threshhold=4096,
+    white_threshold=4096,
     white_buffer=10,
+    dark_threshold=100,
+    dark_buffer=10,
     smooth_water=True,
     color_correction=None,
     ndwi_threshold=0.2,
@@ -160,8 +169,9 @@ def execute(
                 else:
                     logger.debug("merging %s with other", mosaic_name)
                     white_mask = white(mosaic, threshold=white_threshold, buffer=white_buffer)
+                    dark_mask = dark(mosaic, threshold=dark_threshold, buffer=dark_buffer)
                     mosaic = np.where(
-                        (white_mask) & (raw != 0), raw, mosaic
+                        ((dark_mask) | (white_mask)) & (raw != 0), raw, mosaic
                     ).astype(np.int16)
                     nodata_mask = np.where(
                         nodata_mask, raw[0].mask, nodata_mask
