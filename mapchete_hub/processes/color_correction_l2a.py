@@ -149,7 +149,10 @@ def execute(
 
     # read and merge mosaics
     mosaic, nodata_mask = None, None
-    for mosaic_name in ["mosaic_1", "mosaic_2", "mosaic_3"]:
+    for mosaic_name in ["mosaic_1", "mosaic_2", "mosaic_3",
+                        "mosaic_4", "mosaic_5", "mosaic_6",
+                        "mosaic_7", "mosaic_8", "mosaic_9",
+                        "mosaic_10", "mosaic_11", "mosaic_12"]:
         logger.debug("trying to read from %s", mosaic_name)
         if mosaic_name in mp.params["input"]:
             raw = read_mosaic(
