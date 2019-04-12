@@ -19,6 +19,7 @@ def execute(
     td_matching_max_zoom=None,
     td_matching_precision=8,
     td_fallback_to_higher_zoom=False,
+    fill_nodata_with_secondary=False,
     smooth_water=True,
     color_correction=None,
     ndwi_threshold=0.2,
@@ -136,7 +137,7 @@ def execute(
 
     # read and merge mosaics
     mosaic, nodata_mask = None, None
-    for mosaic_name in ["mosaic", "mosaic2"]:
+    for mosaic_name in ["mosaic_1", "mosaic_2", "mosaic_3"]:
         logger.debug("trying to read from %s", mosaic_name)
         if mosaic_name in mp.params["input"]:
             raw = read_mosaic(
