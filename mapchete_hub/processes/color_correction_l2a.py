@@ -174,7 +174,7 @@ def execute(
                     white_mask = white(mosaic, threshold=white_threshold, buffer=white_buffer)
                     dark_mask = dark(mosaic, threshold=dark_threshold, buffer=dark_buffer)
                     mosaic = np.where(
-                        ((dark_mask) | (white_mask)) & (raw != 0) & (np.sum(raw, axis=0) < 8000), raw, mosaic
+                        ((dark_mask) | (white_mask)) & (np.sum(raw, axis=0) > 400) & (np.sum(raw, axis=0) < 8000), raw, mosaic
                     ).astype(np.int16)
                     nodata_mask = np.where(
                         nodata_mask, raw[0].mask, nodata_mask
