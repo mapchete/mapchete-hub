@@ -171,10 +171,19 @@ def execute(
                     nodata_mask = raw[0].mask
                 else:
                     logger.debug("merging %s with other", mosaic_name)
-                    white_mask = white(mosaic, threshold=white_threshold, buffer=white_buffer)
-                    dark_mask = dark(mosaic, threshold=dark_threshold, buffer=dark_buffer)
+                    white_mask = white(mosaic,
+                                       threshold=white_threshold,
+                                       buffer=white_buffer
+                                       )
+                    dark_mask = dark(mosaic,
+                                     threshold=dark_threshold,
+                                     buffer=dark_buffer
+                                     )
                     mosaic = np.where(
-                        ((dark_mask) | (white_mask)) & (np.sum(raw, axis=0) > 250) & (np.sum(raw, axis=0) < 8000), raw, mosaic
+                            ((dark_mask) | (white_mask)) &
+                            (np.sum(raw, axis=0) > 250) &
+                            (np.sum(raw, axis=0) < 8000),
+                            raw, mosaic
                     ).astype(np.int16)
                     nodata_mask = np.where(
                         nodata_mask, raw[0].mask, nodata_mask
