@@ -43,7 +43,7 @@ RUN git clone http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/ma
   && python setup.py test \
   && cd $ROOTDIR/src \
   # metis
-  && git clone http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/metis.git \
+  && git clone http://gitlab+deploy-token-6:_AHLpsvzLQq3j4a_w95R@gitlab.eox.at/maps/metis.git \
   && cd metis \
   && git checkout $METIS_VERSION \
   && pip install -r requirements.txt -r requirements_tests.txt \
