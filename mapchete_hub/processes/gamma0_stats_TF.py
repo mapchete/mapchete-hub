@@ -67,7 +67,7 @@ def execute(
     primary = mp.open("primary")
     try:
         # read stack
-        stack = primary.read(indexes=[1, 2], resampling='Cubic Convolution')
+        stack = primary.read_cube(indexes=[1, 2], resampling='bilinear')
     except EmptyStackException:
         return "empty"
 
