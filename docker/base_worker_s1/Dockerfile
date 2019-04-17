@@ -38,7 +38,7 @@ RUN git clone http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/ma
   && git clone http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git \
   && cd mapchete_satellite \
   && git checkout $MAPCHETE_SATELLITE_VERSION \
-  && pip install -r requirements.txt -r requirements_aws.txt -r requirements_mundi.txt \
+  && pip install -r requirements.txt -r requirements_cli.txt -r requirements_mundi.txt -r requirements_s1.txt -r requirements_test.txt\
   && python setup.py develop \
   && python setup.py test \
   && cd $ROOTDIR/src \
