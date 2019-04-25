@@ -24,9 +24,6 @@ RUN apt update -y \
   && apt install -y libspatialindex-dev \
   && rm -rf /var/lib/apt/lists/*
 
-COPY OTC_rsa /root/.ssh/
-RUN chmod 600 /root/.ssh/OTC_rsa
-
 # install python packages
 #########################
   # orgonite
