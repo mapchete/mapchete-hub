@@ -23,7 +23,7 @@ function retry {
 
 # install docker
 curl -fsSL get.docker.com -o get-docker.sh && sudo sh get-docker.sh
-sudo usermod -aG docker $USER
+sudo usermod -aG docker ubuntu
 sudo chown "$USER":"$USER" /home/"$USER"/.docker -R
 sudo chmod g+rwx "/home/$USER/.docker" -R
 
@@ -49,7 +49,6 @@ MHUB_BROKER_URL='amqp://s1processor:REDACTED_API_KEY@192.168.1.154:5672//'
 MHUB_RESULT_BACKEND='rpc://s1processor:REDACTED_API_KEY@192.168.1.154:5672//'
 MHUB_CONFIG_DIR='/mnt/processes'
 MPS2AWS_CACHE_PATH=/mnt/data/cache
-SNAP_TOOLBOX='/home/$USER/snap/bin'
 WORKER='zone_worker'
 docker run \
   --rm \
@@ -62,7 +61,6 @@ docker run \
   -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
   -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
   -e MPS2AWS_CACHE_PATH=$MPS2AWS_CACHE_PATH \
-  -e SNAP_TOOLBOX=$SNAP_TOOLBOX \
   -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
   -e GML_SKIP_CORRUPTED_FEATURES=YES \
   -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
