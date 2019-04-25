@@ -32,7 +32,6 @@ RUN git clone http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/ma
   && pip install -r requirements.txt \
   && python setup.py build_ext --inplace \
   && python setup.py develop \
-  && python setup.py test \
   && cd $ROOTDIR/src \
   # mapchete_satellite
   && git clone http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git \
@@ -40,7 +39,6 @@ RUN git clone http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/ma
   && git checkout $MAPCHETE_SATELLITE_VERSION \
   && pip install -r requirements.txt -r requirements_cli.txt -r requirements_mundi.txt -r requirements_s1.txt -r requirements_test.txt\
   && python setup.py develop \
-  && python setup.py test \
   && cd $ROOTDIR/src \
   # metis
   && git clone http://gitlab+deploy-token-6:_AHLpsvzLQq3j4a_w95R@gitlab.eox.at/maps/metis.git \
@@ -48,15 +46,14 @@ RUN git clone http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/ma
   && git checkout $METIS_VERSION \
   && pip install -r requirements.txt -r requirements_test.txt \
   && python setup.py develop \
-  && python setup.py test \
   && cd $ROOTDIR/src \
   # mapchete_hub
   && git clone http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git \
   && cd mapchete_hub  \
   && git checkout $MAPCHETE_HUB_VERSION \
   && pip install -r requirements.txt -r requirements_test.txt \
-  && python setup.py install \
-  && python setup.py test
+  && python setup.py develop
+  && cp -R $ROOTDIR/src/mapchete_hub/mapchete_hub/processes /mnt/
 
 WORKDIR $ROOTDIR/src/mapchete_hub
 ENTRYPOINT ./manage.py start-`echo $WORKER | sed s/_/-/g` --loglevel=$LOGLEVEL --logfile=$LOGFILE
