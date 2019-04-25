@@ -52,7 +52,7 @@ RUN git clone http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/ma
   && cd mapchete_hub  \
   && git checkout $MAPCHETE_HUB_VERSION \
   && pip install -r requirements.txt -r requirements_test.txt \
-  && python setup.py develop
+  && python setup.py develop \
   && cp -R $ROOTDIR/src/mapchete_hub/mapchete_hub/processes /mnt/
 
 WORKDIR $ROOTDIR/src/mapchete_hub
