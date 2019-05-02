@@ -10,6 +10,45 @@ Distributed mapchete processing.
 .. image:: https://gitlab.eox.at/maps/mapchete_hub/badges/master/coverage.svg
     :target: https://gitlab.eox.at/maps/mapchete_hub/commits/master
 
+
+------
+Docker
+------
+
+build app container
+-------------------
+
+.. code-block:: shell
+
+    cd docker/base_app
+    docker build -t registry.gitlab.eox.at/maps/mapchete_hub/base_app .
+    docker push registry.gitlab.eox.at/maps/mapchete_hub/base_app
+
+
+build app worker
+----------------
+
+This worker works with Sentinel-2 data on both AWS and Mundi.
+
+.. code-block:: shell
+
+    cd docker/base_worker
+    docker build -t registry.gitlab.eox.at/maps/mapchete_hub/base_worker .
+    docker push registry.gitlab.eox.at/maps/mapchete_hub/base_worker
+
+
+build app worker for Sentinel-1
+-------------------------------
+
+This worker works with Sentinel-2 data on both AWS and Mundi.
+
+.. code-block:: shell
+
+    cd docker/base_worker_s1
+    docker build -t registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1 .
+    docker push registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1
+
+
 -----
 Usage
 -----
