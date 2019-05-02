@@ -2,7 +2,7 @@ image: registry.gitlab.eox.at/maps/docker-base/mapchete:latest
 
 before_script:
   - pip install cython numpy
-  - pip install -e .[test]
+  - pip install -e .[mundi,s1,test]
 
 test:
   script:
