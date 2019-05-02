@@ -13,3 +13,4 @@ rio-color
 scipy
 slacker
 spatialite
+tornado>=4.2.0,<6.0.0
