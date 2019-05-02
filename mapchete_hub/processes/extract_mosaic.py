@@ -156,6 +156,10 @@ def execute(
     with Timer() as t:
         primary = mp.open("primary")
         level = primary.processing_level.lower()
+        custom_masks = (
+            partial(masks.s2_cloudmask, level=level),
+            partial(masks.s2_shadowmask, level=level)
+        )
         if "secondary" in mp.params["input"]:
             secondary = mp.open("secondary")
             cubes = (primary, secondary)
