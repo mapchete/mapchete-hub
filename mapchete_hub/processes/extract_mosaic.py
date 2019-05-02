@@ -3,9 +3,6 @@ from functools import partial
 import logging
 from mapchete import Timer
 from mapchete_satellite.exceptions import EmptyStackException
-from mapchete_satellite.masks import white
-from mapchete_satellite.masks import s2_landmask, s2_vegetationmask, s2_shadowmask, \
-    s2_cloudmask
 from mapchete_satellite import masks
 from mapchete_satellite.utils import read_leveled_cubes
 import numpy as np
@@ -20,9 +17,13 @@ logger = logging.getLogger(__name__)
 
 def scl_shadow_mask_no_water(scl=None, water_buffer=15, vegetation_buffer=5, buffer=0):
     mask = np.where(
-        masks.scl_water(scl=scl, buffer=water_buffer) | masks.scl_vegetation(scl=scl, buffer=vegetation_buffer),
+        masks.scl_water(
+            scl=scl, buffer=water_buffer
+        ) | masks.scl_vegetation(
+            scl=scl, buffer=vegetation_buffer
+        ),
         False,
-        masks.scl_cloud_shadows(scl=scl,buffer=buffer)
+        masks.scl_cloud_shadows(scl=scl, buffer=buffer)
     ).astype(np.bool)
     return masks.buffer_array(mask, buffer)
 
@@ -83,10 +84,6 @@ def execute(
         Apply buffer of n pixels to cloud masks. (default: 0)
     mask_white_areas : bool
         Mask out white areas. (default: False)
-    mask_s2_land : bool
-        Prefer land masked input pixels. (default: False)
-    mask_s2_vegetation : bool
-        Prefer vegetation masked input pixels. (default: False)
     read_threads : int
         Use threads to read input slices concurrently. (default: 1)
     add_indexes : bool
@@ -192,13 +189,16 @@ def execute(
     if mask_white_areas and level == 'l2a':
         white_threshold = 2048
         _stack = np.stack([np.where(
-            masks.white(s.data,threshold=white_threshold), False, s.data)
-            for s in stack])
+            masks.white(s.data, threshold=white_threshold), False, s.data)
+            for s in stack
+        ])
     elif mask_white_areas and level == 'l1c':
         white_threshold = 4096
-        _stack = np.stack([np.where(
-            masks.white(s.data,threshold=white_threshold), False, s.data)
-            for s in stack])
+        _stack = np.stack([
+            np.where(
+                masks.white(s.data, threshold=white_threshold), False, s.data
+            ) for s in stack
+        ])
     else:
         _stack = stack.data
 
@@ -238,10 +238,11 @@ def execute(
             for s in stack])
         if mask_white_areas:
             white_threshold = 2048
-            _stack = np.stack([np.where(
-                masks.white(s,threshold=white_threshold), False, s)
-                for s in _stack])
-        _stack = np.stack([np.where(s[2,: , :] < 25, 0, s) for s in _stack])
+            _stack = np.stack([
+                np.where(
+                    masks.white(s, threshold=white_threshold), False, s) for s in _stack
+            ])
+        _stack = np.stack([np.where(s[2, :, :] < 25, 0, s) for s in _stack])
         _mosaic = _extract_mosaic(
             _stack,
             method,
@@ -283,9 +284,9 @@ def execute(
 
     # fill nodata
     if fill_nodata and level == 'l2a':
-        mosaic = np.where(mosaic==0, 2048, mosaic)
+        mosaic = np.where(mosaic == 0, 2048, mosaic)
     elif fill_nodata:
-        mosaic = np.where(mosaic==0, 4096, mosaic)
+        mosaic = np.where(mosaic == 0, 4096, mosaic)
 
     # optional index band
     if add_indexes:
