@@ -13,6 +13,3 @@ rio-color
 scipy
 slacker
 spatialite
-# dependencies from mapchete_satellite[mundi,s1]
-metis @ git+http://gitlab+deploy-token-6:_AHLpsvzLQq3j4a_w95R@gitlab.eox.at/maps/metis.git@master
-xmltodict

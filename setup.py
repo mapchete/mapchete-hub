@@ -40,7 +40,11 @@ setup(
         ]
     },
     install_requires=parse_requirements('requirements.txt'),
-    extras_require={'test': parse_requirements('requirements_test.txt')},
+    extras_require={
+        'mundi': parse_requirements('requirements_mundi.txt'),
+        's1': parse_requirements('requirements_s1.txt'),
+        'test': parse_requirements('requirements_test.txt')
+    },
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
