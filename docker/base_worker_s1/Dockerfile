@@ -8,6 +8,7 @@ ENV MAPCHETE_SATELLITE_VERSION=master
 ENV AWS_REQUEST_PAYER=requester
 ENV ROOTDIR=/usr/local
 ENV APP_DIR=/tmp/app
+ENV C_FORCE_ROOT="yes"
 
 RUN mkdir $APP_DIR
 WORKDIR $ROOTDIR/src
@@ -15,13 +16,11 @@ WORKDIR $ROOTDIR/src
 ARG AWS_S3_ENDPOINT
 ARG AWS_ACCESS_KEY_ID
 ARG AWS_SECRET_ACCESS_KEY
+ARG LOGFILE
+ARG LOGLEVEL
 ARG MHUB_BROKER_URL
 ARG MHUB_RESULT_BACKEND
 ARG WORKER
-
-RUN apt update -y \
-  && apt install -y libspatialindex-dev \
-  && rm -rf /var/lib/apt/lists/*
 
 # install python packages
 #########################

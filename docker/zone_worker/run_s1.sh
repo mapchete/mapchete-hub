@@ -48,7 +48,7 @@ AWS_SECRET_ACCESS_KEY='REDACTED_API_KEY'
 MHUB_BROKER_URL='amqp://s1processor:REDACTED_API_KEY@192.168.1.154:5672//'
 MHUB_RESULT_BACKEND='rpc://s1processor:REDACTED_API_KEY@192.168.1.154:5672//'
 MHUB_CONFIG_DIR='/mnt/processes'
-MPS2AWS_CACHE_PATH=/mnt/data/cache
+MP_SATELLITE_CACHE_PATH=/mnt/data/cache
 WORKER='zone_worker'
 docker run \
   --rm \
@@ -60,7 +60,7 @@ docker run \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
   -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
   -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
-  -e MPS2AWS_CACHE_PATH=$MPS2AWS_CACHE_PATH \
+  -e MP_SATELLITE_CACHE_PATH=$MP_SATELLITE_CACHE_PATH \
   -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
   -e GML_SKIP_CORRUPTED_FEATURES=YES \
   -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
