@@ -1,15 +1,17 @@
 import json
+import logging
 import numpy as np
 from numpy import ma
 
 from mapchete import Timer
 from orgonite import cloudless
-from mapchete.log import driver_logger
 
 from scipy.ndimage.filters import uniform_filter
 from scipy.ndimage.measurements import variance
 
-logger = driver_logger("mapchete.execute")
+from mapchete_satellite.exceptions import EmptyStackException
+
+logger = logging.getLogger(__name__)
 
 
 def _burn_mask(stack, nodata):
@@ -80,15 +82,23 @@ def execute(
     with Timer() as t:
 
         with mp.open("s1") as s1_cube:
-            if s1_cube is None:
+            if s1_cube.is_empty():
                 return "empty"
-            stack = s1_cube.read_cube(indexes=bands, resampling=resampling)
+            try:
+                stack = s1_cube.read_cube(indexes=bands, resampling=resampling)
+            except EmptyStackException:
+                return 'empty'
 
-            _stack = _prepare_stack(stack.data*10000, keep_slice_indexes=add_indexes)
+            _stack = _prepare_stack(stack.data*10000,
+                                    keep_slice_indexes=add_indexes).astype(np.float32)
 
-            mosaic = np.full((2, mp.tile.shape[0], mp.tile.shape[1]), 25000)
+            mosaic = np.full(mp.tile.shape, 25000)
             for s in _stack:
-                 mosaic = np.where((s[0] < mosaic) & (s[0] > 0.0), s, mosaic)
+                s = np.floor(s)
+                mosaic = np.where((s[0] < mosaic) & (s[0] > 0.0) & (s[0] < 10000),
+                                  s,
+                                  mosaic
+                                  ).astype(np.uint16)
             mosaic = np.where(mosaic == 25000, 0, mosaic)
 
             # optional index band
@@ -98,7 +108,7 @@ def execute(
                     s_id: dict(timestamp=str(s.timestamp), datastrip_id=s.slice_id)
                     for s_id, s in zip(
                         cloudless.gen_slice_indexes(
-                            len(stack.data), nodata=mp.params["output"].nodata
+                            len(stack.data), nodata=0
                         ),
                         stack
                     )

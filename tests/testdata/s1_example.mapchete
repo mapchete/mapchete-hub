@@ -1,0 +1,29 @@
+process: example_s1_process.py
+input:
+  s1:
+    format: S1Mundi
+    level: L1
+    sensormode: IW
+    producttype: GRD
+    start_time: 2019-01-01
+    end_time: 2019-01-02
+    metadata_concurrency: false
+    cache:
+      path: cache
+      cache_resampling: bilinear_interpolation
+      sar_calibration: Gamma0
+      tnr: true
+      keep: true
+
+output:
+  format: GTiff
+  bands: 2
+  path: tmp/s1_example
+  dtype: float32
+pyramid:
+  grid: geodetic
+zoom_levels: 13
+bounds: [8.02001953125, 46.34033203125, 8.0419921875, 46.3623046875]
+
+# mhub parameters:
+mhub_worker: zone_worker

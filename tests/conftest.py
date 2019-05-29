@@ -14,15 +14,22 @@ TEMP_DIR = os.path.join(TESTDATA_DIR, "tmp")
 
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
 S2_CACHE_DIR = os.path.join(TESTDATA_DIR, "s2_cache")
+S1_CACHE_DIR = os.path.join(TESTDATA_DIR, "s1_cache")
 
 
 def _dict_from_mapchete(path, tmpdir):
     conf = dict(yaml.load(open(path).read()), config_dir=os.path.dirname(path))
-    for ip in ["primary", "secondary"]:
+    if "s1" in conf["input"]:
         try:
-            conf["input"][ip]["cache"]["path"] = S2_CACHE_DIR
+            conf["input"]["s1"]["cache"]["path"] = S1_CACHE_DIR
         except KeyError:
             pass
+    else:
+        for ip in ["primary", "secondary"]:
+            try:
+                conf["input"][ip]["cache"]["path"] = S2_CACHE_DIR
+            except KeyError:
+                pass
     conf["output"].update(path=tmpdir)
     return conf
 
@@ -33,6 +40,15 @@ def aws_example_mapchete_cm_4b():
     with TemporaryDirectory() as temp_dir:
         yield _dict_from_mapchete(
             os.path.join(TESTDATA_DIR, "aws_example_4bands.mapchete"), temp_dir
+        )
+
+
+@pytest.fixture(scope="session")
+def mundi_example_mapchete_gamma0():
+    """Fixture for aws_example.mapchete."""
+    with TemporaryDirectory() as temp_dir:
+        yield _dict_from_mapchete(
+            os.path.join(TESTDATA_DIR, "s1_example.mapchete"), temp_dir
         )
 
 

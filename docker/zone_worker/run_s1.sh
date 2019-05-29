@@ -68,4 +68,4 @@ docker run \
   -e LOGFILE=$LOGFILE \
   -v /mnt/data:/mnt/data \
   -d \
-  registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:0.6
+  registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:0.7

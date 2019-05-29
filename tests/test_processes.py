@@ -15,6 +15,36 @@ def test_submit(example_config):
     assert len(jobs) == 1
 
 
+def test_s1_gamma0_mosaic(mundi_example_mapchete_gamma0):
+    zoom = 13
+    with mapchete.open(mundi_example_mapchete_gamma0) as mp:
+        process_tile = next(mp.get_process_tiles(zoom))
+        process = MapcheteProcess(config=mp.config, tile=process_tile)
+
+        def _run_with_params(**kwargs):
+            return extract_mosaic.execute(
+                process, **dict(mp.config.params_at_zoom(zoom), **kwargs)
+            )
+
+        # default run
+        assert _run_with_params().any()
+
+        # extraction methods
+        with pytest.raises(ValueError):
+            _run_with_params(method="invalid")
+
+        # raise exception when using add_indexes with wrong method
+        with pytest.raises(ValueError):
+            _run_with_params(method="weighted_avg", add_indexes=True)
+
+        # empty stack
+        process_tile = mp.config.process_pyramid.tile(13, 1, 1)
+        process = MapcheteProcess(config=mp.config, tile=process_tile)
+        assert extract_mosaic.execute(
+            process, **mp.config.params_at_zoom(zoom)
+        ) == "empty"
+
+
 def test_extract_mosaic(aws_example_mapchete_cm_4b):
     zoom = 13
     with mapchete.open(aws_example_mapchete_cm_4b) as mp:
