@@ -29,14 +29,6 @@ def test_s1_gamma0_mosaic(mundi_example_mapchete_gamma0):
         # default run
         assert _run_with_params().any()
 
-        # extraction methods
-        with pytest.raises(ValueError):
-            _run_with_params(method="invalid")
-
-        # raise exception when using add_indexes with wrong method
-        with pytest.raises(ValueError):
-            _run_with_params(method="weighted_avg", add_indexes=True)
-
         # empty stack
         process_tile = mp.config.process_pyramid.tile(13, 1, 1)
         process = MapcheteProcess(config=mp.config, tile=process_tile)
