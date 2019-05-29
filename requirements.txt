@@ -4,7 +4,7 @@ Flask-Celery-py3
 flask_restful
 geojson
 mapchete>=0.21
-mapchete_satellite @ git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@preprocessing_into_read_function
+mapchete_satellite @ git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@master
 orgonite @ git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master
 Pillow
 pysqlite3
