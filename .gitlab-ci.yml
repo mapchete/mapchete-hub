@@ -1,4 +1,4 @@
-image: registry.gitlab.eox.at/maps/docker-base/mapchete:latest
+image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:latest
 
 before_script:
   - pip install cython numpy

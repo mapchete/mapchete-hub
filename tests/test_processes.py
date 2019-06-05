@@ -1,8 +1,9 @@
 import mapchete
-from mapchete import MapcheteProcess
 import pytest
+from mapchete import MapcheteProcess
 
 from mapchete_hub import get_next_jobs
+from mapchete_hub.processes.s1 import gamma0_stats_TF
 from mapchete_hub.processes import extract_mosaic
 
 
@@ -13,6 +14,28 @@ def test_submit(example_config):
         process_area=None,
     )
     assert len(jobs) == 1
+
+
+def test_s1_gamma0_mosaic(mundi_example_mapchete_gamma0):
+    zoom = 13
+    with mapchete.open(mundi_example_mapchete_gamma0) as mp:
+        process_tile = next(mp.get_process_tiles(zoom))
+        process = MapcheteProcess(config=mp.config, tile=process_tile)
+
+        def _run_with_params(**kwargs):
+            return gamma0_stats_TF.execute(
+                process, **dict(mp.config.params_at_zoom(zoom), **kwargs)
+            )
+
+        # default run
+        assert _run_with_params().any()
+
+        # empty stack
+        process_tile = mp.config.process_pyramid.tile(13, 1, 1)
+        process = MapcheteProcess(config=mp.config, tile=process_tile)
+        assert gamma0_stats_TF.execute(
+            process, **mp.config.params_at_zoom(zoom)
+        ) == "empty"
 
 
 def test_extract_mosaic(aws_example_mapchete_cm_4b):

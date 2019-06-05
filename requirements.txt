@@ -9,6 +9,7 @@ orgonite @ git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/m
 Pillow
 pysqlite3
 pyyaml
+pyproj==1.9.5.1
 rio-color
 scipy
 slacker
