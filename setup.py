@@ -27,7 +27,7 @@ setup(
     description='distributed mapchete processing',
     author='Joachim Ungar',
     author_email='joachim.ungar@eox.at',
-    url='https://gitlab.eox.at/maps/orgonite',
+    url='https://gitlab.eox.at/maps/mapchete_hub',
     license='MIT',
     packages=find_packages(),
     entry_points={
@@ -35,8 +35,14 @@ setup(
         'mapchete.cli.commands': ["mhub=mapchete_hub.cli:mhub"],
         'mapchete.processes': [
             'color_correction=mapchete_hub.processes.color_correction',
+            'color_correction_l2a=mapchete_hub.processes.color_correction_l2a',
             'extract_mosaic=mapchete_hub.processes.extract_mosaic',
             'scale=mapchete_hub.processes.scale',
+            'ndvi_render=mapchete_hub.processes.ndvi_render',
+            'ndwi_render=mapchete_hub.processes.ndwi_render',
+            'gamma0_stats_TF=mapchete_hub.processes.s1.gamma0_stats_TF',
+            'max_coherence_L2_SLC=mapchete_hub.processes.s1.max_coherence_L2_SLC',
+            'min_coherence_L2_SLC=mapchete_hub.processes.s1.min_coherence_L2_SLC',
         ]
     },
     install_requires=parse_requirements('requirements.txt'),

@@ -1,6 +1,6 @@
 process: example_s1_process.py
 input:
-  s1:
+  primary:
     format: S1Mundi
     level: L1
     sensormode: IW
@@ -24,6 +24,3 @@ pyramid:
   grid: geodetic
 zoom_levels: 13
 bounds: [8.02001953125, 46.34033203125, 8.0419921875, 46.3623046875]
-
-# mhub parameters:
-mhub_worker: zone_worker
