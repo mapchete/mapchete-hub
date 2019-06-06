@@ -67,12 +67,6 @@ def execute(
         **kwargs
 ):
     primary = mp.open("primary")
-    from metis._session import _close_opened_files
-    # Close snap files before writing to bucket!
-    process = psutil.Process()
-    _close_opened_files(process=process, file_names='esa')
-    _close_opened_files(process=process, file_names='java')
-
     try:
         # read stack
         stack = primary.read_cube(indexes=[1, 2], resampling='bilinear')
@@ -117,4 +111,9 @@ def execute(
             mosaic = np.stack([avg_vv, avg_vh, min_vv, min_vh, max_vv, max_vh,
                                stddev_vv, stddev_vh, count])
     logger.debug("extracted in %s", t)
+    from metis.utils.tools import _close_opened_files
+    # Close snap files before writing to bucket!
+    process = psutil.Process()
+    _close_opened_files(process=process, file_names='esa')
+    _close_opened_files(process=process, file_names='java')
     return mosaic
