@@ -42,8 +42,8 @@ def outlier_removal(arrayin, threshold=10):
     array_out = np.ma.MaskedArray(
         arrayin,
         mask=np.logical_or(
-            arrayin > masked_mean + masked_std * 2,
-            arrayin < masked_mean - masked_std * 2,
+            arrayin > masked_mean + masked_std * 3,
+            arrayin < masked_mean - masked_std * 3,
             )
     )
     # Use a threshhold to filter out values, 10 db difference default
@@ -93,9 +93,9 @@ def execute(
                                    )
 
             vv_stack_db = outlier_removal(vv_stack_db,
-                                          threshold=10).reshape(vv_stack_db.shape)
+                                          threshold=20).reshape(vv_stack_db.shape)
             vh_stack_db = outlier_removal(vh_stack_db,
-                                          threshold=10).reshape(vh_stack_db.shape)
+                                          threshold=20).reshape(vh_stack_db.shape)
 
             vv_stack_db = np.ma.masked_equal(vv_stack_db, 0.0, copy=False)
             vh_stack_db = np.ma.masked_equal(vh_stack_db, 0.0, copy=False)
