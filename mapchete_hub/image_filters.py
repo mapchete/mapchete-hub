@@ -47,7 +47,7 @@ def _apply_filter(arr, img_filter, **kwargs):
             ),
             1,
             255
-        ).astype("uint8")
+        ).astype("uint8", copy=False)
     elif img_filter in FILTER_FUNCTIONS:
         return np.clip(
             reshape_as_raster(
@@ -57,7 +57,7 @@ def _apply_filter(arr, img_filter, **kwargs):
             ),
             1,
             255
-        ).astype("uint8")
+        ).astype("uint8", copy=False)
 
 
 def blur(arr):
@@ -309,4 +309,4 @@ def sharpen_16bit(src):
             45, 2, mode='nearest'
         )
         for b in src
-    ]).astype(np.uint16)
+    ]).astype(np.uint16, copy=False)

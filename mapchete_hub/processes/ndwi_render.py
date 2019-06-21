@@ -7,7 +7,6 @@ import numpy as np
 from rio_color import operations
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 from matplotlib.colors import ListedColormap
 import matplotlib.colors as colors
 
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 def dark(bands=None, threshold=100, buffer=0):
     return buffer_array(
-        np.where(bands < threshold, True, False).all(axis=0).astype(np.bool),
+        np.where(bands < threshold, True, False).all(axis=0).astype(np.bool, copy=False),
         buffer=buffer
     )
 
@@ -187,10 +186,10 @@ def execute(
                             (np.sum(raw, axis=0) > 250) &
                             (np.sum(raw, axis=0) < 8000),
                             raw, mosaic
-                    ).astype(np.int16)
+                    ).astype(np.int16, copy=False)
                     nodata_mask = np.where(
                         nodata_mask, raw[0].mask, nodata_mask
-                    ).astype(np.bool)
+                    ).astype(np.bool, copy=False)
                 if nodata_mask is not None and not nodata_mask.any():
                     logger.debug("tile fully covered")
                     continue
@@ -269,7 +268,7 @@ def read_mosaic(
         try:
             mosaic = mosaic_inp.read(
                 indexes=bands, resampling=td_resampling
-            ).astype(np.int16)
+            ).astype(np.int16, copy=False)
         except EmptyStackException:
             logger.debug("%s empty: EmptyStackException", mosaic_name)
             return "empty"
@@ -319,4 +318,4 @@ def color_correct(
             saturation
         ) * 255,    # scale back to 8bit
         1, 255      # clip valid values to 1 and 255 to avoid accidental nodata values
-    ).astype("uint8")
+    ).astype("uint8", copy=False)

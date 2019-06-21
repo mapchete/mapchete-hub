@@ -53,9 +53,9 @@ def _prepare_stack(stack, nodata=0, keep_slice_indexes=False):
             for slice_id, slice_ in zip(
                 gen_slice_indexes(stack.shape[0], nodata), _burn_mask(stack, nodata)
             )
-        ]).astype(np.dtype("int_"))
+        ]).astype(np.dtype("int_"), copy=False)
     else:
-        return _burn_mask(stack, nodata).astype(np.dtype("int_"))
+        return _burn_mask(stack, nodata).astype(np.dtype("int_"), copy=False)
 
 
 def lee_filter(img, size):
@@ -79,39 +79,39 @@ def execute(
         **kwargs
 ):
     # read stack
-    with Timer() as t:
+    with mp.open("s1") as s1_cube:
+        if s1_cube.is_empty():
+            return "empty"
+        try:
+            stack = s1_cube.read_cube(indexes=bands, resampling=resampling)
+        except EmptyStackException:
+            return 'empty'
 
-        with mp.open("s1") as s1_cube:
-            if s1_cube.is_empty():
-                return "empty"
-            try:
-                stack = s1_cube.read_cube(indexes=bands, resampling=resampling)
-            except EmptyStackException:
-                return 'empty'
+        _stack = _prepare_stack(
+            stack.data*10000,
+            keep_slice_indexes=add_indexes
+        ).astype(np.float32, copy=False)
 
-            _stack = _prepare_stack(stack.data*10000,
-                                    keep_slice_indexes=add_indexes).astype(np.float32)
+        mosaic = np.zeros(mp.tile.shape)
+        for s in _stack:
+            s = np.ceil(s)
+            mosaic = np.where((s[0] > mosaic) & (s[0] > 0.0) & (s[0] < 10000),
+                              s,
+                              mosaic
+                              ).astype(np.uint16, copy=False)
 
-            mosaic = np.zeros(mp.tile.shape)
-            for s in _stack:
-                s = np.ceil(s)
-                mosaic = np.where((s[0] > mosaic) & (s[0] > 0.0) & (s[0] < 10000),
-                                  s,
-                                  mosaic
-                                  ).astype(np.uint16)
-
-            # optional index band
-            if add_indexes:
-                logger.debug("generate tags")
-                tags = {
-                    s_id: dict(timestamp=str(s.timestamp), datastrip_id=s.slice_id)
-                    for s_id, s in zip(
-                        cloudless.gen_slice_indexes(
-                            len(stack.data), nodata=0
-                        ),
-                        stack
-                    )
-                }
-                return mosaic, {'datasets': json.dumps(tags)}
-            else:
-                return mosaic
+        # optional index band
+        if add_indexes:
+            logger.debug("generate tags")
+            tags = {
+                s_id: dict(timestamp=str(s.timestamp), datastrip_id=s.slice_id)
+                for s_id, s in zip(
+                    cloudless.gen_slice_indexes(
+                        len(stack.data), nodata=0
+                    ),
+                    stack
+                )
+            }
+            return mosaic, {'datasets': json.dumps(tags)}
+        else:
+            return mosaic

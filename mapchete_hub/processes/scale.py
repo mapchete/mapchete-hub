@@ -75,7 +75,7 @@ def execute(
             logger.debug("mosaic empty")
             return "empty"
         try:
-            mosaic = mosaic_inp.read(indexes=bands).astype(np.int16)
+            mosaic = mosaic_inp.read(indexes=bands).astype(np.int16, copy=False)
         except EmptyStackException:
             logger.debug("mosaic empty: EmptyStackException")
             return "empty"
@@ -94,7 +94,7 @@ def execute(
             mosaic.mask,
             0,
             np.clip(
-                (mosaic.astype("float32") / max_value) * out_values,
+                (mosaic.astype("float32", copy=False) / max_value) * out_values,
                 1, out_values
             )
         ),

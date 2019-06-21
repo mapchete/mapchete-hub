@@ -24,7 +24,7 @@ def scl_shadow_mask_no_water(scl=None, water_buffer=15, vegetation_buffer=5, buf
         ),
         False,
         masks.scl_cloud_shadows(scl=scl, buffer=buffer)
-    ).astype(np.bool)
+    ).astype(np.bool, copy=False)
     return masks.buffer_array(mask, buffer)
 
 
@@ -259,7 +259,7 @@ def execute(
             keep_slice_indexes=add_indexes,
         )
 
-        mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16)
+        mosaic = np.where(_mosaic, _mosaic, mosaic).astype(np.int16, copy=False)
 
     # optional sharpen
     if sharpen_output:
