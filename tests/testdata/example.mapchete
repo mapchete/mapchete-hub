@@ -1,6 +1,6 @@
 # mandatory parameters
-process: example_process.py
-bounds: [3.0, 1.0, 4.0, 2.0]
+process: mapchete.processes.examples.example_process
+bounds: [2.0, 1.0, 3.0, 4.0]
 zoom_levels:
     min: 7
     max: 11
@@ -8,14 +8,13 @@ pyramid:
     grid: geodetic
     metatiling: 4
 input:
-    file1:
-        zoom>=10: dummy1.tif
+    file1: dummy1.tif
     file2: dummy2.tif
 output:
     path: tmp
     format: GTiff
     dtype: float32
-    bands: 1
+    bands: 3
 
 # free parameters
 some_integer_parameter: 12
@@ -30,7 +29,7 @@ some_date_obj: 2018-05-01
 
 # mhub parameters:
 mhub_worker: zone_worker
-mhub_announce_on_slack: true
+mhub_queue: zone_worker_queue
 mhub_next_process:
     mhub_worker: preview_worker
     process: example_process.py

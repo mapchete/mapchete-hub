@@ -1,10 +1,10 @@
 from celery.utils.log import get_task_logger
 import os
 from shapely import wkt
-from slacker import Slacker
 
 from mapchete_hub import mapchete_index, cleanup_config
 from mapchete_hub.celery_app import celery_app
+from mapchete_hub._misc import announce_on_slack
 
 
 logger = get_task_logger(__name__)
@@ -25,7 +25,7 @@ def run(self, *args, **kwargs):
     executor = mapchete_index(
         config=mapchete_config,
         process_area=process_area,
-        out_dir=os.environ.get('INDEX_OUTPUT_DIR'),
+        out_dir=os.environ.get('INDEX_OUTPUT_DIR', mapchete_config["output"]["path"]),
         shapefile=True
     )
 
@@ -41,19 +41,4 @@ def run(self, *args, **kwargs):
         self.send_event('task-progress', progress_data=dict(current=i, total=total_tiles))
 
     logger.info("processing successful.")
-    logger.debug(config['mapchete_config'].keys())
-    if config['mapchete_config'].get("mhub_announce_on_slack", False):
-        logger.info("announce on slack")
-        zone_lat, zone_lon = process_area.centroid.y, process_area.centroid.x
-        permalink = "%s#zoom=8&lon=%s&lat=%s" % (
-            os.environ.get("PREVIEW_PERMALINK"), zone_lon, zone_lat
-        )
-        slack = Slacker("", incoming_webhook_url=os.environ["SLACK_WEBHOOK_URL"])
-        slack.incomingwebhook.post(
-            {
-                "username": "Mapchete",
-                "icon_url": "https://a2.memecaptain.com/src_thumbs/24132.jpg",
-                "channel": "#mapchete_hub",
-                "text": permalink
-            }
-        )
+    announce_on_slack(config=config, process_area=process_area)

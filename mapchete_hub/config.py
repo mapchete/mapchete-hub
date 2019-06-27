@@ -16,15 +16,14 @@ def _get_flask_options():
         event_serializer='pickle',
         accept_content=['pickle', 'json'],
         task_routes={
-            'mapchete_hub.workers.zone_worker.*': {'queue': 'zone_queue'},
-            'mapchete_hub.workers.subprocess_worker.*': {'queue': 'subprocess_queue'},
-            'mapchete_hub.workers.preview_worker.*': {'queue': 'preview_queue'}
+            'mapchete_hub.workers.zone_worker.*': {'queue': 'zone_worker_queue'},
+            'mapchete_hub.workers.preview_worker.*': {'queue': 'preview_worker_queue'}
         },
         task_acks_late=True,
         worker_send_task_events=True,
         worker_hijack_root_logger=False,
         task_send_sent_event=True,
-        event_queue_expires=604800  # one week in seconds
+        event_queue_expires=604800,  # one week in seconds
     )
     opts = {}
     for k, v in _get_opts(default).items():
@@ -35,6 +34,7 @@ def _get_flask_options():
 
 def _get_main_options():
     default = dict(
+        config_dir="/tmp/",
         status_gpkg='status.gpkg',
         status_gpkg_profile=dict(
             crs={'init': 'epsg:4326'},
@@ -55,7 +55,6 @@ def _get_main_options():
                 )
             )
         ),
-        config_dir="/tmp/"
     )
     return _get_opts(default)
 
@@ -73,3 +72,4 @@ def _get_opts(default):
 host_options = _get_host_options()
 flask_options = _get_flask_options()
 main_options = _get_main_options()
+timeout = 5

@@ -1,12 +1,16 @@
-from collections import OrderedDict
+from case import ContextMock, Mock
+from collections import namedtuple, OrderedDict
 import os
 import pytest
+import rasterio
 import shutil
 from tempfile import TemporaryDirectory
 import yaml
 
+from mapchete_hub import api
 from mapchete_hub.application import flask_app
-from mapchete_hub.config import host_options
+from mapchete_hub.celery_app import celery_app
+from mapchete_hub.config import host_options, flask_options
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
@@ -15,6 +19,22 @@ TEMP_DIR = os.path.join(TESTDATA_DIR, "tmp")
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
 S2_CACHE_DIR = os.path.join(TESTDATA_DIR, "s2_cache")
 S1_CACHE_DIR = os.path.join(TESTDATA_DIR, "s1_cache")
+
+
+ExampleConfig = namedtuple("ExampleConfig", ("path", "dict"))
+
+
+# making celery.send_event() work with eager mode:
+def send_task(name, args=(), kwargs={}, **opts):
+    # https://github.com/celery/celery/issues/581
+    task = celery_app.tasks[name]
+    return task.apply(args, kwargs, **opts)
+celery_app.send_task = send_task
+
+# mocking send_event() calls
+celery_app.events = Mock(name='events')
+celery_app.events.attach_mock(ContextMock(), 'default_dispatcher')
+celery_app.conf.update(flask_options, task_always_eager=True)
 
 
 def _dict_from_mapchete(path, tmpdir):
@@ -32,6 +52,19 @@ def _dict_from_mapchete(path, tmpdir):
                 pass
     conf["output"].update(path=tmpdir)
     return conf
+
+
+@pytest.fixture(scope="session")
+def client():
+    app = flask_app()
+    celery_app.init_app(app)
+    with app.test_client() as c:
+        yield c
+
+
+@pytest.fixture
+def mhub_api(client):
+    return api.API(_test_client=client)
 
 
 @pytest.fixture(scope="session")
@@ -53,6 +86,12 @@ def mundi_example_mapchete_gamma0():
 
 
 @pytest.fixture
+def aws_example_mapchete_cm_4b_path():
+    """Fixture for aws_example.mapchete."""
+    return os.path.join(TESTDATA_DIR, "aws_example_4bands.mapchete")
+
+
+@pytest.fixture
 def landpoly_geojson():
     """Fixture for landpoly.geojson."""
     return os.path.join(TESTDATA_DIR, "landpoly.geojson")
@@ -62,12 +101,6 @@ def landpoly_geojson():
 def tile_13_1986_8557_geojson():
     """Fixture for tile_13_1986_8557.geojson."""
     return os.path.join(TESTDATA_DIR, "tile_13_1986_8557.geojson")
-
-
-@pytest.fixture
-def app():
-    """Dummy Flask app."""
-    return flask_app()
 
 
 @pytest.fixture
@@ -86,13 +119,8 @@ def mp_tmpdir():
 @pytest.fixture
 def status_gpkg():
     """Setup and teardown temporary directory."""
-    os.makedirs(TEMP_DIR, exist_ok=True)
-    status_path = os.path.join(TEMP_DIR, 'status.gpkg')
-    yield status_path
-    try:
-        os.remove(status_path)
-    except OSError:
-        pass
+    with TemporaryDirectory() as temp_dir:
+        yield os.path.join(temp_dir, 'status.gpkg')
 
 
 @pytest.fixture
@@ -119,8 +147,10 @@ def status_profile():
 
 
 @pytest.fixture
-def example_process():
-    return yaml.load(open(os.path.join(TESTDATA_DIR, 'example.mapchete')).read())
+def example_mapchete():
+    path = os.path.join(TESTDATA_DIR, 'example.mapchete')
+    with TemporaryDirectory() as temp_dir:
+        yield ExampleConfig(path=path, dict=_dict_from_mapchete(path, temp_dir))
 
 
 @pytest.fixture
@@ -136,3 +166,33 @@ def example_config():
         zoom=None,
         point=None
     )
+
+
+@pytest.fixture(scope="session")
+def dummy1_tif():
+    return os.path.join(TESTDATA_DIR, "dummy1.tif")
+
+
+@pytest.fixture(scope="session")
+def array_8bit(dummy1_tif):
+    with rasterio.open(dummy1_tif) as src:
+        return src.read()
+
+
+@pytest.fixture
+def response_json():
+    return {
+        'properties': {'state': 'PENDING'},
+        'geometry': {
+            'coordinates': [
+                [
+                    [2.109375, 3.8671875],
+                    [2.109375, 4.21875],
+                    [1.7578125, 4.21875],
+                    [1.7578125, 3.8671875],
+                    [2.109375, 3.8671875]
+                ]
+            ],
+            'type': 'Polygon'
+        }
+    }

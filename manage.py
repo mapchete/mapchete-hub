@@ -12,24 +12,22 @@ https://github.com/Robpol86/Flask-Large-Application-Example/blob/master/manage.p
 """
 from celery.bin.celery import main as celery_main
 import click
+from mapchete_hub import log
 import os
 
 import mapchete_hub
-import mapchete_hub.log
 from mapchete_hub.application import flask_app
-from mapchete_hub.celery_app import celery_app
-from mapchete_hub.config import host_options, flask_options
-from mapchete_hub.monitor import status_monitor
+from mapchete_hub.config import host_options
 
 
 def _set_log_level(ctx, param, loglevel):
-    mapchete_hub.log.set_log_level(loglevel)
+    log.set_log_level(loglevel)
     return loglevel
 
 
 def _setup_logfile(ctx, param, logfile):
     if logfile:
-        mapchete_hub.log.setup_logfile(logfile)
+        log.setup_logfile(logfile)
     return logfile
 
 
@@ -54,89 +52,33 @@ def cli(ctx, **kwargs):
 @opt_logfile
 @click.pass_context
 def devserver(ctx, loglevel, logfile):
-    click.echo("launch dev server")
-    app = flask_app()
-    app.run(host=host_options['host_ip'], port=host_options['port'])
+    flask_app(monitor=True).run(host=host_options['host_ip'], port=host_options['port'])
 
 
-@cli.command(short_help='Launch job status monitor.')
+@cli.command(short_help='Launches Celery worker.')
+@click.option("--worker-name", "-n", type=click.STRING, default="mhub_worker")
+@click.option("--queue", "-q", type=click.STRING, default="zone_worker_queue")
 @opt_loglevel
 @opt_logfile
 @click.pass_context
-def monitor(ctx, loglevel, logfile):
-    click.echo("launch monitor")
-    celery_app.conf.update(flask_options)
-    celery_app.init_app(flask_app())
-    status_monitor(celery_app)
-
-
-@cli.command(short_help='Launches Celery zone worker.')
-@opt_loglevel
-@opt_logfile
-@click.pass_context
-def start_zone_worker(ctx, loglevel, logfile):
+def worker(ctx, worker_name, queue, loglevel, logfile):
     click.echo("launch zone worker")
     app = flask_app()
-    celery_args = [
-        'celery',
-        'worker',
-        '-n', 'zone_worker@' + os.environ.get('HOST_IP', '%h'),
-        '--without-gossip',
-        '--max-tasks-per-child=1',
-        '--concurrency=1',
-        '-E',
-        '--prefetch-multiplier=1',
-        '-Ofair',
-        '-Q', 'zone_queue'
-    ]
     with app.app_context():
-        return celery_main(celery_args)
-
-
-@cli.command(short_help='Launches Celery subprocess worker.')
-@opt_loglevel
-@opt_logfile
-@click.pass_context
-def start_subprocess_worker(ctx, loglevel, logfile):
-    click.echo("launch subprocess worker")
-    app = flask_app()
-    celery_args = [
-        'celery',
-        'worker',
-        '-n', 'subprocess_worker@' + os.environ.get('HOST_IP', '%h'),
-        '--without-gossip',
-        '--max-tasks-per-child=1',
-        '--concurrency=1',
-        '-E',
-        '--prefetch-multiplier=1',
-        '-Ofair',
-        '-Q', 'subprocess_queue'
-    ]
-    with app.app_context():
-        return celery_main(celery_args)
-
-
-@cli.command(short_help='Launches Celery preview worker.')
-@opt_loglevel
-@opt_logfile
-@click.pass_context
-def start_preview_worker(ctx, loglevel, logfile):
-    click.echo("launch preview worker")
-    app = flask_app()
-    celery_args = [
-        'celery',
-        'worker',
-        '-n', 'preview_worker@' + os.environ.get('HOST_IP', '%h'),
-        '--without-gossip',
-        '--max-tasks-per-child=1',
-        '--concurrency=1',
-        '-E',
-        '--prefetch-multiplier=1',
-        '-Ofair',
-        '-Q', 'preview_queue'
-    ]
-    with app.app_context():
-        return celery_main(celery_args)
+        return celery_main(
+            [
+                'celery',
+                'worker',
+                '-n', '%s@%s' % (worker_name, os.environ.get('HOST_IP', '%h')),
+                '--without-gossip',
+                '--max-tasks-per-child=1',
+                '--concurrency=1',
+                '-E',
+                '--prefetch-multiplier=1',
+                '-Ofair',
+                '-Q', queue
+            ]
+        )
 
 
 if __name__ == '__main__':

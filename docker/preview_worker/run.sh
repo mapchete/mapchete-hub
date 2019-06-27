@@ -33,6 +33,7 @@ SLACK_WEBHOOK_URL='REDACTED_API_KEY'
 LOGLEVEL='DEBUG'
 LOGFILE='/mnt/data/log/preview_worker.log'
 WORKER='preview_worker'
+QUEUE='preview_worker_queue'
 docker run \
   --rm \
   --name=mapserver \
@@ -49,6 +50,7 @@ docker run \
   --rm \
   --name $WORKER \
   -e WORKER=$WORKER \
+  -e QUEUE=$QUEUE \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \

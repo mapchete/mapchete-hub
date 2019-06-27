@@ -7,6 +7,7 @@ import os
 from shapely.geometry import Polygon, mapping
 from shapely import wkt
 import spatialite
+import sys
 
 from mapchete_hub.config import main_options, flask_options
 
@@ -14,19 +15,22 @@ logger = logging.getLogger(__name__)
 
 
 def status_monitor(celery_app):
-    status_gpkg = main_options.get("status_gpkg")
-    logger.debug("status monitor")
+    logger.debug("start status monitor")
     state = celery_app.events.State()
     logger.debug("state: %s", state)
 
     with StatusHandler(
-        status_gpkg, mode='w', profile=main_options["status_gpkg_profile"]
+        os.path.join(
+           main_options.get("config_dir"), main_options.get("status_gpkg")
+        ),
+        mode='w',
+        profile=main_options["status_gpkg_profile"]
     ) as status_handler:
 
         def announce_task_state(event):
+            logger.debug("got event: %s", event)
             state.event(event)
             task = state.tasks.get(event['uuid'])
-            logger.debug(event)
             try:
                 logger.debug('task status: %s: %s', task.uuid, event["state"])
             except:
@@ -63,6 +67,8 @@ def status_monitor(celery_app):
                     recv.capture(limit=None, timeout=None, wakeup=True)
             except ConnectionResetError as e:
                 logger.error(e)
+            except (KeyboardInterrupt, SystemExit):
+                sys.exit()
 
 
 class StatusHandler():

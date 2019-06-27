@@ -50,10 +50,12 @@ MHUB_RESULT_BACKEND='rpc://s1processor:REDACTED_API_KEY@192.168.1.154:5672//'
 MHUB_CONFIG_DIR='/mnt/processes'
 MP_SATELLITE_CACHE_PATH=/mnt/data/cache
 WORKER='zone_worker'
+QUEUE='zone_worker_queue'
 docker run \
   --rm \
   --name $WORKER \
   -e WORKER=$WORKER \
+  -e QUEUE=$QUEUE \
   -e AWS_S3_ENDPOINT=$AWS_S3_ENDPOINT \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \

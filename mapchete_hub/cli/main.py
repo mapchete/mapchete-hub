@@ -1,23 +1,15 @@
 import click
-import geojson
-import json
-import requests
-from requests.exceptions import ConnectionError
-import time
+from mapchete import Timer
+from mapchete.cli.utils import opt_debug
 from tqdm import tqdm
-import yaml
 
 import mapchete_hub
+from mapchete_hub.api import API, job_states
 from mapchete_hub.config import host_options
+from mapchete_hub.exceptions import JobFailed
 
 # https://github.com/tqdm/tqdm/issues/481
 tqdm.monitor_interval = 0
-
-job_states = {
-    "todo": ["PENDING"],
-    "doing": ["PROGRESS", "RECEIVED", "STARTED"],
-    "done": ["SUCCESS", "FAILURE"]
-}
 
 
 @click.version_option(version=mapchete_hub.__version__, message='%(version)s')
@@ -26,7 +18,10 @@ job_states = {
     '--host', '-h',
     type=click.STRING,
     nargs=1,
-    default='%s:%s' % (host_options["host_ip"], host_options["port"])
+    default='%s:%s' % (host_options["host_ip"], host_options["port"]),
+    help="Address and port of mhub endpoint (default: %s:%s)." % (
+        host_options["host_ip"], host_options["port"]
+    )
 )
 @click.pass_context
 def mhub(ctx, **kwargs):
@@ -46,249 +41,92 @@ def capabilities(ctx):
 @click.option(
     '--mode', '-m', type=click.Choice(["continue", "overwrite"]), default="overwrite"
 )
+@opt_debug
 @click.pass_context
-def start(ctx, job_id, mapchete_file, bounds=None, mode=None):
-    start_job(job_id, mapchete_file, bounds, host=ctx.obj['host'], mode=mode)
-
-
-@mhub.command(short_help='Stops job.')
-@click.argument('job_id', type=click.STRING)
-@click.pass_context
-def stop(ctx):
-    click.echo("stop job")
-    raise NotImplementedError()
+def start(ctx, job_id, mapchete_file, bounds=None, mode=None, debug=False):
+    try:
+        click.echo(
+            "job state: %s" % API(host=ctx.obj["host"]).start_job(
+                job_id,
+                mapchete_file,
+                bounds, mode=mode
+            ).state
+        )
+        show_progress(ctx, job_id)
+    except Exception as e:
+        click.echo("Error: %s" % e)
 
 
 @mhub.command(short_help='Shows job status.')
 @click.argument('job_id', type=click.STRING)
 @click.option('--geojson', is_flag=True)
 @click.pass_context
-def status(ctx, job_id, geojson):
+def status(ctx, job_id, geojson=False):
     try:
-        get_status(job_id, host=ctx.obj['host'], as_geojson=geojson)
-    except ConnectionError:
-        click.echo("No mapchete hub running under given endpoint.")
+        click.echo(
+            API(host=ctx.obj["host"]).job(job_id, geojson=geojson)
+            if geojson
+            else API(host=ctx.obj["host"]).job(job_id)
+        )
+    except Exception as e:
+        click.echo("Error: %s" % e)
+
+
+@mhub.command(short_help='Shows job progress.')
+@click.argument('job_id', type=click.STRING)
+@click.pass_context
+def progress(ctx, job_id):
+    try:
+        show_progress(ctx, job_id)
+    except Exception as e:
+        click.echo("Error: %s" % e)
 
 
 @mhub.command(short_help='Shows current jobs.')
 @click.option('--geojson', is_flag=True)
-@click.option('--progress', is_flag=True)
 @click.pass_context
-def jobs(ctx, geojson, progress):
-    if progress:
-        return get_jobs_progress(host=ctx.obj['host'])
-    else:
-        return get_jobs(as_geojson=geojson, host=ctx.obj['host'])
-
-
-def start_job(job_id, mapchete_file, bounds, host=None, mode=None):
-
-    url = "http://%s/jobs/%s" % (host, job_id)
-    data = mapchete_hub.cleanup_datetime(
-        dict(
-            mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
-            mode=mode,
-            zoom=None,
-            bounds=bounds,
-            point=None,
-            wkt_geometry=None,
-            tile=None
-        )
-    )
-    if 'mhub_worker' not in data['mapchete_config']:
-        raise ValueError('specify mhub worker (zone_worker or preview_worker)')
-
+def jobs(ctx, geojson=False):
     try:
-        res = requests.post(url, json=data)
-    except ConnectionError:
-        click.echo("No mapchete hub running under given endpoint.")
-        return
-    if res.status_code == 409:
-        click.echo("job %s already exists" % job_id)
-        return
-    elif res.status_code == 202:
-        res_data = json.loads(res.text)["properties"]
-        state = res_data["state"]
-        click.echo("job status: %s" % state)
-    else:
-        raise ValueError("unknown status code: %s", res.status_code)
-
-
-def get_status(job_id, host=None, as_geojson=False):
-    url = "http://%s/jobs/%s" % (host, job_id)
-    try:
-        res = _get_json(url)
-    except ConnectionError as e:
-        click.echo("error when getting job %s status: %s" % (job_id, e))
-        return
-
-    if res["properties"]["state"] in job_states["todo"]:
-        click.echo("waiting for worker to accept job...")
-        while True:
-            res = _get_json(url)
-            if res["properties"]["state"] not in job_states["todo"]:
-                break
-            time.sleep(1)
-
-    if res["properties"]["state"] in job_states["doing"]:
-        if as_geojson:
-            print_as_geojson(res)
-            return
-
-        def print_verbose_state(state):
-            if state == "STARTED":
-                msg = "started"
-            elif state == "RECEIVED":
-                msg = "received"
-            elif state == "PROGRESS":
-                msg = "in progress"
-            else:
-                msg = state.lower()
-            click.echo("job %s %s" % (job_id, msg))
-
-        current_state = res["properties"]["state"]
-        print_verbose_state(current_state)
-
-        while True:
-            try:
-                res = _get_json(url)
-                if res["properties"]["state"] != current_state:
-                    current_state = res["properties"]["state"]
-                    print_verbose_state(current_state)
-                current = res["properties"]["progress_data"]["current"]
-                total = res["properties"]["progress_data"]["total"]
-                assert isinstance(current, int)
-                assert isinstance(total, int)
-                break
-            except:
-                pass
-            finally:
-                time.sleep(1)
-
-        with tqdm(total=total, initial=current) as pbar:
-            while True:
-                res = _get_json(url)
-
-                if res["properties"]["state"] in job_states["done"]:
-                    break
-
-                elif res["properties"]["state"] == "PROGRESS":
-
-                    if res["properties"]["progress_data"]:
-                        current = res["properties"]["progress_data"]["current"]
-
-                        if current and pbar.last_print_n and current > pbar.last_print_n:
-                            pbar.update(current - pbar.last_print_n)
-
-                time.sleep(1)
-
-    if res["properties"]["state"] == "SUCCESS":
-        if as_geojson:
-            print_as_geojson(res)
-            return
         click.echo(
-            "job %s successfully finished in %ss" % (job_id, res["properties"]["runtime"])
+            API(host=ctx.obj["host"]).jobs(geojson=geojson)
+            if geojson
+            else "\n".join([
+                "%s: %s" % (job_id, state)
+                for job_id, state in API(host=ctx.obj["host"]).jobs_states().items()
+            ])
         )
-
-    elif res["properties"]["state"] == "FAILURE":
-        if as_geojson:
-            print_as_geojson(res)
-            return
-        click.echo("job %s failed:" % job_id)
-        click.echo("traceback:")
-        click.echo(res["properties"]["traceback"])
-
-    else:
-        raise ValueError("unknown state: %s", res["properties"]["state"])
+    except Exception as e:
+        click.echo("Error: %s" % e)
 
 
-def get_jobs(as_geojson=False, host=None):
-    url = "http://%s/jobs" % host
-    res = _get_json(url)
-    if as_geojson:
-        print_as_geojson(res)
-    else:
-        for feature in res:
+def show_progress(ctx, job_id):
+    try:
+        states = API(host=ctx.obj["host"]).job_progress(job_id)
+        i = next(states)
+        if i["state"] == "SUCCESS":
             click.echo(
-                "%s: %s" % (
-                    feature["properties"]["job_id"], feature["properties"]["state"]
+                "job %s successfully finished in %s" % (
+                    job_id, Timer(elapsed=i["runtime"])
                 )
             )
+            return
 
-
-def get_jobs_progress(host=None):
-    url = "http://%s/jobs" % host
-    res = _get_json(url)
-    progress_features = [
-        feature
-        for feature in res
-        if (
-            feature["properties"]["state"] == "PROGRESS" and
-            feature["properties"]["progress_data"].get("current") is not None
-        )
-    ]
-    try:
-        pbars = {
-            feature["properties"]["job_id"]: dict(
-                pbar=tqdm(
-                    desc=feature["properties"]["job_id"],
-                    position=-i,
-                    total=feature["properties"]["progress_data"]["total"],
-                    initial=feature["properties"]["progress_data"]["current"],
-                ),
-                last=0
-            )
-            for i, feature in enumerate(progress_features)
-            # for i, feature in enumerate([dict(properties=dict(job_id="z6-12-75"))])
-        }
-
-        def get_current(job_id):
-            url = "http://%s/jobs/%s" % (host, job_id)
-            res = _get_json(url)
-            return res["properties"]["progress_data"].get("current")
-
-        while True:
-            for job_id, d in pbars.items():
-                current = get_current(job_id)
-                if current and current > d["pbar"].last_print_n:
-                    d["pbar"].update(current - d["pbar"].last_print_n)
-            time.sleep(2)
-    finally:
-        for k, v in pbars.items():
-            v["pbar"].close()
-
-
-def print_as_geojson(res):
-    click.echo(
-            '{\n'
-            '  "type": "FeatureCollection",\n'
-            '  "features": ['
-        )
-    if isinstance(res, dict):
-        res = [res]
-    features = (i for i in res)
-    try:
-        feature = next(features)
-        while True:
-            gj = '    %s' % geojson.Feature(**feature)
-            parsed = json.loads(gj)
-            gj = json.dumps(parsed, indent=4, sort_keys=True)
-            try:
-                feature = next(features)
-                click.echo(gj + ',')
-            except StopIteration:
-                click.echo(gj)
-                raise
-    except StopIteration:
-        pass
-    click.echo(
-        '  ]\n'
-        '}'
-    )
-
-
-def _get_json(url, headers={}):
-    response = requests.get(url, headers=headers)
-    if response.status_code == 404:
-        raise ConnectionError("no resource found")
-    return json.loads(response.text)
+        if i["state"] in job_states["doing"]:
+            with tqdm(
+                initial=i["progress_data"]["current"],
+                total=i["progress_data"]["total"]
+            ) as pbar:
+                for i in states:
+                    if (
+                        i["progress_data"]["current"] and
+                        pbar.last_print_n and
+                        i["progress_data"]["current"] > pbar.last_print_n
+                    ):
+                        pbar.update(i["progress_data"]["current"] - pbar.last_print_n)
+    except JobFailed as e:
+        click.echo("Job %s failed" % job_id)
+        click.echo(e)
+        return
+    except Exception as e:
+        click.echo("Error: %s" % e)
+        return
