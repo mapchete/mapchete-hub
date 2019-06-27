@@ -1,75 +1,11 @@
 import datetime
+import geojson
 import json
 import logging
-
-from mapchete_hub.workers import zone_worker, preview_worker, subprocess_worker
-from mapchete_hub._core import cleanup_config
+import os
+from slacker import Slacker
 
 logger = logging.getLogger(__name__)
-
-
-workers = {
-    'zone_worker': zone_worker,
-    'preview_worker': preview_worker,
-    'subprocess_worker': subprocess_worker
-}
-
-
-def send_to_queue(
-    job_id=None,
-    worker=None,
-    config=None,
-    process_area=None
-):
-    if worker not in workers.keys():
-        raise ValueError('unknown worker: %s')
-    kwargs = dict(
-        config=cleanup_config(cleanup_datetime(config)),
-        process_area=process_area.wkt
-    )
-    logger.debug(config)
-    logger.debug("send to %s queue", worker)
-    logger.debug(kwargs)
-    workers[worker].run.apply_async(
-        args=(None, ),
-        kwargs=kwargs,
-        task_id=job_id,
-        kwargsrepr=json.dumps(kwargs),
-        link=get_next_jobs(
-            job_id=job_id,
-            config=config,
-            process_area=process_area.wkt
-        )
-    )
-
-
-def get_next_jobs(job_id=None, config=None, process_area=None):
-    logger.debug(config.keys())
-
-    def _gen_next_job(next_c):
-        logger.debug(next_c.keys())
-        while True:
-            if 'mhub_next_process' in next_c:
-                job_conf = next_c['mhub_next_process']
-                worker = job_conf['mhub_worker']
-                kwargs = dict(
-                    config=cleanup_config(dict(mapchete_config=next_c)),
-                    process_area=process_area
-                )
-                task_id = '%s_%s' % (worker, job_id)
-                kwargsrepr = json.dumps(kwargs)
-                yield workers[worker].run.signature(
-                    args=(None, ),
-                    kwargs=kwargs,
-                    task_id=task_id,
-                    kwargsrepr=kwargsrepr
-                )
-                next_c = job_conf
-            else:
-                break
-
-    mp_config = cleanup_datetime(config['mapchete_config'])
-    return list(_gen_next_job(mp_config))
 
 
 def cleanup_datetime(d):
@@ -79,3 +15,54 @@ def cleanup_datetime(d):
         else str(v) if isinstance(v, datetime.date) else v
         for k, v in d.items()
     }
+
+
+def announce_on_slack(config=None, process_area=None):
+    if config['mapchete_config'].get("mhub_announce_on_slack", False):
+        logger.info("announce on slack")
+        Slacker(
+            "",
+            incoming_webhook_url=os.environ["SLACK_WEBHOOK_URL"]
+        ).incomingwebhook.post(
+            {
+                "username": "Mapchete",
+                "icon_url": "https://a2.memecaptain.com/src_thumbs/24132.jpg",
+                "channel": "#mapchete_hub",
+                "text": "%s#zoom=8&lon=%s&lat=%s" % (
+                    os.environ.get("PREVIEW_PERMALINK"),
+                    process_area.centroid.y,
+                    process_area.centroid.x
+                )
+            }
+        )
+
+
+def format_as_geojson(inp, indent=4):
+    space = " " * indent
+    out_gj = (
+        '{\n'
+        '%s"type": "FeatureCollection",\n'
+        '%s"features": [\n'
+    ) % (space, space)
+    features = (i for i in ([inp] if isinstance(inp, dict) else inp))
+    try:
+        feature = next(features)
+        level = 2
+        while True:
+            feature_gj = (space * level).join(
+                json.dumps(
+                    json.loads('%s' % geojson.Feature(**feature)),
+                    indent=indent,
+                    sort_keys=True
+                ).splitlines(True)
+            )
+            try:
+                feature = next(features)
+                out_gj += "%s%s,\n" % (space * level, feature_gj)
+            except StopIteration:
+                out_gj += "%s%s\n" % (space * level, feature_gj)
+                break
+    except StopIteration:
+        pass
+    out_gj += '%s]\n}' % space
+    return out_gj

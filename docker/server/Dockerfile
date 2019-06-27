@@ -15,11 +15,11 @@ ARG LOGFILE
 ARG LOGLEVEL
 ARG MHUB_BROKER_URL
 ARG MHUB_RESULT_BACKEND
-ARG WORKER
 
 # install python packages
 #########################
-RUN pip install -e git+http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git@${MAPCHETE_HUB_VERSION}#egg=mapchete_hub --src ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION}
+RUN pip install -e git+http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git@${MAPCHETE_HUB_VERSION}#egg=mapchete_hub --src ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION} \
+    && pip install gunicorn
 
 WORKDIR ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION}/mapchete-hub
-ENTRYPOINT ./manage.py $SUBCOMMAND --loglevel=$LOGLEVEL --logfile=$LOGFILE
+ENTRYPOINT gunicorn --bind 0.0.0.0:5000 --log-level $LOGLEVEL -w 1 "mapchete_hub.application:flask_app(monitor=True)"

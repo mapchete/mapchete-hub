@@ -49,10 +49,12 @@ MHUB_RESULT_BACKEND='rpc://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
 MHUB_CONFIG_DIR='/mnt/processes'
 MP_SATELLITE_CACHE_PATH=/mnt/data/cache
 WORKER='zone_worker'
+QUEUE='zone_worker_queue'
 docker run \
   --rm \
   --name $WORKER \
   -e WORKER=$WORKER \
+  -e QUEUE=$QUEUE \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \

@@ -1,11 +1,10 @@
 
 from ._core import mapchete_execute, mapchete_index, cleanup_config
-from ._misc import send_to_queue, get_next_jobs, cleanup_datetime
+from ._misc import cleanup_datetime
 
 __version__ = "0.2"
 
 
 __all__ = [
-    "mapchete_execute", "mapchete_index", "cleanup_config", "send_to_queue",
-    "get_next_jobs", "cleanup_datetime"
+    "mapchete_execute", "mapchete_index", "cleanup_config", "cleanup_datetime"
 ]

@@ -1,17 +1,10 @@
-from billiard import cpu_count, current_process
-from billiard.exceptions import WorkerLostError
-from billiard.pool import Pool
+import billiard
+from billiard import cpu_count
 from celery.utils.log import get_task_logger
-from functools import partial
 import mapchete
-from mapchete.config import _map_to_new_config
-from mapchete.errors import MapcheteNodataTile, MapcheteProcessException
+from mapchete.config import _map_to_new_config, get_zoom_levels
 from mapchete.index import zoom_index_gen
 from mapchete.tile import BufferedTilePyramid
-import os
-import signal
-import subprocess
-import time
 
 from mapchete_hub.config import main_options
 
@@ -38,6 +31,45 @@ def mapchete_index(
     basepath=None,
     for_gdal=True
 ):
+    """
+    Wrapper around index generation method which behaves like `mapchete index`.
+
+    Parameters
+    ----------
+    config : dict
+        A valid Mapchete configuration.
+    process_area : Polygon
+        Area to be processed.
+    bounds : tuple
+        Bounds to be processed.
+    tile : tuple or Tile
+        Tile to be processed.
+    zoom : int or list of ints
+        Zoom levels to be processed.
+    geojson : bool
+        generate GeoJSON index (default: False)
+    gpkg : bool
+        generate GeoPackage index (default: False)
+    shapefile : bool
+        generate Shapefile index (default: False)
+    txt : bool
+        generate tile path list textfile (default: False)
+    vrt : bool
+        GDAL-style VRT file (default: False)
+    fieldname : str
+        field name which contains paths of tiles (default: "location")
+    basepath : str
+        if set, use custom base path instead of output path
+    for_gdal : bool
+        use GDAL compatible remote paths, i.e. add "/vsicurl/" before path
+        (default: True)
+
+    Yields
+    ------
+    First item is an integer indicating number of tiles to be processed.
+    Following items are ProcessInfo objects containing process and write information for
+    each process tile.
+    """
     config.update(config_dir=main_options['config_dir'])
     if not any([geojson, gpkg, shapefile, txt]):
         raise ValueError(
@@ -45,26 +77,15 @@ def mapchete_index(
     if not out_dir:
         raise ValueError('no out_dir given')
 
-    def _gpkg_to_shp(zoom):
-        src = os.path.join(out_dir, zoom + ".gpkg")
-        dst = os.path.join(out_dir, zoom + ".shp")
-        sp = subprocess.run(
-            ["ogr2ogr", dst, src],
-            stdout=subprocess.PIPE
-        )
-        if sp.returncode:
-            logger.error("ogr2ogr error when converting %s to %s", src, dst)
-
     # process single tile
     if tile:
-        conf = _map_to_new_config(config)
-        tile = BufferedTilePyramid(
-            conf["pyramid"]["grid"],
-            metatiling=conf["pyramid"].get("metatiling", 1),
-            pixelbuffer=conf["pyramid"].get("pixelbuffer", 0)
+        tile = BufferedTilePyramid.from_dict(
+            _map_to_new_config(config)["pyramid"]
         ).tile(*tile)
         with mapchete.open(
-            config, mode="readonly", bounds=tile.bounds,
+            dict(config, config_dir=main_options['config_dir']),
+            mode="readonly",
+            bounds=tile.bounds,
             zoom=tile.zoom
         ) as mp:
             num_processed = 0
@@ -85,46 +106,42 @@ def mapchete_index(
                 num_processed += 1
                 logger.debug("tile %s/%s finished", num_processed, total_tiles)
                 yield dict(process_tile=tile)
-            if gpkg and not shapefile:
-                _gpkg_to_shp(tile.zoom)
 
     else:
-        if process_area:
-            bounds = process_area.bounds
-        else:
-            bounds = bounds
         with mapchete.open(
-            config, mode="readonly", zoom=zoom, bounds=bounds
+            dict(config, config_dir=main_options['config_dir']),
+            mode="readonly",
+            zoom=zoom,
+            bounds=process_area.bounds if process_area else bounds
         ) as mp:
             num_processed = 0
             logger.debug("process bounds: %s", mp.config.init_bounds)
             logger.debug("process zooms: %s", mp.config.init_zoom_levels)
             logger.debug("fieldname: %s", fieldname)
-            zoom_levels = list(_get_zoom_level(zoom, mp))
-            assert zoom_levels
+            zoom_levels = get_zoom_levels(
+                process_zoom_levels=mp.config.zoom_levels,
+                init_zoom_levels=zoom
+            )
             total_tiles = mp.count_tiles(min(zoom_levels), max(zoom_levels))
             yield total_tiles
-            if total_tiles == 0:
-                return
-            for z in mp.config.init_zoom_levels:
-                logger.debug("zoom %s", z)
-                for tile in zoom_index_gen(
-                    mp=mp,
-                    zoom=z,
-                    out_dir=out_dir,
-                    geojson=geojson,
-                    gpkg=gpkg,
-                    shapefile=shapefile,
-                    txt=txt,
-                    fieldname=fieldname,
-                    basepath=basepath,
-                    for_gdal=for_gdal
-                ):
-                    num_processed += 1
-                    logger.debug("tile %s/%s finished", num_processed, total_tiles)
-                    yield dict(process_tile=tile)
-            if gpkg and not shapefile:
-                _gpkg_to_shp(z)
+            if total_tiles:
+                for z in mp.config.init_zoom_levels:
+                    logger.debug("zoom %s", z)
+                    for tile in zoom_index_gen(
+                        mp=mp,
+                        zoom=z,
+                        out_dir=out_dir,
+                        geojson=geojson,
+                        gpkg=gpkg,
+                        shapefile=shapefile,
+                        txt=txt,
+                        fieldname=fieldname,
+                        basepath=basepath,
+                        for_gdal=for_gdal
+                    ):
+                        num_processed += 1
+                        logger.debug("tile %s/%s finished", num_processed, total_tiles)
+                        yield dict(process_tile=tile)
 
 
 def mapchete_execute(
@@ -134,140 +151,56 @@ def mapchete_execute(
     process_area=None,
     multi=cpu_count(),
     max_chunksize=1,
-    max_attempts=20
+    **kwargs
 ):
-    if config is None:
-        raise AttributeError("no mapchete config given")
-    config.update(config_dir=main_options['config_dir'])
+    """
+    Wrapper around `mp.batch_processor()` method which behaves like `mapchete execute`.
 
-    with mapchete.open(config, mode=mode, zoom=zoom, bounds=process_area.bounds) as mp:
-        logger.debug("run with multiprocessing")
-        num_processed = 0
-        zoom_levels = list(_get_zoom_level(zoom, mp))
-        assert zoom_levels
-        total_tiles = mp.count_tiles(min(zoom_levels), max(zoom_levels))
-        yield total_tiles
-        if total_tiles == 0:
-            logger.debug("no tiles to be processed")
-            return
-        logger.debug(
-            "run process on %s tiles using %s workers", total_tiles, multi)
-        f = partial(_process_worker, mp)
-        for zoom in zoom_levels:
-            process_tiles = set([t.id for t in mp.get_process_tiles(zoom)])
-            missing, finished = process_tiles, set()
-            for attempt in range(max_attempts):
-                if not missing:
-                    logger.debug(
-                        "all tiles processed for zoom %s in %s attempts", zoom, attempt
-                    )
-                    break
+    Parameters
+    ----------
+    config : dict
+        A valid Mapchete configuration.
+    mode : string
+        Process mode. Either "continue" or "overwrite".
+    zoom : int or list of ints
+        Zoom levels to be processed.
+    process_area : Polygon
+        Area to be processed.
+    multi : int
+        Number of CPU cores to be used. Default is number of available cores.
+    max_chunksize : int
+        Number of tasks to be passed on to a billiard worker at once.
+
+    Yields
+    ------
+    First item is an integer indicating number of tiles to be processed.
+    Following items are ProcessInfo objects containing process and write information for
+    each process tile.
+    """
+    with mapchete.Timer() as t:
+        with mapchete.open(
+            dict(config, config_dir=main_options['config_dir']),
+            mode=mode,
+            zoom=zoom,
+            bounds=process_area.bounds
+        ) as mp:
+            zoom_levels = get_zoom_levels(
+                process_zoom_levels=mp.config.zoom_levels,
+                init_zoom_levels=zoom
+            )
+            total_tiles = mp.count_tiles(min(zoom_levels), max(zoom_levels))
+            yield total_tiles
+            if total_tiles:
                 logger.debug(
-                    "attempt %s of %s to process %s tiles for zoom %s on %s subprocesses",
-                    attempt + 1, max_attempts, len(missing), zoom, multi
+                    "run process on %s tiles using %s workers", total_tiles, multi
                 )
-                try:
-                    pool = Pool(multi, _worker_sigint_handler)
-                    for tile, message in pool.imap_unordered(
-                        f, missing,
-                        # set chunksize to between 1 and max_chunksize
-                        chunksize=min([max([total_tiles // multi, 1]), max_chunksize])
-                    ):
-                        finished.add(tile.id)
-                        num_processed += 1
-                        logger.debug("tile %s/%s finished", num_processed, total_tiles)
-                        yield dict(process_tile=tile, **message)
-                except KeyboardInterrupt:
-                    logger.error("Caught KeyboardInterrupt")
-                    logger.error("terminate pool")
-                    pool.terminate()
-                    raise
-                except Exception as e:
-                    if (
-                        isinstance(e.args[0].exception, WorkerLostError)
-                    ) or (
-                        isinstance(e.args[0].exception, MapcheteProcessException) and
-                        isinstance(e.args[0].exception.old, WorkerLostError)
-                    ):
-                        logger.error("Caught WorkerLostError: %s", e)
-                        logger.error("terminate pool")
-                        pool.terminate()
-                    elif (
-                        isinstance(e, MemoryError) or
-                        isinstance(e.args[0].exception, MemoryError)
-                    ):
-                        logger.error("Caught MemoryError")
-                        # reduce number of subprocesses for next run
-                        multi -= 1
-                        # retry if it will still be running on at least half of the
-                        # available cores and there will be a next attempt
-                        if (multi >= cpu_count() // 2) and (attempt + 1 < max_attempts):
-                            logger.debug("try again using %s subprocesses", multi)
-                        else:
-                            raise
-                    else:
-                        logger.error("Caught Exception")
-                        logger.exception(e)
-                        logger.error("terminate pool")
-                        pool.terminate()
-                        raise
-                finally:
-                    logger.debug("close pool")
-                    pool.close()
-                    logger.debug("join pool")
-                    pool.join()
-                    missing = process_tiles.difference(finished)
+                # run process on tiles
+                for process_info in mp.batch_processor(
+                    multiprocessing_module=billiard,
+                    multi=multi,
+                    zoom=zoom,
+                    max_chunksize=max_chunksize
+                ):
+                    yield process_info
 
-            if missing:
-                logger.error("missing %s tiles: %s", len(missing), missing)
-                raise MapcheteProcessException(
-                    "not all tiles processed after %s retries", max_attempts
-                )
-        logger.debug("%s tile(s) iterated", (str(num_processed)))
-
-
-def _process_worker(process, process_tile_id):
-    """Worker function running the process."""
-    process_tile = process.config.process_pyramid.tile(*process_tile_id)
-    logger.debug((process_tile.id, "running on %s" % current_process().name))
-
-    # skip execution if overwrite is disabled and tile exists
-    if process.config.mode == "continue" and (
-        process.config.output.tiles_exist(process_tile)
-    ):
-        logger.debug((process_tile.id, "tile exists, skipping"))
-        return process_tile, dict(
-            process="output already exists",
-            write="nothing written")
-
-    # execute on process tile
-    else:
-        start = time.time()
-        try:
-            output = process.execute(process_tile, raise_nodata=True)
-        except MapcheteNodataTile:
-            output = None
-        processor_message = "processed in %ss" % round(time.time() - start, 3)
-        logger.debug((process_tile.id, processor_message))
-        writer_message = process.write(process_tile, output)
-        return process_tile, dict(
-            process=processor_message,
-            write=writer_message
-        )
-
-
-def _worker_sigint_handler():
-    # ignore SIGINT and let everything be handled by parent process
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-
-def _get_zoom_level(zoom, process):
-    """Determine zoom levels."""
-    if zoom is None:
-        return reversed(process.config.zoom_levels)
-    if isinstance(zoom, int):
-        return [zoom]
-    elif len(zoom) == 2:
-        return reversed(range(min(zoom), max(zoom)+1))
-    elif len(zoom) == 1:
-        return zoom
+    logger.debug("processing finished in %s" % t)

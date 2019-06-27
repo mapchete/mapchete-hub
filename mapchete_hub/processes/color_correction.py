@@ -290,7 +290,8 @@ def read_mosaic(
             return "empty"
         try:
             mosaic = mosaic_inp.read(
-                indexes=bands, resampling=td_resampling
+                indexes=bands,
+                resampling=td_resampling
             ).astype(np.int16, copy=False)
         except EmptyStackException:
             logger.debug("%s empty: EmptyStackException", mosaic_name)

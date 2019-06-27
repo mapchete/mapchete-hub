@@ -2,9 +2,17 @@ import mapchete
 import pytest
 from mapchete import MapcheteProcess
 
-from mapchete_hub import get_next_jobs
+from mapchete_hub.application import get_next_jobs
 from mapchete_hub.processes.s1 import gamma0_stats_TF
 from mapchete_hub.processes import extract_mosaic
+
+
+def no_metis():
+    try:
+        import metis
+        return False
+    except ImportError:
+        return True
 
 
 def test_submit(example_config):
@@ -16,6 +24,7 @@ def test_submit(example_config):
     assert len(jobs) == 1
 
 
+@pytest.mark.skipif(no_metis, reason="requires metis")
 def test_s1_gamma0_mosaic(mundi_example_mapchete_gamma0):
     zoom = 13
     with mapchete.open(mundi_example_mapchete_gamma0) as mp:

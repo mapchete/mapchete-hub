@@ -87,6 +87,42 @@ def execute(
         except EmptyStackException:
             return 'empty'
 
+        _stack = _prepare_stack(stack.data*10000,
+                                keep_slice_indexes=add_indexes).astype(np.float32)
+
+        mosaic = np.full(mp.tile.shape, 25000)
+        for s in _stack:
+            s = np.floor(s)
+            mosaic = np.where((s[0] < mosaic) & (s[0] > 0.0) & (s[0] < 10000),
+                              s,
+                              mosaic
+                              ).astype(np.uint16)
+        mosaic = np.where(mosaic == 25000, 0, mosaic)
+
+        # optional index band
+        if add_indexes:
+            logger.debug("generate tags")
+            tags = {
+                s_id: dict(timestamp=str(s.timestamp), datastrip_id=s.slice_id)
+                for s_id, s in zip(
+                    cloudless.gen_slice_indexes(
+                        len(stack.data), nodata=0
+                    ),
+                    stack
+                )
+            }
+            return mosaic, {'datasets': json.dumps(tags)}
+        else:
+            return mosaic
+
+    with mp.open("s1") as s1_cube:
+        if s1_cube.is_empty():
+            return "empty"
+        try:
+            stack = s1_cube.read_cube(indexes=bands, resampling=resampling)
+        except EmptyStackException:
+            return 'empty'
+
         _stack = _prepare_stack(
             stack.data*10000,
             keep_slice_indexes=add_indexes

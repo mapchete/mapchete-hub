@@ -14,11 +14,11 @@ WORKDIR $ROOTDIR/src
 
 ARG AWS_ACCESS_KEY_ID
 ARG AWS_SECRET_ACCESS_KEY
-ARG LOGFILE
 ARG LOGLEVEL
 ARG MHUB_BROKER_URL
 ARG MHUB_RESULT_BACKEND
 ARG WORKER
+ARG QUEUE
 
 # install python packages
 #########################
@@ -26,4 +26,4 @@ RUN pip install git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox
   pip install -e git+http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git@${MAPCHETE_HUB_VERSION}#egg=mapchete_hub[mundi] --src ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION}
 
 WORKDIR ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION}/mapchete-hub
-ENTRYPOINT ./manage.py start-`echo $WORKER | sed s/_/-/g` --loglevel=$LOGLEVEL --logfile=$LOGFILE
+ENTRYPOINT ./manage.py worker -n $WORKER -q $QUEUE --loglevel=$LOGLEVEL
