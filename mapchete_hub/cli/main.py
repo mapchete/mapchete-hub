@@ -28,10 +28,41 @@ def mhub(ctx, **kwargs):
     ctx.obj = dict(**kwargs)
 
 
-@mhub.command(short_help='Show capabilities.')
+@mhub.command(short_help='Show available processes.')
+@click.option(
+    "--process_name", "-n", type=click.STRING, help="Print docstring of process."
+)
+@click.option(
+    "--docstrings", is_flag=True, help="Print docstrings of all processes."
+)
 @click.pass_context
-def capabilities(ctx):
-    click.echo("mapchete hub capabilities (available processes, workers.)")
+def processes(ctx, process_name=None, docstrings=False):
+    cap = API(host=ctx.obj["host"]).get("capabilities.json").json
+
+    # get all registered processes
+    processes = cap["processes"]
+
+    # print selected process
+    if process_name:
+        _print_process_info(processes[process_name], docstrings=True)
+    else:
+        # print all processes
+        click.echo("%s processes found" % len(processes))
+        for process_module in processes.values():
+            _print_process_info(process_module, docstrings=docstrings)
+
+
+def _print_process_info(process_module, docstrings=False):
+    click.echo(
+        click.style(
+            process_module["name"],
+            bold=docstrings,
+            underline=docstrings
+        )
+    )
+    if docstrings:
+        click.echo(process_module["docstring"])
+
 
 
 @mhub.command(short_help='Starts job.')

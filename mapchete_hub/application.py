@@ -6,6 +6,7 @@ from mapchete.config import get_zoom_levels
 from mapchete.tile import BufferedTilePyramid
 from multiprocessing import Process
 import os
+import pkg_resources
 from shapely.geometry import box, mapping
 from shapely import wkt
 
@@ -77,6 +78,7 @@ def flask_app(monitor=False):
     celery_app.init_app(app)
 
     logger.debug("add endpoints to REST API")
+    api.add_resource(Capabilities, '/capabilities.json')
     api.add_resource(JobsOverview, '/jobs/')
     api.add_resource(Jobs, '/jobs/<string:job_id>')
 
@@ -88,6 +90,23 @@ def flask_app(monitor=False):
     logger.debug("return app")
     # Return the application instance.
     return app
+
+
+class Capabilities(Resource):
+
+    def __init__(self):
+        processes = list(pkg_resources.iter_entry_points("mapchete.processes"))
+        self._capabilities = {}
+        self._capabilities["processes"] = {}
+        for v in processes:
+            process_module = v.load()
+            self._capabilities["processes"][process_module.__name__] = {
+                "name": process_module.__name__,
+                "docstring": process_module.execute.__doc__
+            }
+
+    def get(self):
+        return jsonify(self._capabilities)
 
 
 class JobsOverview(Resource):
