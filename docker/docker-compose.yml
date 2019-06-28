@@ -16,28 +16,8 @@ services:
       - RABBITMQ_DEFAULT_USER=s2processor
       - RABBITMQ_DEFAULT_PASS=REDACTED_API_KEY
 
-  monitor:
-    image: registry.gitlab.eox.at/maps/mapchete_hub/base_app:latest
-    networks:
-      - backend
-    depends_on:
-      - rabbitmq
-    deploy:
-      mode: global
-      restart_policy:
-        condition: on-failure
-    env_file: server.env
-    environment:
-      - SUBCOMMAND=monitor
-      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
-      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
-    volumes:
-      - type: volume
-        source: status_data
-        target: /mnt/data
-
   server:
-    image: registry.gitlab.eox.at/maps/mapchete_hub/base_app:latest
+    image: registry.gitlab.eox.at/maps/mapchete_hub/server:latest
     networks:
       - backend
     depends_on:
@@ -66,7 +46,6 @@ services:
     depends_on:
       - rabbitmq
       - server
-      - monitor
     deploy:
       mode: global
       restart_policy:
