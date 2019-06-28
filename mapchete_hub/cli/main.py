@@ -37,6 +37,18 @@ def mhub(ctx, **kwargs):
 )
 @click.pass_context
 def processes(ctx, process_name=None, docstrings=False):
+
+    def _print_process_info(process_module, docstrings=False):
+        click.echo(
+            click.style(
+                process_module["name"],
+                bold=docstrings,
+                underline=docstrings
+            )
+        )
+        if docstrings:
+            click.echo(process_module["docstring"])
+
     cap = API(host=ctx.obj["host"]).get("capabilities.json").json
 
     # get all registered processes
@@ -52,17 +64,15 @@ def processes(ctx, process_name=None, docstrings=False):
             _print_process_info(process_module, docstrings=docstrings)
 
 
-def _print_process_info(process_module, docstrings=False):
-    click.echo(
-        click.style(
-            process_module["name"],
-            bold=docstrings,
-            underline=docstrings
-        )
-    )
-    if docstrings:
-        click.echo(process_module["docstring"])
-
+@mhub.command(short_help='Show available processes.')
+@click.pass_context
+def queues(ctx):
+    cap = API(host=ctx.obj["host"]).get("capabilities.json").json
+    # click.echo(cap["queues"])
+    for queue, workers in cap["queues"].items():
+        click.echo("%s:" % queue)
+        for worker in workers:
+            click.echo("    %s" % worker)
 
 
 @mhub.command(short_help='Starts job.')

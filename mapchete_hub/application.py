@@ -79,6 +79,7 @@ def flask_app(monitor=False):
 
     logger.debug("add endpoints to REST API")
     api.add_resource(Capabilities, '/capabilities.json')
+    api.add_resource(QueuesOverview, '/queues/')
     api.add_resource(JobsOverview, '/jobs/')
     api.add_resource(Jobs, '/jobs/<string:job_id>')
 
@@ -106,7 +107,21 @@ class Capabilities(Resource):
             }
 
     def get(self):
+        insp = celery_app.control.inspect().active_queues()
+        queues_out = {}
+        for worker, queues in insp.items():
+            for queue in queues:
+                if queue["name"] not in queues_out:
+                    queues_out[queue["name"]] = []
+                queues_out[queue["name"]].append(worker)
+        self._capabilities["queues"] = queues_out
         return jsonify(self._capabilities)
+
+
+class QueuesOverview(Resource):
+
+    def get(self):
+        return jsonify(celery_app.control.inspect())
 
 
 class JobsOverview(Resource):
