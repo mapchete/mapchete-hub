@@ -49,30 +49,35 @@ def processes(ctx, process_name=None, docstrings=False):
         if docstrings:
             click.echo(process_module["docstring"])
 
-    cap = API(host=ctx.obj["host"]).get("capabilities.json").json
+    try:
+        cap = API(host=ctx.obj["host"]).get("capabilities.json").json
 
-    # get all registered processes
-    processes = cap["processes"]
+        # get all registered processes
+        processes = cap.get("processes")
 
-    # print selected process
-    if process_name:
-        _print_process_info(processes[process_name], docstrings=True)
-    else:
-        # print all processes
-        click.echo("%s processes found" % len(processes))
-        for process_module in processes.values():
-            _print_process_info(process_module, docstrings=docstrings)
+        # print selected process
+        if process_name:
+            _print_process_info(processes[process_name], docstrings=True)
+        else:
+            # print all processes
+            click.echo("%s processes found" % len(processes))
+            for process_module in processes.values():
+                _print_process_info(process_module, docstrings=docstrings)
+    except Exception as e:
+        click.echo("Error: %s" % e)
 
 
 @mhub.command(short_help='Show available processes.')
 @click.pass_context
 def queues(ctx):
-    cap = API(host=ctx.obj["host"]).get("capabilities.json").json
-    # click.echo(cap["queues"])
-    for queue, workers in cap["queues"].items():
-        click.echo("%s:" % queue)
-        for worker in workers:
-            click.echo("    %s" % worker)
+    try:
+        cap = API(host=ctx.obj["host"]).get("capabilities.json").json
+        for queue, workers in cap["queues"].items():
+            click.echo("%s:" % queue)
+            for worker in workers:
+                click.echo("    %s" % worker)
+    except Exception as e:
+        click.echo("Error: %s" % e)
 
 
 @mhub.command(short_help='Starts job.')
