@@ -36,7 +36,6 @@ def get_next_jobs(job_id=None, config=None, process_area=None):
     logger.debug("get next jobs: %s", config.keys())
 
     def _gen_next_job(next_c):
-        logger.debug(next_c.keys())
         while True:
             if 'mhub_next_process' in next_c:
                 job_conf = next_c['mhub_next_process']
@@ -107,14 +106,16 @@ class Capabilities(Resource):
             }
 
     def get(self):
+        # append current information on queues and workers
         insp = celery_app.control.inspect().active_queues()
         queues_out = {}
-        for worker, queues in insp.items():
+        for worker, queues in (insp or {}).items():
             for queue in queues:
                 if queue["name"] not in queues_out:
                     queues_out[queue["name"]] = []
                 queues_out[queue["name"]].append(worker)
         self._capabilities["queues"] = queues_out
+
         return jsonify(self._capabilities)
 
 

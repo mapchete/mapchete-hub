@@ -72,10 +72,13 @@ def processes(ctx, process_name=None, docstrings=False):
 def queues(ctx):
     try:
         cap = API(host=ctx.obj["host"]).get("capabilities.json").json
-        for queue, workers in cap["queues"].items():
-            click.echo("%s:" % queue)
-            for worker in workers:
-                click.echo("    %s" % worker)
+        if cap["queues"]:
+            for queue, workers in cap["queues"].items():
+                click.echo("%s:" % queue)
+                for worker in workers:
+                    click.echo("    %s" % worker)
+        else:
+            click.echo("no queues nor workers currently registered")
     except Exception as e:
         click.echo("Error: %s" % e)
 

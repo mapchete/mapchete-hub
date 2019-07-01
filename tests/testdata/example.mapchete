@@ -58,4 +58,3 @@ mhub_next_process:
         zoom>7: string2
     some_bool_parameter: true
     some_date_obj: 2018-05-01
-
