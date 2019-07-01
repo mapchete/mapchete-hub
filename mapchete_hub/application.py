@@ -9,6 +9,8 @@ import os
 import pkg_resources
 from shapely.geometry import box, mapping
 from shapely import wkt
+from webargs import fields, validate
+from webargs.flaskparser import use_kwargs, parser
 
 from mapchete_hub.celery_app import celery_app
 from mapchete_hub.config import flask_options, main_options
@@ -127,8 +129,12 @@ class QueuesOverview(Resource):
 
 class JobsOverview(Resource):
 
-    def get(self):
-        return jsonify(states.all())
+    args = {'output': fields.Str(required=False)}
+
+    @use_kwargs(args)
+    def get(self, output=None):
+        logger.debug("output: %s", output)
+        return jsonify(states.all(output=output))
 
 
 class Jobs(Resource):
@@ -142,14 +148,13 @@ class Jobs(Resource):
             abort(404)
 
     def post(self, job_id):
-        config = request.get_json()
-        mhub_worker = config['mapchete_config']['mhub_worker']
-        mhub_queue = config['mapchete_config'].get(
+        data = request.get_json()
+
+        mhub_worker = data['mapchete_config']['mhub_worker']
+        mhub_queue = data['mapchete_config'].get(
             'mhub_queue', "%s_queue" % mhub_worker
         )
-
         res = states.job(job_id)
-
         # job exists
         if res:
             logger.debug("job already exists: %s", job_id)
@@ -159,11 +164,11 @@ class Jobs(Resource):
         else:
             # pass on to celery cluster
             logger.debug("job is new: %s", job_id)
-            process_area = process_area_from_config(config)
+            process_area = process_area_from_config(data)
             logger.debug("process area: %s", process_area)
 
             kwargs = dict(
-                config=cleanup_config(cleanup_datetime(config)),
+                config=cleanup_config(cleanup_datetime(data)),
                 process_area=process_area.wkt
             )
             logger.debug("send task %s to queue %s", job_id, mhub_queue)
@@ -175,7 +180,7 @@ class Jobs(Resource):
                 kwargsrepr=json.dumps(kwargs),
                 link=get_next_jobs(
                     job_id=job_id,
-                    config=config,
+                    config=data,
                     process_area=process_area.wkt
                 )
             )

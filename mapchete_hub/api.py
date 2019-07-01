@@ -53,12 +53,16 @@ class API():
         self._api = _test_client if _test_client else requests
         self._baseurl = "" if _test_client else "http://%s/" % host
 
-    def get(self, url, **kwargs):
+    def get(self, url, params=None, **kwargs):
         """
         Make a GET request to _test_client or host.
         """
         try:
-            res = self._api.get(self._baseurl + url, **self._get_kwargs(kwargs))
+            res = self._api.get(
+                self._baseurl + url,
+                params=params or {},
+                **self._get_kwargs(kwargs)
+            )
             return Response(
                 status_code=res.status_code,
                 json=res.json if self._test_client else json.loads(res.text)
@@ -94,15 +98,11 @@ class API():
                 tile=None
             )
         )
-        if 'mhub_worker' not in data['mapchete_config']:
-            raise ValueError('specify mhub worker (zone_worker or preview_worker)')
+        if 'mhub_queue' not in data['mapchete_config']:
+            raise ValueError('specify mhub_queue')
 
         logger.debug("send job %s to API", job_id)
-        res = self.post(
-            "jobs/%s" % job_id,
-            json=data,
-            timeout=timeout
-        )
+        res = self.post("jobs/%s" % job_id, json=data, timeout=timeout)
         logger.debug("job %s sent", job_id)
         return Job(
             status_code=res.status_code,
@@ -115,7 +115,7 @@ class API():
         """
         Return job state.
         """
-        res = self.get("jobs/%s" % job_id)
+        res = self.get("jobs/%s" % job_id, timeout=timeout)
         if res.status_code == 404:
             raise JobNotFound("job %s does not exist" % job_id)
         else:
@@ -136,11 +136,11 @@ class API():
         """
         return self.job(job_id).state
 
-    def jobs(self, geojson=False):
+    def jobs(self, geojson=False, output=None):
         """
         Return job state.
         """
-        res = self.get("jobs/")
+        res = self.get("jobs/", timeout=timeout, params=dict(output=output))
         return (
             format_as_geojson(res.json)
             if geojson
@@ -155,13 +155,13 @@ class API():
             }
         )
 
-    def jobs_states(self):
+    def jobs_states(self, output=None):
         """
         Return jobs states.
         """
         return {
             job["properties"]["job_id"]: job["properties"]["state"]
-            for job in self.get("jobs/").json
+            for job in self.get("jobs/", timeout=timeout, params=dict(output=output)).json
         }
 
     def job_progress(self, job_id, interval=1, timeout=30):

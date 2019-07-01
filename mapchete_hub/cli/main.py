@@ -109,13 +109,23 @@ def start(ctx, job_id, mapchete_file, bounds=None, mode=None, debug=False):
 @mhub.command(short_help='Shows job status.')
 @click.argument('job_id', type=click.STRING)
 @click.option('--geojson', is_flag=True)
+@click.option('--traceback', is_flag=True)
 @click.pass_context
-def status(ctx, job_id, geojson=False):
+def status(ctx, job_id, geojson=False, traceback=False):
     try:
-        click.echo(
+        response = (
             API(host=ctx.obj["host"]).job(job_id, geojson=geojson)
             if geojson
             else API(host=ctx.obj["host"]).job(job_id)
+        )
+        click.echo(
+            response
+            if geojson
+            else "%s" % (
+                response.json["properties"]["traceback"]
+                if traceback
+                else response.state,
+            )
         )
     except Exception as e:
         click.echo("Error: %s" % e)
@@ -133,15 +143,18 @@ def progress(ctx, job_id):
 
 @mhub.command(short_help='Shows current jobs.')
 @click.option('--geojson', is_flag=True)
+@click.option('--output', type=click.STRING, help="only print jobs with specific output")
 @click.pass_context
-def jobs(ctx, geojson=False):
+def jobs(ctx, geojson=False, output=None):
     try:
         click.echo(
-            API(host=ctx.obj["host"]).jobs(geojson=geojson)
+            API(host=ctx.obj["host"]).jobs(geojson=geojson, output=output)
             if geojson
             else "\n".join([
                 "%s: %s" % (job_id, state)
-                for job_id, state in API(host=ctx.obj["host"]).jobs_states().items()
+                for job_id, state in API(
+                    host=ctx.obj["host"]
+                ).jobs_states(output=output).items()
             ])
         )
     except Exception as e:

@@ -119,11 +119,19 @@ class StatusHandler():
         )
         logger.debug(self.fields)
 
-    def all(self):
-        logger.debug("get status of all jobs")
+    def all(self, output=None):
         c = self.connection.cursor()
         res = c.execute('SELECT * FROM %s;' % self.tablename)
-        return [self._decode_row(row) for row in res]
+        all_entries = [self._decode_row(row) for row in res]
+        if output is None:
+            logger.debug("get status of all jobs")
+            return all_entries
+        else:
+            logger.debug("get status jobs with output %s", output)
+            return [
+                i for i in all_entries
+                if i["properties"]["config"]["mapchete_config"]["output"]["path"] == output
+            ]
 
     def job(self, job_id):
         logger.debug("get job %s status", job_id)
