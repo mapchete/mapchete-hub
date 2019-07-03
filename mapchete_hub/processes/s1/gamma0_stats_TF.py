@@ -67,12 +67,6 @@ def execute(
         **kwargs
 ):
     primary = mp.open("primary")
-    from metis._session import _close_opened_files
-    # Close snap files before writing to bucket!
-    process = psutil.Process()
-    _close_opened_files(process=process, file_names='esa')
-    _close_opened_files(process=process, file_names='java')
-
     try:
         # read stack
         stack = primary.read_cube(indexes=[1, 2], resampling='bilinear')
@@ -93,9 +87,9 @@ def execute(
                                    )
 
             vv_stack_db = outlier_removal(vv_stack_db,
-                                          threshold=20).reshape(vv_stack_db.shape)
+                                          threshold=30).reshape(vv_stack_db.shape)
             vh_stack_db = outlier_removal(vh_stack_db,
-                                          threshold=20).reshape(vh_stack_db.shape)
+                                          threshold=30).reshape(vh_stack_db.shape)
 
             vv_stack_db = np.ma.masked_equal(vv_stack_db, 0.0, copy=False)
             vh_stack_db = np.ma.masked_equal(vh_stack_db, 0.0, copy=False)
