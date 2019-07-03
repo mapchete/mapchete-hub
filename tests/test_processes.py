@@ -24,7 +24,7 @@ def test_submit(example_config):
     assert len(jobs) == 1
 
 
-@pytest.mark.skipif(no_metis, reason="requires metis")
+@pytest.mark.skipif(no_metis(), reason="requires metis")
 def test_s1_gamma0_mosaic(mundi_example_mapchete_gamma0):
     zoom = 13
     with mapchete.open(mundi_example_mapchete_gamma0) as mp:
