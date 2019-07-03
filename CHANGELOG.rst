@@ -5,7 +5,8 @@ Changelog
 ---
 0.2
 ---
-* filter jobs by process output path
+* generate capabilities.json (#51)
+* filter jobs by process output path (#40)
 * list available processes
 * list active queues and workers
 * use built-in mapchete batch functions (#47)
