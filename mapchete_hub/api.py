@@ -135,11 +135,11 @@ class API():
         """
         return self.job(job_id).state
 
-    def jobs(self, geojson=False, output=None):
+    def jobs(self, geojson=False, output_path=None):
         """
         Return job state.
         """
-        res = self.get("jobs/", timeout=timeout, params=dict(output=output))
+        res = self.get("jobs/", timeout=timeout, params=dict(output_path=output_path))
         return (
             format_as_geojson(res.json)
             if geojson
@@ -154,13 +154,17 @@ class API():
             }
         )
 
-    def jobs_states(self, output=None):
+    def jobs_states(self, output_path=None):
         """
         Return jobs states.
         """
         return {
             job["properties"]["job_id"]: job["properties"]["state"]
-            for job in self.get("jobs/", timeout=timeout, params=dict(output=output)).json
+            for job in self.get(
+                "jobs/",
+                timeout=timeout,
+                params=dict(output_path=output_path)
+            ).json
         }
 
     def job_progress(self, job_id, interval=1, timeout=30):

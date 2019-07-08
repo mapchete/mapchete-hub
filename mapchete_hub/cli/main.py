@@ -143,18 +143,20 @@ def progress(ctx, job_id):
 
 @mhub.command(short_help='Shows current jobs.')
 @click.option('--geojson', is_flag=True)
-@click.option('--output', type=click.STRING, help="only print jobs with specific output")
+@click.option(
+    '--output_path', type=click.STRING, help="only print jobs with specific output_path"
+)
 @click.pass_context
-def jobs(ctx, geojson=False, output=None):
+def jobs(ctx, geojson=False, output_path=None):
     try:
         click.echo(
-            API(host=ctx.obj["host"]).jobs(geojson=geojson, output=output)
+            API(host=ctx.obj["host"]).jobs(geojson=geojson, output_path=output_path)
             if geojson
             else "\n".join([
                 "%s: %s" % (job_id, state)
                 for job_id, state in API(
                     host=ctx.obj["host"]
-                ).jobs_states(output=output).items()
+                ).jobs_states(output_path=output_path).items()
             ])
         )
     except Exception as e:

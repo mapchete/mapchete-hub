@@ -129,12 +129,12 @@ class QueuesOverview(Resource):
 
 class JobsOverview(Resource):
 
-    args = {'output': fields.Str(required=False)}
+    args = {'output_path': fields.Str(required=False)}
 
     @use_kwargs(args)
-    def get(self, output=None):
-        logger.debug("output: %s", output)
-        return jsonify(states.all(output=output))
+    def get(self, output_path=None):
+        logger.debug("output_path: %s", output_path)
+        return jsonify(states.all(output_path=output_path))
 
 
 class Jobs(Resource):
