@@ -28,10 +28,59 @@ def mhub(ctx, **kwargs):
     ctx.obj = dict(**kwargs)
 
 
-@mhub.command(short_help='Show capabilities.')
+@mhub.command(short_help='Show available processes.')
+@click.option(
+    "--process_name", "-n", type=click.STRING, help="Print docstring of process."
+)
+@click.option(
+    "--docstrings", is_flag=True, help="Print docstrings of all processes."
+)
 @click.pass_context
-def capabilities(ctx):
-    click.echo("mapchete hub capabilities (available processes, workers.)")
+def processes(ctx, process_name=None, docstrings=False):
+
+    def _print_process_info(process_module, docstrings=False):
+        click.echo(
+            click.style(
+                process_module["name"],
+                bold=docstrings,
+                underline=docstrings
+            )
+        )
+        if docstrings:
+            click.echo(process_module["docstring"])
+
+    try:
+        cap = API(host=ctx.obj["host"]).get("capabilities.json").json
+
+        # get all registered processes
+        processes = cap.get("processes")
+
+        # print selected process
+        if process_name:
+            _print_process_info(processes[process_name], docstrings=True)
+        else:
+            # print all processes
+            click.echo("%s processes found" % len(processes))
+            for process_module in processes.values():
+                _print_process_info(process_module, docstrings=docstrings)
+    except Exception as e:
+        click.echo("Error: %s" % e)
+
+
+@mhub.command(short_help='Show available processes.')
+@click.pass_context
+def queues(ctx):
+    try:
+        cap = API(host=ctx.obj["host"]).get("capabilities.json").json
+        if cap["queues"]:
+            for queue, workers in cap["queues"].items():
+                click.echo("%s:" % queue)
+                for worker in workers:
+                    click.echo("    %s" % worker)
+        else:
+            click.echo("no queues nor workers currently registered")
+    except Exception as e:
+        click.echo("Error: %s" % e)
 
 
 @mhub.command(short_help='Starts job.')
@@ -60,13 +109,23 @@ def start(ctx, job_id, mapchete_file, bounds=None, mode=None, debug=False):
 @mhub.command(short_help='Shows job status.')
 @click.argument('job_id', type=click.STRING)
 @click.option('--geojson', is_flag=True)
+@click.option('--traceback', is_flag=True)
 @click.pass_context
-def status(ctx, job_id, geojson=False):
+def status(ctx, job_id, geojson=False, traceback=False):
     try:
-        click.echo(
+        response = (
             API(host=ctx.obj["host"]).job(job_id, geojson=geojson)
             if geojson
             else API(host=ctx.obj["host"]).job(job_id)
+        )
+        click.echo(
+            response
+            if geojson
+            else "%s" % (
+                response.json["properties"]["traceback"]
+                if traceback
+                else response.state,
+            )
         )
     except Exception as e:
         click.echo("Error: %s" % e)
@@ -84,15 +143,20 @@ def progress(ctx, job_id):
 
 @mhub.command(short_help='Shows current jobs.')
 @click.option('--geojson', is_flag=True)
+@click.option(
+    '--output_path', type=click.STRING, help="only print jobs with specific output_path"
+)
 @click.pass_context
-def jobs(ctx, geojson=False):
+def jobs(ctx, geojson=False, output_path=None):
     try:
         click.echo(
-            API(host=ctx.obj["host"]).jobs(geojson=geojson)
+            API(host=ctx.obj["host"]).jobs(geojson=geojson, output_path=output_path)
             if geojson
             else "\n".join([
                 "%s: %s" % (job_id, state)
-                for job_id, state in API(host=ctx.obj["host"]).jobs_states().items()
+                for job_id, state in API(
+                    host=ctx.obj["host"]
+                ).jobs_states(output_path=output_path).items()
             ])
         )
     except Exception as e:

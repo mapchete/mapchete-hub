@@ -60,7 +60,18 @@ def test_jobs():
     assert "no mhub server found" in result.output
 
 
-def test_capabilities():
-    """mhub capabilities"""
-    result = CliRunner().invoke(main.mhub, "capabilities")
+def test_processes():
+    """mhub processes"""
+    result = CliRunner().invoke(main.mhub, "processes")
     assert result.exit_code == 0
+    assert "no mhub server found" in result.output
+    result = CliRunner().invoke(main.mhub, "processes", "--docstrings")
+    assert result.exit_code == 0
+    assert "no mhub server found" in result.output
+
+
+def test_queues():
+    """mhub queues"""
+    result = CliRunner().invoke(main.mhub, "queues")
+    assert result.exit_code == 0
+    assert "no mhub server found" in result.output
