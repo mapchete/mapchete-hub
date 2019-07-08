@@ -47,6 +47,7 @@ def status_monitor(celery_app):
 
         while True:
             try:
+                logger.debug("try to establish connection for events...")
                 with celery_app.connection(flask_options["broker_url"]) as connection:
                     logger.debug("connection: %s", connection)
                     recv = celery_app.events.Receiver(
@@ -119,11 +120,26 @@ class StatusHandler():
         )
         logger.debug(self.fields)
 
-    def all(self):
-        logger.debug("get status of all jobs")
+    def all(self, output_path=None):
         c = self.connection.cursor()
-        res = c.execute('SELECT * FROM %s;' % self.tablename)
-        return [self._decode_row(row) for row in res]
+        all_entries = [
+            self._decode_row(row)
+            for row in c.execute('SELECT * FROM %s;' % self.tablename)
+        ]
+
+        def _has_output_path(x, output_path):
+            try:
+                mp_config = x["properties"]["config"]["mapchete_config"]
+                return mp_config["output"]["path"] == output_path
+            except KeyError:
+                return False
+
+        if output_path is None:
+            logger.debug("get status of all jobs")
+            return all_entries
+        else:
+            logger.debug("get status jobs with output_path %s", output_path)
+            return [i for i in all_entries if _has_output_path(i, output_path)]
 
     def job(self, job_id):
         logger.debug("get job %s status", job_id)
@@ -140,12 +156,13 @@ class StatusHandler():
     def update(self, job_id, metadata={}):
         if self.mode == 'r':
             raise AttributeError('update not allowed in read mode')
-        # logger.debug("update job %s status with: %s", job_id, metadata)
+
+        # get cursor
         c = self.connection.cursor()
+
         # update incoming metadata
         entry = dict(self._filtered_by_schema(metadata), job_id=metadata['uuid'])
         if 'kwargs' in metadata:
-            # logger.debug("found kwargs: %s", metadata['kwargs'])
             kwargs = json.loads(metadata['kwargs'].replace("'", '"'))
             entry.update(
                 geom=wkt.loads(kwargs['process_area']).wkt,
@@ -176,6 +193,7 @@ class StatusHandler():
             )
             encoded_values.append(job_id)
             c.execute(update, encoded_values)
+
         # commit changes
         self.connection.commit()
 
@@ -183,19 +201,17 @@ class StatusHandler():
         self.connection.close()
 
     def _filtered_by_schema(self, metadata):
-        return {
-            k: v
-            for k, v in metadata.items()
-            if k in self.fields
-        }
+        return {k: v for k, v in metadata.items() if k in self.fields}
 
     def _encode_values(self, entry):
+
         def _encode():
             for v in entry.values():
                 if isinstance(v, dict):
                     yield json.dumps(v)
                 else:
                     yield v
+
         return list(_encode())
 
     def _decode_row(self, row):
@@ -205,7 +221,6 @@ class StatusHandler():
                 if k == 'geom':
                     if v is None:
                         yield (k, v)
-                        # raise TypeError("geometry invalid")
                     else:
                         yield (k, mapping(wkt.loads(v)))
                 elif isinstance(v, str):
@@ -215,6 +230,7 @@ class StatusHandler():
                         yield (k, v)
                 else:
                     yield (k, v)
+
         decoded = dict(_decode())
         return dict(
             geometry=decoded['geom'],

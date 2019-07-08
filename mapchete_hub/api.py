@@ -58,7 +58,10 @@ class API():
         Make a GET request to _test_client or host.
         """
         try:
-            res = self._api.get(self._baseurl + url, **self._get_kwargs(kwargs))
+            res = self._api.get(
+                self._baseurl + url,
+                **self._get_kwargs(kwargs)
+            )
             return Response(
                 status_code=res.status_code,
                 json=res.json if self._test_client else json.loads(res.text)
@@ -94,15 +97,11 @@ class API():
                 tile=None
             )
         )
-        if 'mhub_worker' not in data['mapchete_config']:
-            raise ValueError('specify mhub worker (zone_worker or preview_worker)')
+        if 'mhub_queue' not in data['mapchete_config']:
+            raise ValueError('specify mhub_queue')
 
         logger.debug("send job %s to API", job_id)
-        res = self.post(
-            "jobs/%s" % job_id,
-            json=data,
-            timeout=timeout
-        )
+        res = self.post("jobs/%s" % job_id, json=data, timeout=timeout)
         logger.debug("job %s sent", job_id)
         return Job(
             status_code=res.status_code,
@@ -115,7 +114,7 @@ class API():
         """
         Return job state.
         """
-        res = self.get("jobs/%s" % job_id)
+        res = self.get("jobs/%s" % job_id, timeout=timeout)
         if res.status_code == 404:
             raise JobNotFound("job %s does not exist" % job_id)
         else:
@@ -136,11 +135,11 @@ class API():
         """
         return self.job(job_id).state
 
-    def jobs(self, geojson=False):
+    def jobs(self, geojson=False, output_path=None):
         """
         Return job state.
         """
-        res = self.get("jobs/")
+        res = self.get("jobs/", timeout=timeout, params=dict(output_path=output_path))
         return (
             format_as_geojson(res.json)
             if geojson
@@ -155,13 +154,17 @@ class API():
             }
         )
 
-    def jobs_states(self):
+    def jobs_states(self, output_path=None):
         """
         Return jobs states.
         """
         return {
             job["properties"]["job_id"]: job["properties"]["state"]
-            for job in self.get("jobs/").json
+            for job in self.get(
+                "jobs/",
+                timeout=timeout,
+                params=dict(output_path=output_path)
+            ).json
         }
 
     def job_progress(self, job_id, interval=1, timeout=30):
@@ -201,8 +204,12 @@ class API():
             time.sleep(interval)
 
     def _get_kwargs(self, kwargs):
-        return (
-            {k: v for k, v in kwargs.items() if k not in ["timeout"]}
-            if self._test_client
-            else kwargs
-        )
+        """
+        For test client:
+        remove timeout kwarg
+        rename params kwarg to query_string
+        """
+        if self._test_client:
+            kwargs.pop("timeout", None)
+            kwargs.update(query_string=kwargs.pop("params", {}))
+        return kwargs

@@ -5,6 +5,10 @@ Changelog
 ---
 0.2
 ---
+* generate capabilities.json (#51)
+* filter jobs by process output path (#40)
+* list available processes
+* list active queues and workers
 * use built-in mapchete batch functions (#47)
 * added better unit test coverage for most flask & celery related code parts (#7)
 * start monitor in child process (#23)
