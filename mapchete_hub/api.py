@@ -53,14 +53,13 @@ class API():
         self._api = _test_client if _test_client else requests
         self._baseurl = "" if _test_client else "http://%s/" % host
 
-    def get(self, url, params=None, **kwargs):
+    def get(self, url, **kwargs):
         """
         Make a GET request to _test_client or host.
         """
         try:
             res = self._api.get(
                 self._baseurl + url,
-                params=params or {},
                 **self._get_kwargs(kwargs)
             )
             return Response(
@@ -201,8 +200,12 @@ class API():
             time.sleep(interval)
 
     def _get_kwargs(self, kwargs):
-        return (
-            {k: v for k, v in kwargs.items() if k not in ["timeout"]}
-            if self._test_client
-            else kwargs
-        )
+        """
+        For test client:
+        remove timeout kwarg
+        rename params kwarg to query_string
+        """
+        if self._test_client:
+            kwargs.pop("timeout", None)
+            kwargs.update(query_string=kwargs.pop("params", {}))
+        return kwargs
