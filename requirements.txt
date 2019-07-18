@@ -1,17 +1,14 @@
 celery
 celery-flower
+eox_preprocessing @ git+http://gitlab+deploy-token-8:siGaiZE1Faj6Mm16WEu6@gitlab.eox.at/maps/preprocessing.git@master
 Flask-Celery-py3
 flask_restful
 geojson
 mapchete>=0.28
 mapchete_satellite @ git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@master
 orgonite @ git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master
-Pillow
 pysqlite3
 pyyaml
-pyproj==1.9.5.1
-rio-color
-scipy
 slacker
 spatialite
 tornado>=4.2.0,<6.0.0
