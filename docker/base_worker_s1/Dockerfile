@@ -29,7 +29,11 @@ RUN pip install git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox
   pip install git+http://gitlab+deploy-token-6:_AHLpsvzLQq3j4a_w95R@gitlab.eox.at/maps/metis.git@${METIS_VERSION}#egg=metis && \
   pip install git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@${MAPCHETE_SATELLITE_VERSION}#egg=mapchete_satellite && \
   pip install -e git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@${EOX_PREPROCESSING_VERSION}#egg=eox_preprocessing && \
-  pip install -e git+http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git@${MAPCHETE_HUB_VERSION}#egg=mapchete_hub[mundi] --src ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION}
+  cd ${ROOTDIR}/src && \
+  git clone http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git && \
+  cd mapchete_hub && \
+  git checkout ${MAPCHETE_HUB_VERSION} && \
+  pip install -e .[mundi]
 
-WORKDIR ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION}/mapchete-hub
+WORKDIR ${ROOTDIR}/src/mapchete_hub
 ENTRYPOINT ./manage.py worker -n $WORKER -q $QUEUE --loglevel=$LOGLEVEL
