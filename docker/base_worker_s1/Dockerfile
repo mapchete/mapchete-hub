@@ -1,6 +1,7 @@
 FROM registry.gitlab.eox.at/maps/docker-base/snap-mapchete:latest
 MAINTAINER Joachim Ungar
 
+ENV EOX_PREPROCESSING_VERSION=master
 ENV MAPCHETE_HUB_VERSION=master
 ENV ORGONITE_VERSION=master
 ENV METIS_VERSION=master
@@ -26,8 +27,9 @@ ARG QUEUE
 #########################
 RUN pip install git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@${ORGONITE_VERSION}#egg=orgonite && \
   pip install git+http://gitlab+deploy-token-6:_AHLpsvzLQq3j4a_w95R@gitlab.eox.at/maps/metis.git@${METIS_VERSION}#egg=metis && \
-  pip install git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@preprocessing_into_read_function#egg=mapchete_satellite && \
-  pip install -e git+http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git@${MAPCHETE_HUB_VERSION}#egg=mapchete_hub[mundi] --src ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION}
+  pip install git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@${MAPCHETE_SATELLITE_VERSION}#egg=mapchete_satellite && \
+  pip install -e git+http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git@${MAPCHETE_HUB_VERSION}#egg=mapchete_hub[mundi] --src ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION} \
+  pip install -e git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@${EOX_PREPROCESSING_VERSION}#egg=mapchete_hub[mundi] --src ${ROOTDIR}/src/preprocessing/${EOX_PREPROCESSING_VERSION}
 
 WORKDIR ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION}/mapchete-hub
 ENTRYPOINT ./manage.py worker -n $WORKER -q $QUEUE --loglevel=$LOGLEVEL
