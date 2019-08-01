@@ -1,6 +1,6 @@
 celery
 celery-flower
-eox_preprocessing @ git+http://gitlab+deploy-token-8:siGaiZE1Faj6Mm16WEu6@gitlab.eox.at/maps/preprocessing.git@master
+eox_preprocessing @ git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@master
 Flask-Celery-py3
 flask_restful
 geojson
