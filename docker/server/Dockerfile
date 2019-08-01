@@ -19,7 +19,7 @@ ARG MHUB_RESULT_BACKEND
 
 # install python packages
 #########################
-RUN pip install -e git+http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git@${MAPCHETE_HUB_VERSION}#egg=mapchete_hub --src ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION} \
+RUN pip install -e git+http://gitlab+deploy-token-5:Yz84UvRWVVG7K7e6u7n_@gitlab.eox.at/maps/mapchete_hub.git@${MAPCHETE_HUB_VERSION}#egg=mapchete_hub --src ${ROOTDIR}/src/mapchete_hub/${MAPCHETE_HUB_VERSION} && \
     pip install -e git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@${EOX_PREPROCESSING_VERSION}#egg=mapchete_hub[mundi] --src ${ROOTDIR}/src/preprocessing/${EOX_PREPROCESSING_VERSION} \
     && pip install gunicorn
 
