@@ -9,7 +9,10 @@ ENV MAPCHETE_SATELLITE_VERSION=master
 ENV AWS_REQUEST_PAYER=requester
 ENV ROOTDIR=/usr/local
 ENV APP_DIR=/tmp/app
-ENV C_FORCE_ROOT=yes
+ENV CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+ENV C_FORCE_ROOT=True
 
 RUN mkdir $APP_DIR
 WORKDIR $ROOTDIR/src
@@ -36,4 +39,4 @@ RUN pip install git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox
   pip install -e .[mundi]
 
 WORKDIR ${ROOTDIR}/src/mapchete_hub
-ENTRYPOINT ./manage.py worker -n $WORKER -q $QUEUE --loglevel=$LOGLEVEL
+ENTRYPOINT ./manage.py worker -n $WORKER -Q $QUEUE --loglevel=$LOGLEVEL

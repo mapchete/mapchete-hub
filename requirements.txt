@@ -5,8 +5,6 @@ Flask-Celery-py3
 flask_restful
 geojson
 mapchete>=0.28
-pysqlite3
-pyyaml
 slacker
 spatialite
 tornado>=4.2.0,<6.0.0

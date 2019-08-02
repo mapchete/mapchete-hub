@@ -57,7 +57,7 @@ def devserver(ctx, loglevel, logfile):
 
 @cli.command(short_help='Launches Celery worker.')
 @click.option("--worker-name", "-n", type=click.STRING, default="mhub_worker")
-@click.option("--queue", "-q", type=click.STRING, default="zone_worker_queue")
+@click.option("--queue", "-Q", type=click.STRING, default="zone_worker_queue")
 @opt_loglevel
 @opt_logfile
 @click.pass_context
