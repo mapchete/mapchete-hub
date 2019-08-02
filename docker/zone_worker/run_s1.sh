@@ -43,7 +43,7 @@ retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:lat
 LOGLEVEL='DEBUG'
 LOGFILE=/mnt/data/log/worker.log
 AWS_S3_ENDPOINT='obs.eu-de.otc.t-systems.com'
-AWS_ACCESS_KEY_ID='GZMKTK8LQMPLWZ1NIOLZ'
+AWS_ACCESS_KEY_ID='EGD9GHVFU5OQ2UKIOB5W'
 AWS_SECRET_ACCESS_KEY='REDACTED_API_KEY'
 MHUB_BROKER_URL='amqp://s1processor:REDACTED_API_KEY@192.168.1.154:5672//'
 MHUB_RESULT_BACKEND='rpc://s1processor:REDACTED_API_KEY@192.168.1.154:5672//'
