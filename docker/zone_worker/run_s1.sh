@@ -37,7 +37,7 @@ sudo apt install -y htop
 # log into registry
 CI_JOB_TOKEN=REDACTED_API_KEY
 retry 10 docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.eox.at
-retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:0.8
+retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:latest
 
 # set environment and run container
 LOGLEVEL='DEBUG'
@@ -68,4 +68,4 @@ docker run \
   -e LOGFILE=$LOGFILE \
   -v /mnt/data:/mnt/data \
   -d \
-  registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:0.8
+  registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:latest
