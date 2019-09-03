@@ -37,7 +37,7 @@ sudo apt install -y htop
 # log into registry
 CI_JOB_TOKEN=REDACTED_API_KEY
 retry 10 docker login -u gitlab-ci-token -p $CI_JOB_TOKEN registry.gitlab.eox.at
-retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:0.8
+retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:latest
 
 # set environment and run container
 LOGLEVEL='DEBUG'
@@ -47,7 +47,6 @@ AWS_ACCESS_KEY_ID='GZMKTK8LQMPLWZ1NIOLZ'
 AWS_SECRET_ACCESS_KEY='REDACTED_API_KEY'
 MHUB_BROKER_URL='amqp://s1processor:REDACTED_API_KEY@192.168.1.154:5672//'
 MHUB_RESULT_BACKEND='rpc://s1processor:REDACTED_API_KEY@192.168.1.154:5672//'
-MHUB_CONFIG_DIR='/mnt/processes'
 MP_SATELLITE_CACHE_PATH=/mnt/data/cache
 WORKER='zone_worker'
 QUEUE='zone_worker_queue'
@@ -61,7 +60,6 @@ docker run \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
   -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
-  -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
   -e MP_SATELLITE_CACHE_PATH=$MP_SATELLITE_CACHE_PATH \
   -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
   -e GML_SKIP_CORRUPTED_FEATURES=YES \
@@ -70,4 +68,4 @@ docker run \
   -e LOGFILE=$LOGFILE \
   -v /mnt/data:/mnt/data \
   -d \
-  registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:0.8
+  registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1:latest
