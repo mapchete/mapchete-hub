@@ -39,4 +39,4 @@ RUN pip install git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox
   pip install -e .[mundi]
 
 WORKDIR ${ROOTDIR}/src/mapchete_hub
-ENTRYPOINT ./manage.py worker -n $WORKER -Q $QUEUE --loglevel=$LOGLEVEL
+ENTRYPOINT ./manage.py worker --loglevel=$LOGLEVEL
