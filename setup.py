@@ -33,22 +33,10 @@ setup(
     entry_points={
         'console_scripts': ['mhub=mapchete_hub.cli:mhub'],
         'mapchete.cli.commands': ["mhub=mapchete_hub.cli:mhub"],
-        'mapchete.processes': [
-            'color_correction=mapchete_hub.processes.color_correction',
-            'color_correction_l2a=mapchete_hub.processes.color_correction_l2a',
-            'extract_mosaic=mapchete_hub.processes.extract_mosaic',
-            'scale=mapchete_hub.processes.scale',
-            'ndvi_render=mapchete_hub.processes.ndvi_render',
-            'ndwi_render=mapchete_hub.processes.ndwi_render',
-            'gamma0_stats_TF=mapchete_hub.processes.s1.gamma0_stats_TF',
-            'max_coherence_L2_SLC=mapchete_hub.processes.s1.max_coherence_L2_SLC',
-            'min_coherence_L2_SLC=mapchete_hub.processes.s1.min_coherence_L2_SLC',
-        ]
     },
     install_requires=parse_requirements('requirements.txt'),
     extras_require={
         'mundi': parse_requirements('requirements_mundi.txt'),
-        's1': parse_requirements('requirements_s1.txt'),
         'test': parse_requirements('requirements_test.txt')
     },
     classifiers=[
