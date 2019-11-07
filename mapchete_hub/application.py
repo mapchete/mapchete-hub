@@ -9,15 +9,15 @@ import os
 import pkg_resources
 from shapely.geometry import box, mapping
 from shapely import wkt
-from webargs import fields, validate
-from webargs.flaskparser import use_kwargs, parser
+from webargs import fields
+from webargs.flaskparser import use_kwargs
 
 from mapchete_hub.celery_app import celery_app
 from mapchete_hub.config import flask_options, main_options
 from mapchete_hub._core import cleanup_config
 from mapchete_hub.monitor import StatusHandler, status_monitor
 from mapchete_hub._misc import cleanup_datetime
-from mapchete_hub.workers import zone_worker, preview_worker
+from mapchete_hub.workers import execute, index
 
 
 logger = logging.getLogger(__name__)
@@ -28,9 +28,12 @@ states = StatusHandler(
 )
 
 
-workers = {
-    'zone_worker': zone_worker,
-    'preview_worker': preview_worker
+available_workers = {
+    "execute_worker": execute,
+    "index_worker": index,
+    # deprecated
+    "zone_worker": execute,
+    "preview_worker": index,
 }
 
 
@@ -39,16 +42,16 @@ def get_next_jobs(job_id=None, config=None, process_area=None):
 
     def _gen_next_job(next_c):
         while True:
-            if 'mhub_next_process' in next_c:
-                job_conf = next_c['mhub_next_process']
-                worker = job_conf['mhub_worker']
+            if "mhub_next_process" in next_c:
+                job_conf = next_c["mhub_next_process"]
+                worker = job_conf["mhub_worker"]
                 kwargs = dict(
                     config=cleanup_config(dict(mapchete_config=next_c)),
                     process_area=process_area
                 )
-                task_id = '%s_%s' % (worker, job_id)
+                task_id = "%s_%s" % (worker, job_id)
                 kwargsrepr = json.dumps(kwargs)
-                yield workers[worker].run.signature(
+                yield available_workers[worker].run.signature(
                     args=(None, ),
                     kwargs=kwargs,
                     task_id=task_id,
@@ -58,11 +61,11 @@ def get_next_jobs(job_id=None, config=None, process_area=None):
             else:
                 break
 
-    mp_config = cleanup_datetime(config['mapchete_config'])
+    mp_config = cleanup_datetime(config["mapchete_config"])
     return list(_gen_next_job(mp_config))
 
 
-def flask_app(monitor=False):
+def flask_app(launch_monitor=False):
     """Flask application factory. Initializes and returns the Flask application."""
 
     logger.debug("initialize flask app")
@@ -79,18 +82,18 @@ def flask_app(monitor=False):
     celery_app.init_app(app)
 
     logger.debug("add endpoints to REST API")
-    api.add_resource(Capabilities, '/capabilities.json')
-    api.add_resource(QueuesOverview, '/queues/')
-    api.add_resource(JobsOverview, '/jobs/')
-    api.add_resource(Jobs, '/jobs/<string:job_id>')
+    api.add_resource(Capabilities, "/capabilities.json")
+    api.add_resource(QueuesOverview, "/queues/")
+    api.add_resource(JobsOverview, "/jobs/")
+    api.add_resource(Jobs, "/jobs/<string:job_id>")
 
-    if monitor:
-        logger.debug("start monitor in child process")
+    if launch_monitor:
+        logger.debug("spawn monitor in child process")
         monitor = Process(target=status_monitor, args=(celery_app, ))
         monitor.start()
 
-    logger.debug("return app")
     # Return the application instance.
+    logger.debug("return app")
     return app
 
 
@@ -129,7 +132,7 @@ class QueuesOverview(Resource):
 
 class JobsOverview(Resource):
 
-    args = {'output_path': fields.Str(required=False)}
+    args = {"output_path": fields.Str(required=False)}
 
     @use_kwargs(args)
     def get(self, output_path=None):
@@ -150,9 +153,10 @@ class Jobs(Resource):
     def post(self, job_id):
         data = request.get_json()
 
-        mhub_worker = data['mapchete_config']['mhub_worker']
-        mhub_queue = data['mapchete_config'].get(
-            'mhub_queue', "%s_queue" % mhub_worker
+        mhub_worker = available_workers[data["mapchete_config"]["mhub_worker"]].__name__
+        mhub_queue = data["mapchete_config"].get(
+            "mhub_queue",
+            "%s_queue" % mhub_worker.split(".")[-1]
         )
         res = states.job(job_id)
         # job exists
@@ -173,7 +177,7 @@ class Jobs(Resource):
             )
             logger.debug("send task %s to queue %s", job_id, mhub_queue)
             celery_app.send_task(
-                "mapchete_hub.workers.%s.run" % mhub_worker,
+                "%s.run" % mhub_worker,
                 task_id=job_id,
                 queue=mhub_queue,
                 kwargs=kwargs,
@@ -197,12 +201,12 @@ class Jobs(Resource):
 
 def process_area_from_config(config):
     # bounds
-    bounds = config.get('bounds')
+    bounds = config.get("bounds")
     if bounds:
         return box(*bounds)
 
     # wkt_geometry
-    wkt_geometry = config.get('wkt_geometry')
+    wkt_geometry = config.get("wkt_geometry")
     if wkt_geometry:
         return wkt.loads(wkt_geometry)
 
@@ -214,7 +218,7 @@ def process_area_from_config(config):
         )
 
     # point
-    point = config.get('point')
+    point = config.get("point")
     if point:
         x, y = point
         zoom_levels = get_zoom_levels(
@@ -224,12 +228,12 @@ def process_area_from_config(config):
         return _tp().tile_from_xy(x, y, max(zoom_levels)).bbox
 
     # tile
-    tile = config.get('tile')
+    tile = config.get("tile")
     if tile:
         return _tp().tile(*tile).bbox
 
     # mapchete_config
-    process_bounds = config.get('mapchete_config', {}).get('process_bounds')
+    process_bounds = config.get("mapchete_config", {}).get("process_bounds")
     if process_bounds:
         return box(*process_bounds)
 

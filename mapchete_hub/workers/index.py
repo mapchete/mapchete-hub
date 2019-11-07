@@ -1,4 +1,5 @@
 from celery.utils.log import get_task_logger
+from mapchete.io import makedirs
 import os
 from shapely import wkt
 
@@ -22,10 +23,22 @@ def run(self, *args, **kwargs):
     mapchete_config = cleanup_config(config['mapchete_config'])
     # first, the inputs get parsed, i.e. all metadat queried from catalogue
     # this may take a while
+    if "INDEX_OUTPUT_DIR" in os.environ:
+        # create subfolder using process output path in order not to mix up index files
+        # from multiple outputs
+        index_output_path = os.path.join(
+            os.environ.get("INDEX_OUTPUT_DIR"),
+            os.path.join(
+                *mapchete_config["output"]["path"].replace("s3://", "").split("/")
+            )
+        )
+        makedirs(index_output_path)
+    else:
+        index_output_path = mapchete_config["output"]["path"]
     executor = mapchete_index(
         config=mapchete_config,
         process_area=process_area,
-        out_dir=os.environ.get('INDEX_OUTPUT_DIR', mapchete_config["output"]["path"]),
+        out_dir=index_output_path,
         shapefile=True
     )
 

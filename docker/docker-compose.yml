@@ -17,7 +17,7 @@ services:
       - RABBITMQ_DEFAULT_PASS=REDACTED_API_KEY
 
   server:
-    image: registry.gitlab.eox.at/maps/mapchete_hub/server:latest
+    image: registry.gitlab.eox.at/maps/mapchete_hub/server:0.2
     networks:
       - backend
     depends_on:
@@ -40,7 +40,7 @@ services:
         target: /mnt/data/
 
   zone_worker:
-    image: registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
+    image: registry.gitlab.eox.at/maps/mapchete_hub/worker:0.2
     networks:
       - backend
     depends_on:

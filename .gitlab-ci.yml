@@ -1,9 +1,14 @@
-image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:latest
+default:
+  before_script:
+    - pip install cython numpy
+    - pip install -e .[mundi,test]
 
-before_script:
-  - pip install cython numpy
-  - pip install -e .[mundi,test]
+test_base_image:0.1:
+  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:0.1
+  script:
+    - pytest -v --cov=mapchete_hub tests/
 
-test:
+test_base_image:latest:
+  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:latest
   script:
     - pytest -v --cov=mapchete_hub tests/

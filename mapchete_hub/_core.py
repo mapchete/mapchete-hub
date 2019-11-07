@@ -1,6 +1,6 @@
 import billiard
 from billiard import cpu_count
-from celery.utils.log import get_task_logger
+import logging
 import mapchete
 from mapchete.config import _map_to_new_config, get_zoom_levels
 from mapchete.index import zoom_index_gen
@@ -9,7 +9,7 @@ from mapchete.tile import BufferedTilePyramid
 from mapchete_hub.config import main_options
 
 
-logger = get_task_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def cleanup_config(mp_config):

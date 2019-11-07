@@ -15,14 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 def status_monitor(celery_app):
+    """Run status monitor listening to task events."""
     logger.debug("start status monitor")
     state = celery_app.events.State()
     logger.debug("state: %s", state)
 
     with StatusHandler(
-        os.path.join(
-           main_options.get("config_dir"), main_options.get("status_gpkg")
-        ),
+        os.path.join(main_options.get("config_dir"), main_options.get("status_gpkg")),
         mode='w',
         profile=main_options["status_gpkg_profile"]
     ) as status_handler:

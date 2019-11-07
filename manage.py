@@ -17,7 +17,9 @@ import os
 
 import mapchete_hub
 from mapchete_hub.application import flask_app
-from mapchete_hub.config import host_options
+from mapchete_hub.celery_app import celery_app
+from mapchete_hub.config import host_options, flask_options
+from mapchete_hub.monitor import status_monitor
 
 
 def _set_log_level(ctx, param, loglevel):
@@ -32,11 +34,16 @@ def _setup_logfile(ctx, param, logfile):
 
 
 opt_loglevel = click.option(
-    '--loglevel', type=click.Choice(['INFO', 'DEBUG', 'ERROR']), default='ERROR',
+    '--loglevel',
+    type=click.Choice(['INFO', 'DEBUG', 'ERROR']),
+    default='ERROR',
     callback=_set_log_level
 )
 opt_logfile = click.option(
-    '--logfile', type=click.Path(), default=None, callback=_setup_logfile
+    '--logfile',
+    type=click.Path(),
+    default=None,
+    callback=_setup_logfile
 )
 
 
@@ -48,21 +55,50 @@ def cli(ctx, **kwargs):
 
 
 @cli.command(short_help='Launches Flask Development Server.')
+@click.option(
+    "--launch-monitor",
+    is_flag=True,
+    help="Launch monitor in separate thread."
+)
 @opt_loglevel
 @opt_logfile
 @click.pass_context
-def devserver(ctx, loglevel, logfile):
-    flask_app(monitor=True).run(host=host_options['host_ip'], port=host_options['port'])
+def devserver(ctx, launch_monitor, **kwargs):
+    click.echo("launch devserver")
+    flask_app(launch_monitor=launch_monitor).run(
+        host=host_options['host_ip'], port=host_options['port']
+    )
+
+
+@cli.command(short_help='Launch job status monitor.')
+@opt_loglevel
+@opt_logfile
+@click.pass_context
+def monitor(ctx, **kwargs):
+    click.echo("launch monitor")
+    celery_app.conf.update(flask_options)
+    celery_app.init_app(flask_app())
+    status_monitor(celery_app)
 
 
 @cli.command(short_help='Launches Celery worker.')
-@click.option("--worker-name", "-n", type=click.STRING, default="mhub_worker")
-@click.option("--queue", "-q", type=click.STRING, default="zone_worker_queue")
+@click.option(
+    "--worker-name", "-n",
+    type=click.Choice(["execute_worker", "index_worker"]),
+    default="execute_worker",
+    help="Worker type to be spawned."
+)
+@click.option(
+    "--queues", "-q",
+    type=click.STRING,
+    default="execute_queue",
+    help="Queue(s) worker should listen to."
+)
 @opt_loglevel
 @opt_logfile
 @click.pass_context
-def worker(ctx, worker_name, queue, loglevel, logfile):
-    click.echo("launch zone worker")
+def worker(ctx, worker_name, queues, **kwargs):
+    click.echo("launch %s attatched to queue(s) %s" % (worker_name, queues))
     app = flask_app()
     with app.app_context():
         return celery_main(
@@ -76,7 +112,7 @@ def worker(ctx, worker_name, queue, loglevel, logfile):
                 '-E',
                 '--prefetch-multiplier=1',
                 '-Ofair',
-                '-Q', queue
+                '-Q', queues
             ]
         )
 

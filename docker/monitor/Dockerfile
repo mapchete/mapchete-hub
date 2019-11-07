@@ -7,6 +7,4 @@ ARG LOGLEVEL
 ARG MHUB_BROKER_URL
 ARG MHUB_RESULT_BACKEND
 
-RUN pip install gunicorn
-
-ENTRYPOINT gunicorn --bind 0.0.0.0:5000 --log-level $LOGLEVEL -w 3 "mapchete_hub.application:flask_app()"
+ENTRYPOINT ./manage.py monitor --loglevel=$LOGLEVEL
