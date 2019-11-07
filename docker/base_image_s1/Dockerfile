@@ -1,7 +1,7 @@
 FROM registry.gitlab.eox.at/maps/docker-base/snap-mapchete:0.2
 MAINTAINER Joachim Ungar
 
-ENV MAPCHETE_HUB_VERSION docker_image_versions
+ENV MAPCHETE_HUB_VERSION 0.2
 ENV MAPCHETE_SATELLITE_VERSION 0.3
 ENV AWS_REQUEST_PAYER requester
 ENV ROOTDIR /usr/local
