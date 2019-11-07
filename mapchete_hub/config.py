@@ -16,8 +16,8 @@ def _get_flask_options():
         event_serializer='pickle',
         accept_content=['pickle', 'json'],
         task_routes={
-            'mapchete_hub.workers.zone_worker.*': {'queue': 'zone_worker_queue'},
-            'mapchete_hub.workers.preview_worker.*': {'queue': 'preview_worker_queue'}
+            'mapchete_hub.workers.execute.*': {'queue': 'execute_queue'},
+            'mapchete_hub.workers.index.*': {'queue': 'index_queue'},
         },
         task_acks_late=True,
         worker_send_task_events=True,

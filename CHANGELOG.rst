@@ -5,6 +5,10 @@ Changelog
 ---
 0.2
 ---
+* celery worker now capture logs again (#62)
+* zone_worker and preview_worker modules renamed to execute and index like their mapchete counterparts (#60)
+* use tagged versions instead of branches in docker base images & depdendencies (#58)
+* move mapserver and mapcache docker images to docker-base repository (#57)
 * generate capabilities.json (#51)
 * filter jobs by process output path (#40)
 * list available processes

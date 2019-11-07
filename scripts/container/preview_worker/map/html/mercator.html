@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="robots" content="index, all" />
+    <title>EOX Sentinel-2 Cloudless (development version)</title>
+    <link rel="stylesheet" href="dist/ol-debug.css" type="text/css">
+    <link rel="stylesheet" href="https://rawgit.com/walkermatt/ol3-layerswitcher/master/src/ol3-layerswitcher.css" type="text/css">
+    <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+    <script src="dist/ol-debug.js"></script>
+    <script src="dist/geotiff.browserify.js"></script>
+    <script src="dist/plotty.min.js"></script>
+    <script src="olGeoTiff_07.js"></script>
+    <style type="text/css">
+      html, body, .map {
+	background-color: #455A64;
+        height: 100.0%;
+        width: 100%;
+        border: 0px;
+        margin: 0px;
+        padding: 0px;
+	color: white;
+	background-color: #455A64;
+    }
+    .layer-switcher.shown {
+	color: black;
+    }
+    .button {
+	    border: 2px solid white;
+	    background-color: #455A64;
+	    color: white;
+	    padding: 10px 20px;
+	    text-align: center;
+	    text-decoration: none;
+	    display: inline-block;
+	    font-size: 14px;
+	    margin: 2px 1px;
+	    cursor: pointer;
+    }
+    </style>
+    </style>
+  </head>
+  <body>
+    <script src="https://rawgit.com/walkermatt/ol3-layerswitcher/master/src/ol3-layerswitcher.js"></script>
+    <div id="map" style="height:100%;"></div>
+    <script>
+        var config = {
+            init_zoom: 2,
+            init_lon: 0.0,
+            init_lat: 0.0,
+            srs: 'EPSG:3857',
+        }
+    </script>
+    <script src="s2maps.js"></script>
+  </body>
+</html>

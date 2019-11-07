@@ -50,7 +50,10 @@ def processes(ctx, process_name=None, docstrings=False):
             click.echo(process_module["docstring"])
 
     try:
-        cap = API(host=ctx.obj["host"]).get("capabilities.json").json
+        res = API(host=ctx.obj["host"]).get("capabilities.json")
+        if res.status_code != 200:
+            raise ConnectionError(res.json)
+        cap = res.json
 
         # get all registered processes
         processes = cap.get("processes")
@@ -61,8 +64,8 @@ def processes(ctx, process_name=None, docstrings=False):
         else:
             # print all processes
             click.echo("%s processes found" % len(processes))
-            for process_module in processes.values():
-                _print_process_info(process_module, docstrings=docstrings)
+            for process_name in sorted(processes.keys()):
+                _print_process_info(processes[process_name], docstrings=docstrings)
     except Exception as e:
         click.echo("Error: %s" % e)
 
@@ -71,9 +74,11 @@ def processes(ctx, process_name=None, docstrings=False):
 @click.pass_context
 def queues(ctx):
     try:
-        cap = API(host=ctx.obj["host"]).get("capabilities.json").json
-        if cap["queues"]:
-            for queue, workers in cap["queues"].items():
+        res = API(host=ctx.obj["host"]).get("capabilities.json")
+        if res.status_code != 200:
+            raise ConnectionError(res.json)
+        if res.json["queues"]:
+            for queue, workers in res.json["queues"].items():
                 click.echo("%s:" % queue)
                 for worker in workers:
                     click.echo("    %s" % worker)
@@ -95,13 +100,15 @@ def queues(ctx):
 def start(ctx, job_id, mapchete_file, bounds=None, mode=None, debug=False):
     try:
         click.echo(
-            "job state: %s" % API(host=ctx.obj["host"]).start_job(
+            "job %s state: %s" % (
                 job_id,
-                mapchete_file,
-                bounds, mode=mode
-            ).state
+                API(host=ctx.obj["host"]).start_job(
+                    job_id,
+                    mapchete_file,
+                    bounds, mode=mode
+                ).state
+            )
         )
-        show_progress(ctx, job_id)
     except Exception as e:
         click.echo("Error: %s" % e)
 

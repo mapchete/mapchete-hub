@@ -167,7 +167,7 @@ class API():
             ).json
         }
 
-    def job_progress(self, job_id, interval=1, timeout=30):
+    def job_progress(self, job_id, interval=1, timeout=60):
         """
         Yield job progress information.
         """
