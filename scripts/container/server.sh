@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # set environment variables
-MHUB_DOCKER_IMAGE_TAG="0.3"
+MHUB_DOCKER_IMAGE_TAG="latest"
 GITLAB_REGISTRY_TOKEN=REDACTED_API_KEY
 AWS_ACCESS_KEY_ID="REDACTED_API_KEY"
 AWS_SECRET_ACCESS_KEY="REDACTED_API_KEY"
@@ -53,6 +53,7 @@ fi
 
 # get rgb_worker docker container
 retry 10 docker login -u gitlab-ci-token -p $GITLAB_REGISTRY_TOKEN registry.gitlab.eox.at
+retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/monitor:$MHUB_DOCKER_IMAGE_TAG
 retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/server:$MHUB_DOCKER_IMAGE_TAG
 
 # set environment and run containers

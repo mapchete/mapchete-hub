@@ -16,7 +16,7 @@ from mapchete_hub import log
 import os
 
 import mapchete_hub
-from mapchete_hub.application import flask_app
+from mapchete_hub.application import available_workers, flask_app
 from mapchete_hub.celery_app import celery_app
 from mapchete_hub.config import host_options, flask_options
 from mapchete_hub.monitor import status_monitor
@@ -56,16 +56,16 @@ def cli(ctx, **kwargs):
 
 @cli.command(short_help='Launches Flask Development Server.')
 @click.option(
-    "--launch-monitor",
+    "--no-monitor",
     is_flag=True,
     help="Launch monitor in separate thread."
 )
 @opt_loglevel
 @opt_logfile
 @click.pass_context
-def devserver(ctx, launch_monitor, **kwargs):
+def devserver(ctx, no_monitor, **kwargs):
     click.echo("launch devserver")
-    flask_app(launch_monitor=launch_monitor).run(
+    flask_app(launch_monitor=not no_monitor).run(
         host=host_options['host_ip'], port=host_options['port']
     )
 
@@ -84,7 +84,7 @@ def monitor(ctx, **kwargs):
 @cli.command(short_help='Launches Celery worker.')
 @click.option(
     "--worker-name", "-n",
-    type=click.Choice(["execute_worker", "index_worker"]),
+    type=click.Choice(available_workers.keys()),
     default="execute_worker",
     help="Worker type to be spawned."
 )

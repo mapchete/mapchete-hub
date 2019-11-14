@@ -5,6 +5,7 @@ import mapchete
 from mapchete.config import _map_to_new_config, get_zoom_levels
 from mapchete.index import zoom_index_gen
 from mapchete.tile import BufferedTilePyramid
+from shapely import wkt
 
 from mapchete_hub.config import main_options
 
@@ -13,11 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 def cleanup_config(mp_config):
+    """Strip configuration from all mapchete Hub items."""
     return {k: v for k, v in mp_config.items() if not k.startswith('mhub_')}
 
 
 def mapchete_index(
-    config=None,
+    mapchete_config=None,
     process_area=None,
     bounds=None,
     tile=None,
@@ -29,17 +31,18 @@ def mapchete_index(
     out_dir=None,
     fieldname='location',
     basepath=None,
-    for_gdal=True
+    for_gdal=True,
+    **kwargs
 ):
     """
     Wrapper around index generation method which behaves like `mapchete index`.
 
     Parameters
     ----------
-    config : dict
+    mapchete_config : dict
         A valid Mapchete configuration.
-    process_area : Polygon
-        Area to be processed.
+    process_area : str
+        Area to be processed as WKT.
     bounds : tuple
         Bounds to be processed.
     tile : tuple or Tile
@@ -70,7 +73,6 @@ def mapchete_index(
     Following items are ProcessInfo objects containing process and write information for
     each process tile.
     """
-    config.update(config_dir=main_options['config_dir'])
     if not any([geojson, gpkg, shapefile, txt]):
         raise ValueError(
             "one of 'geojson', 'gpkg', 'shapefile' or 'txt' must be provided")
@@ -80,10 +82,10 @@ def mapchete_index(
     # process single tile
     if tile:
         tile = BufferedTilePyramid.from_dict(
-            _map_to_new_config(config)["pyramid"]
+            _map_to_new_config(mapchete_config)["pyramid"]
         ).tile(*tile)
         with mapchete.open(
-            dict(config, config_dir=main_options['config_dir']),
+            dict(mapchete_config, config_dir=main_options['config_dir']),
             mode="readonly",
             bounds=tile.bounds,
             zoom=tile.zoom
@@ -109,10 +111,10 @@ def mapchete_index(
 
     else:
         with mapchete.open(
-            dict(config, config_dir=main_options['config_dir']),
+            dict(mapchete_config, config_dir=main_options['config_dir']),
             mode="readonly",
             zoom=zoom,
-            bounds=process_area.bounds if process_area else bounds
+            bounds=wkt.loads(process_area).bounds if process_area else bounds
         ) as mp:
             num_processed = 0
             logger.debug("process bounds: %s", mp.config.init_bounds)
@@ -145,8 +147,8 @@ def mapchete_index(
 
 
 def mapchete_execute(
-    config=None,
-    mode="continue",
+    mapchete_config=None,
+    mode=None,
     zoom=None,
     process_area=None,
     multi=cpu_count(),
@@ -158,14 +160,14 @@ def mapchete_execute(
 
     Parameters
     ----------
-    config : dict
+    mapchete_config : dict
         A valid Mapchete configuration.
     mode : string
         Process mode. Either "continue" or "overwrite".
     zoom : int or list of ints
         Zoom levels to be processed.
-    process_area : Polygon
-        Area to be processed.
+    process_area : str
+        Area to be processed as WKT.
     multi : int
         Number of CPU cores to be used. Default is number of available cores.
     max_chunksize : int
@@ -179,10 +181,10 @@ def mapchete_execute(
     """
     with mapchete.Timer() as t:
         with mapchete.open(
-            dict(config, config_dir=main_options['config_dir']),
-            mode=mode,
+            dict(mapchete_config, config_dir=main_options['config_dir']),
+            mode=mode or "continue",
             zoom=zoom,
-            bounds=process_area.bounds
+            bounds=wkt.loads(process_area).bounds
         ) as mp:
             zoom_levels = get_zoom_levels(
                 process_zoom_levels=mp.config.zoom_levels,

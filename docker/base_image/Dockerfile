@@ -1,7 +1,8 @@
 FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.2
 MAINTAINER Joachim Ungar
 
-ENV MAPCHETE_HUB_VERSION 0.2
+# TODO: reset version to release!
+ENV MAPCHETE_HUB_VERSION mhub_cli
 ENV MAPCHETE_SATELLITE_VERSION 0.3
 ENV AWS_REQUEST_PAYER requester
 ENV ROOTDIR /usr/local

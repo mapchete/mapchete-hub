@@ -1,4 +1,4 @@
-FROM registry.gitlab.eox.at/maps/mapchete_hub/base_image:0.3
+FROM registry.gitlab.eox.at/maps/mapchete_hub/base_image:latest
 MAINTAINER Joachim Ungar
 
 ARG AWS_ACCESS_KEY_ID

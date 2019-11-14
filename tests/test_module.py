@@ -1,3 +1,4 @@
+from celery.canvas import Signature
 import geojson
 from mapchete.config import raw_conf_process_pyramid, get_zoom_levels
 import os
@@ -6,7 +7,7 @@ from shapely.geometry import box, shape
 from tempfile import NamedTemporaryFile
 
 from mapchete_hub import mapchete_index, mapchete_execute, cleanup_config, log
-from mapchete_hub.application import process_area_from_config
+from mapchete_hub.application import process_area_from_config, get_next_jobs
 from mapchete_hub._misc import announce_on_slack, format_as_geojson
 
 
@@ -23,13 +24,13 @@ def test_cleanup_config(example_mapchete):
 def test_mapchete_index(mp_tmpdir, example_mapchete):
     # full area
     assert len(list(mapchete_index(
-        config=example_mapchete.dict,
+        mapchete_config=example_mapchete.dict,
         shapefile=True,
         out_dir=mp_tmpdir
     )))
     # single tile
     assert len(list(mapchete_index(
-        config=example_mapchete.dict,
+        mapchete_config=example_mapchete.dict,
         shapefile=True,
         out_dir=mp_tmpdir,
         tile=(11, 244, 517)
@@ -38,20 +39,20 @@ def test_mapchete_index(mp_tmpdir, example_mapchete):
     # test errors
     with pytest.raises(ValueError):
         list(mapchete_index(
-            config=example_mapchete.dict,
+            mapchete_config=example_mapchete.dict,
             out_dir=mp_tmpdir
         ))
     with pytest.raises(ValueError):
         list(mapchete_index(
-            config=example_mapchete.dict,
+            mapchete_config=example_mapchete.dict,
             shapefile=True,
         ))
 
 
 def test_mapchete_execute(mp_tmpdir, example_mapchete):
     assert list(mapchete_execute(
-        config=example_mapchete.dict,
-        process_area=box(3, 1, 4, 2),
+        mapchete_config=example_mapchete.dict,
+        process_area=box(3, 1, 4, 2).wkt,
         zoom=11,
     ))
 
@@ -59,11 +60,9 @@ def test_mapchete_execute(mp_tmpdir, example_mapchete):
 def test_announce_on_slack(example_mapchete):
     with pytest.raises(KeyError):
         announce_on_slack(
-            config=dict(
-                mapchete_config=dict(
-                    example_mapchete.dict,
-                    mhub_announce_on_slack=True
-                )
+            mapchete_config=dict(
+                example_mapchete.dict,
+                mhub_announce_on_slack=True
             ),
             process_area=process_area_from_config(example_mapchete.dict)
         )
@@ -126,3 +125,13 @@ def test_format_as_geojson(response_json):
     for f in gj["features"]:
         assert "state" in f["properties"]
         assert shape(f["geometry"]).is_valid
+
+
+def test_get_next_jobs(example_mapchete):
+    for i in get_next_jobs(
+        config=dict(mapchete_config=example_mapchete.dict),
+        process_area="SOME POLYGON",
+        zoom=[0, 5],
+        mode="hanse"
+    ):
+        assert isinstance(i, Signature)

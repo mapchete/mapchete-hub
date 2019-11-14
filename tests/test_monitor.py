@@ -12,7 +12,7 @@ def test_statushandler(status_gpkg, status_profile):
         'type': 'task-sent',
         'clock': 90,
         'timestamp': 1528190160.3892283,
-        'kwargs': '{"process_area": "POLYGON ((4 1, 4 2, 3 2, 3 1, 4 1))", "config": {"mode": "continue", "bounds": null, "tile": null, "point": null, "mapchete_config": {"process_bounds": [3.0, 1.0, 4.0, 2.0], "some_integer_parameter": 12, "some_bool_parameter": true, "some_float_parameter": 5.3, "output": {"dtype": "float32", "bands": 1, "path": "test", "format": "GTiff"}, "process_file": "example_process.py", "some_string_parameter": {"zoom<=7": "string1", "zoom>7": "string2"}, "zoom_levels": {"min": 7, "max": 11}, "pyramid": {"grid": "geodetic", "metatiling": 4}, "input": {"file1": {"zoom>=10": "dummy1.tif"}, "file2": "dummy2.tif"}}, "wkt_geometry": null, "zoom": null}}',
+        'kwargs': '{"process_area": "POLYGON ((4 1, 4 2, 3 2, 3 1, 4 1))", "mode": "continue", "bounds": null, "tile": null, "point": null, "mapchete_config": {"process_bounds": [3.0, 1.0, 4.0, 2.0], "some_integer_parameter": 12, "some_bool_parameter": true, "some_float_parameter": 5.3, "output": {"dtype": "float32", "bands": 1, "path": "test", "format": "GTiff"}, "process_file": "example_process.py", "some_string_parameter": {"zoom<=7": "string1", "zoom>7": "string2"}, "zoom_levels": {"min": 7, "max": 11}, "pyramid": {"grid": "geodetic", "metatiling": 4}, "input": {"file1": {"zoom>=10": "dummy1.tif"}, "file2": "dummy2.tif"}}, "wkt_geometry": null, "zoom": null}',
         'root_id': 'hanse',
         'hostname': 'gen6329@tycho2',
         'local_received': 1528190160.3903759,

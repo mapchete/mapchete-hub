@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # set environment variables
-MHUB_DOCKER_IMAGE_TAG="0.3"
+MHUB_DOCKER_IMAGE_TAG="latest"
 GITLAB_REGISTRY_TOKEN=REDACTED_API_KEY
 AWS_ACCESS_KEY_ID="REDACTED_API_KEY"
 AWS_SECRET_ACCESS_KEY="REDACTED_API_KEY"
@@ -12,7 +12,7 @@ MHUB_BROKER_URL=$"amqp://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
 MHUB_RESULT_BACKEND=$"rpc://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
 MP_SATELLITE_CACHE_PATH=/mnt/data/cache
 WORKER="execute_worker"
-QUEUE="zone_worker_queue"
+QUEUE="execute_queue"
 LOGLEVEL="DEBUG"
 
 # from https://gist.github.com/sj26/88e1c6584397bb7c13bd11108a579746

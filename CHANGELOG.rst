@@ -3,6 +3,13 @@ Changelog
 #########
 
 ---
+0.3
+---
+* add ``mhub execute`` and ``mhub index`` commands (#54)
+* API returns more useful error message for client
+* automatically assign job ID (#64)
+
+---
 0.2
 ---
 * celery worker now capture logs again (#62)

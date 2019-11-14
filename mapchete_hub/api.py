@@ -1,5 +1,7 @@
 """
-This module wraps around the requests module for real-life usage and Flask's test_clien()
+API requests wrapper.
+
+This module wraps around the requests module for real-life usage and Flask's test_client()
 in order to be able to test mhub CLI.
 """
 
@@ -9,11 +11,12 @@ import logging
 import requests
 from requests.exceptions import ConnectionError
 import time
+import uuid
 import yaml
 
 import mapchete_hub
 from mapchete_hub.config import timeout
-from mapchete_hub.exceptions import JobFailed, JobNotFound
+from mapchete_hub.exceptions import JobFailed, JobNotFound, JobRejected
 from mapchete_hub._misc import format_as_geojson
 
 
@@ -43,7 +46,7 @@ class Job():
         )
 
 
-Response = namedtuple('Response', 'status_code json')
+Response = namedtuple("Response", "status_code json")
 
 
 class API():
@@ -82,26 +85,36 @@ class API():
         except ConnectionError:
             raise ConnectionError("no mhub server found at %s" % self.host)
 
-    def start_job(self, job_id, mapchete_file, bounds, mode="continue"):
+    def start_job(
+        self,
+        mapchete_file,
+        job_id=None,
+        mhub_worker=None,
+        mhub_queue=None,
+        **kwargs
+    ):
         """
         Start a job and return job state.
         """
+        job_id = job_id or uuid.uuid4().hex
         data = mapchete_hub.cleanup_datetime(
             dict(
                 mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
-                mode=mode,
-                zoom=None,
-                bounds=bounds,
-                point=None,
-                wkt_geometry=None,
-                tile=None
+                **kwargs
             )
         )
-        if 'mhub_queue' not in data['mapchete_config']:
-            raise ValueError('specify mhub_queue')
+        mhub_worker = mhub_worker or data["mapchete_config"].get("mhub_worker")
+        if not mhub_worker:
+            raise ValueError("specify mhub_worker")
+        mhub_queue = mhub_queue or data["mapchete_config"].get("mhub_queue")
+        if not mhub_queue:
+            raise ValueError("specify mhub_queue")
+        data["mapchete_config"].update(mhub_worker=mhub_worker, mhub_queue=mhub_queue)
 
         logger.debug("send job %s to API", job_id)
-        res = self.post("jobs/%s" % job_id, json=data, timeout=timeout)
+        res = self.post("jobs/%s" % job_id, json=json.dumps(data), timeout=timeout)
+        if res.status_code != 202:
+            raise JobRejected(res.json)
         logger.debug("job %s sent", job_id)
         return Job(
             status_code=res.status_code,
