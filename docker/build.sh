@@ -1,5 +1,6 @@
 #!/bin/bash
-AVAILABLE_IMAGES=("base_image base_image_s1 worker worker_s1 server monitor")
+AVAILABLE_IMAGES=("base_image worker server monitor")
+# "base_image worker server monitor base_image_s1 worker_s1"
 REGISTRY_BASEURL="registry.gitlab.eox.at/maps/mapchete_hub"
 USAGE="Usage: $(basename "$0") [-h] IMAGE TAG
 

@@ -28,10 +28,11 @@ some_date_obj: 2018-05-01
 
 
 # mhub parameters:
-mhub_worker: zone_worker
-mhub_queue: zone_worker_queue
+mhub_worker: execute_worker
+mhub_queue: execute_worker_queue
 mhub_next_process:
-    mhub_worker: preview_worker
+    mhub_mode: overwrite
+    mhub_worker: execute_worker
     process: example_process.py
     bounds: [3.0, 1.0, 4.0, 2.0]
     zoom_levels:
@@ -50,11 +51,18 @@ mhub_next_process:
         dtype: float32
         bands: 1
 
-    # free parameters
-    some_integer_parameter: 12
-    some_float_parameter: 5.3
-    some_string_parameter:
-        zoom<=7: string1
-        zoom>7: string2
-    some_bool_parameter: true
-    some_date_obj: 2018-05-01
+    mhub_next_process:
+        mhub_worker: index_worker
+        process: example_process.py
+        zoom_levels:
+            min: 7
+            max: 11
+        pyramid:
+            grid: geodetic
+            metatiling: 4
+        input:
+        output:
+            path: test
+            format: GTiff
+            dtype: float32
+            bands: 1

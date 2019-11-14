@@ -165,7 +165,14 @@ class StatusHandler():
             kwargs = json.loads(metadata['kwargs'].replace("'", '"'))
             entry.update(
                 geom=wkt.loads(kwargs['process_area']).wkt,
-                config=kwargs['config']
+                config=dict(
+                    mapchete_config=kwargs['mapchete_config'],
+                    mode=kwargs.get("mode"),
+                    bounds=kwargs.get("bounds"),
+                    tile=kwargs.get("tile"),
+                    point=kwargs.get("point"),
+                    wkt_geometry=kwargs.get("wkt_geometry")
+                )
             )
         encoded_values = self._encode_values(entry)
 

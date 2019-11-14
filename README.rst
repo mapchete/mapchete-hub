@@ -11,6 +11,8 @@ Distributed mapchete processing.
     :target: https://gitlab.eox.at/maps/mapchete_hub/commits/master
 
 
+aws s3 cp s3://eox-s2cloudless-2018/rgbnir/13 s3://eox-s2cloudless-2018/rgbnir/13 --recursive --storage-class DEEP_ARCHIVE
+
 ------
 Docker
 ------

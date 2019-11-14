@@ -17,8 +17,8 @@ def cleanup_datetime(d):
     }
 
 
-def announce_on_slack(config=None, process_area=None):
-    if config['mapchete_config'].get("mhub_announce_on_slack", False):
+def announce_on_slack(mapchete_config=None, process_area=None):
+    if mapchete_config.get("mhub_announce_on_slack", False):
         logger.info("announce on slack")
         Slacker(
             "",

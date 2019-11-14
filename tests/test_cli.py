@@ -75,3 +75,31 @@ def test_queues():
     result = CliRunner().invoke(main.mhub, "queues")
     assert result.exit_code == 0
     assert "no mhub server found" in result.output
+
+
+def test_execute(example_mapchete):
+    """mhub execute"""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
+            "execute",
+            example_mapchete.path,
+        ]
+    )
+    assert result.exit_code == 0
+    assert "no mhub server found" in result.output
+
+
+def test_index(example_mapchete):
+    """mhub index"""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
+            "index",
+            example_mapchete.path,
+        ]
+    )
+    assert result.exit_code == 0
+    assert "no mhub server found" in result.output

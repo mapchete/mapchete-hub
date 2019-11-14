@@ -9,14 +9,15 @@ import os
 import pkg_resources
 from shapely.geometry import box, mapping
 from shapely import wkt
+import uuid
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
 from mapchete_hub.celery_app import celery_app
 from mapchete_hub.config import flask_options, main_options
 from mapchete_hub._core import cleanup_config
-from mapchete_hub.monitor import StatusHandler, status_monitor
 from mapchete_hub._misc import cleanup_datetime
+from mapchete_hub.monitor import StatusHandler, status_monitor
 from mapchete_hub.workers import execute, index
 
 
@@ -31,43 +32,42 @@ states = StatusHandler(
 available_workers = {
     "execute_worker": execute,
     "index_worker": index,
-    # deprecated
+}
+deprecated_workers = {
     "zone_worker": execute,
     "preview_worker": index,
 }
 
 
-def get_next_jobs(job_id=None, config=None, process_area=None):
-    logger.debug("get next jobs: %s", config.keys())
-
-    def _gen_next_job(next_c):
+def get_next_jobs(config=None, **kwargs):
+    """Append next jobs to queue."""
+    def _gen_next_job(job_conf, **kwargs):
         while True:
-            if "mhub_next_process" in next_c:
-                job_conf = next_c["mhub_next_process"]
-                worker = job_conf["mhub_worker"]
-                kwargs = dict(
-                    config=cleanup_config(dict(mapchete_config=next_c)),
-                    process_area=process_area
+            if "mhub_next_process" in job_conf:
+                next_conf = job_conf["mhub_next_process"]
+                worker = next_conf["mhub_worker"]
+                job_kwargs = dict(
+                    mapchete_config=cleanup_config(next_conf),
+                    **dict(kwargs, mode=next_conf.get("mhub_mode"))
                 )
-                task_id = "%s_%s" % (worker, job_id)
-                kwargsrepr = json.dumps(kwargs)
-                yield available_workers[worker].run.signature(
+                task_id = uuid.uuid4().hex
+                job_kwargs_repr = json.dumps(job_kwargs)
+                yield dict(available_workers, **deprecated_workers)[worker].run.signature(
                     args=(None, ),
-                    kwargs=kwargs,
+                    kwargs=job_kwargs,
                     task_id=task_id,
-                    kwargsrepr=kwargsrepr
+                    kwargsrepr=job_kwargs_repr
                 )
-                next_c = job_conf
+                job_conf = next_conf
             else:
                 break
 
-    mp_config = cleanup_datetime(config["mapchete_config"])
-    return list(_gen_next_job(mp_config))
+    mapchete_config = cleanup_datetime(config["mapchete_config"])
+    return list(_gen_next_job(mapchete_config, **kwargs))
 
 
 def flask_app(launch_monitor=False):
     """Flask application factory. Initializes and returns the Flask application."""
-
     logger.debug("initialize flask app")
     app = Flask(__name__)
     logger.debug("initialize flask with: %s", flask_options)
@@ -151,13 +151,21 @@ class Jobs(Resource):
             abort(404)
 
     def post(self, job_id):
-        data = request.get_json()
+        raw = request.get_json()
+        data = raw if isinstance(raw, dict) else json.loads(raw)
 
-        mhub_worker = available_workers[data["mapchete_config"]["mhub_worker"]].__name__
-        mhub_queue = data["mapchete_config"].get(
-            "mhub_queue",
-            "%s_queue" % mhub_worker.split(".")[-1]
-        )
+        try:
+            mhub_worker = dict(
+                available_workers, **deprecated_workers
+            )[data["mapchete_config"]["mhub_worker"]].__name__
+            mhub_queue = data["mapchete_config"].get(
+                "mhub_queue",
+                "%s_queue" % mhub_worker.split(".")[-1]
+            )
+        except Exception as e:
+            logger.error(e)
+            return make_response(jsonify(dict(message=str(e))), 400)
+
         res = states.job(job_id)
         # job exists
         if res:
@@ -168,13 +176,14 @@ class Jobs(Resource):
         else:
             # pass on to celery cluster
             logger.debug("job is new: %s", job_id)
-            process_area = process_area_from_config(data)
+            try:
+                process_area = process_area_from_config(data)
+            except Exception as e:
+                logger.error(e)
+                return make_response(jsonify(dict(message=str(e))), 400)
             logger.debug("process area: %s", process_area)
 
-            kwargs = dict(
-                config=cleanup_config(cleanup_datetime(data)),
-                process_area=process_area.wkt
-            )
+            kwargs = dict(data, process_area=process_area.wkt)
             logger.debug("send task %s to queue %s", job_id, mhub_queue)
             celery_app.send_task(
                 "%s.run" % mhub_worker,
@@ -183,9 +192,8 @@ class Jobs(Resource):
                 kwargs=kwargs,
                 kwargsrepr=json.dumps(kwargs),
                 link=get_next_jobs(
-                    job_id=job_id,
                     config=data,
-                    process_area=process_area.wkt
+                    process_area=process_area.wkt,
                 )
             )
             res = states.job(job_id)

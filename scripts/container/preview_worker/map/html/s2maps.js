@@ -172,7 +172,7 @@ var s2_false_color_infrared = new ol.layer.Tile({
 var s2_true_color = new ol.layer.Tile({
     title: '8bit Color Corrected',
     type: 'overlay',
-    visible: true,
+    visible: false,
     source: new ol.source.TileWMS({
         attributions: '<a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2017 & 2018)',
         url: "/mapserver?map=/map/" + dirname + "/s2cloudless.map&",
@@ -183,7 +183,7 @@ var s2_true_color = new ol.layer.Tile({
 var s2_debug = new ol.layer.Tile({
     title: '16bit Stretched',
     type: 'overlay',
-    visible: false,
+    visible: true,
     source: new ol.source.TileWMS({
         attributions: '<a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2017 & 2018)',
         url: "/mapserver?map=/map/" + dirname + "/debug.map&",

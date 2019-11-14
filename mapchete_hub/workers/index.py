@@ -1,9 +1,8 @@
 from celery.utils.log import get_task_logger
 from mapchete.io import makedirs
 import os
-from shapely import wkt
 
-from mapchete_hub import mapchete_index, cleanup_config
+from mapchete_hub import mapchete_index
 from mapchete_hub.celery_app import celery_app
 from mapchete_hub._misc import announce_on_slack
 
@@ -11,16 +10,15 @@ from mapchete_hub._misc import announce_on_slack
 logger = get_task_logger(__name__)
 
 
+# bind=True enables getting the job ID and sending status updates (with send_events())
 # ignore_result=True important, otherwise it will be stored in broker
 @celery_app.task(bind=True, ignore_result=True)
-def run(self, *args, **kwargs):
+def run(self, *args, mapchete_config=None, process_area=None, **kwargs):
+    """Celery task for mapchete_index."""
     logger.info("got job %s", self.request.id)
-    config = kwargs["config"]
-    logger.debug(config)
-    process_area = wkt.loads(kwargs["process_area"])
     logger.debug("initialize process")
     self.send_event('task-progress', progress_data=dict(current=None, total=None))
-    mapchete_config = cleanup_config(config['mapchete_config'])
+
     # first, the inputs get parsed, i.e. all metadat queried from catalogue
     # this may take a while
     if "INDEX_OUTPUT_DIR" in os.environ:
@@ -36,10 +34,11 @@ def run(self, *args, **kwargs):
     else:
         index_output_path = mapchete_config["output"]["path"]
     executor = mapchete_index(
-        config=mapchete_config,
+        mapchete_config=mapchete_config,
         process_area=process_area,
+        shapefile=True,
         out_dir=index_output_path,
-        shapefile=True
+        **kwargs
     )
 
     # get total tiles
@@ -54,4 +53,4 @@ def run(self, *args, **kwargs):
         self.send_event('task-progress', progress_data=dict(current=i, total=total_tiles))
 
     logger.info("processing successful.")
-    announce_on_slack(config=config, process_area=process_area)
+    announce_on_slack(mapchete_config=mapchete_config, process_area=process_area)

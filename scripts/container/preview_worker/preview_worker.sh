@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # set environment variables
-MHUB_DOCKER_IMAGE_TAG="0.3"
+MHUB_DOCKER_IMAGE_TAG="latest"
 DOCKER_BASE_IMAGE_TAG="0.2"
 GITLAB_REGISTRY_TOKEN=REDACTED_API_KEY
 AWS_ACCESS_KEY_ID="REDACTED_API_KEY"
@@ -13,11 +13,11 @@ MHUB_BROKER_URL=$"amqp://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
 MHUB_RESULT_BACKEND=$"rpc://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
 MP_SATELLITE_CACHE_PATH=/mnt/data/cache
 WORKER="index_worker"
-QUEUE="preview_worker_queue"
+QUEUE="index_queue"
 HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
-INDEX_OUTPUT_DIR='/mnt/data/indexes'
-PREVIEW_PERMALINK='http://'$HOST_IP
-SLACK_WEBHOOK_URL='REDACTED_API_KEY'
+INDEX_OUTPUT_DIR="/mnt/data/indexes"
+PREVIEW_PERMALINK="http://"$HOST_IP"/geodetic.html"
+SLACK_WEBHOOK_URL="REDACTED_API_KEY"
 LOGLEVEL="INFO"
 
 # from https://gist.github.com/sj26/88e1c6584397bb7c13bd11108a579746

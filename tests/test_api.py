@@ -13,9 +13,9 @@ def test_api_get(mhub_api):
 def test_start_job(mhub_api, example_mapchete):
     job_id = "test"
     result = mhub_api.start_job(
-        job_id,
         example_mapchete.path,
-        example_mapchete.dict["bounds"]
+        job_id=job_id,
+        bounds=example_mapchete.dict["bounds"]
     )
     assert result.job_id == job_id
     # url = "/jobs/%s" % job_id
