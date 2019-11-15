@@ -1,0 +1,126 @@
+version: "3.6"
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3
+    ports:
+      - 5672
+    networks:
+      - backend
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    environment:
+      - RABBITMQ_DEFAULT_USER=s2processor
+      - RABBITMQ_DEFAULT_PASS=REDACTED_API_KEY
+
+  monitor:
+    build: .
+    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
+    command: ./manage.py monitor --loglevel=DEBUG
+    networks:
+      - backend
+    depends_on:
+      - rabbitmq
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    env_file: .env
+    environment:
+      - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_CONFIG_DIR=/mnt/data/
+      - MHUB_STATUS_GPKG=/mnt/data/status.gpkg
+    volumes:
+      - type: volume
+        source: status_data
+        target: /mnt/data/
+
+  server:
+    build: .
+    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
+    command: gunicorn --bind 0.0.0.0:5000 --log-level DEBUG --workers 4 --threads 4 --worker-class=gthread --worker-tmp-dir /dev/shm "mapchete_hub.application:flask_app()"
+    networks:
+      - backend
+    depends_on:
+      - rabbitmq
+      - monitor
+    ports:
+      - 5000:5000
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    env_file: .env
+    environment:
+      - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_CONFIG_DIR=/mnt/data/
+      - MHUB_STATUS_GPKG=/mnt/data/status.gpkg
+    volumes:
+      - type: volume
+        source: status_data
+        target: /mnt/data/
+
+  execute_worker:
+    build: .
+    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
+    command: ./manage.py worker -n execute_worker -q execute_queue --loglevel=DEBUG
+    networks:
+      - backend
+    depends_on:
+      - rabbitmq
+      - server
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    env_file: .env
+    environment:
+      - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_CONFIG_DIR=/mnt/data
+      - MP_SATELLITE_CACHE_PATH=/mnt/data/cache
+    volumes:
+      - type: volume
+        source: worker_data
+        target: /mnt/data/
+
+  index_worker:
+    build: .
+    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
+    command: ./manage.py worker -n index_worker -q index_queue --loglevel=DEBUG
+    networks:
+      - backend
+    depends_on:
+      - rabbitmq
+      - server
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    env_file: .env
+    environment:
+      - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_CONFIG_DIR=/mnt/data
+      - MHUB_INDEX_OUTPUT_DIR=/mnt/data/indexes
+      - MP_SATELLITE_CACHE_PATH=/mnt/data/cache
+    volumes:
+      - type: volume
+        source: worker_data
+        target: /mnt/data/
+
+networks:
+  backend:
+
+volumes:
+  status_data:
+  worker_data:

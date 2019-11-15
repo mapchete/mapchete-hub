@@ -11,324 +11,209 @@ Distributed mapchete processing.
     :target: https://gitlab.eox.at/maps/mapchete_hub/commits/master
 
 
-aws s3 cp s3://eox-s2cloudless-2018/rgbnir/13 s3://eox-s2cloudless-2018/rgbnir/13 --recursive --storage-class DEEP_ARCHIVE
-
-------
-Docker
-------
-
-build server container
-----------------------
-
-.. code-block:: shell
-
-    cd docker/base_app
-    docker build -t registry.gitlab.eox.at/maps/mapchete_hub/server .
-    docker push registry.gitlab.eox.at/maps/mapchete_hub/server
-
-
-build worker
-------------
-
-This worker works with Sentinel-2 data on both AWS and Mundi.
-
-.. code-block:: shell
-
-    cd docker/base_worker
-    docker build -t registry.gitlab.eox.at/maps/mapchete_hub/base_worker .
-    docker push registry.gitlab.eox.at/maps/mapchete_hub/base_worker
-
-
-build worker for Sentinel-1
----------------------------
-
-This worker works with Sentinel-1 data on Mundi.
-
-.. code-block:: shell
-
-    cd docker/base_worker_s1
-    docker build -t registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1 .
-    docker push registry.gitlab.eox.at/maps/mapchete_hub/base_worker_s1
-
+Mapchete Hub executes mapchete processes asynchronously in the cloud. The process management interface is a REST api. To submit and observe jobs, there is a command line tool included in this package: ``mhub``.
 
 -----
 Usage
 -----
 
-SSH login:
+A fully functional mapchete Hub instance needs the following services:
+
+* rabbitmq
+* mhub server
+* mhub monitor
+* mhub worker (execute_worker and/or index_worker)
+
+Please consult the ``docker-compose.yml`` file to gather details.
+
+Use the shell scripts in ``scripts/container`` to install docker, download the image and run the required service. Per default, the ``latest`` tag is used. To start a specifically tagged image, pass it on to the script:
 
 .. code-block:: shell
 
-    ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.194.7.82
+    ./worker.sh 0.3
 
 
-Current instances:
+A mapchete process can be used in mapchete Hub if:
 
-* mhub server: ``18.194.7.82``
-* broker: ``18.197.182.82``
-* preview_worker & joker machine: ``18.184.146.112``
+* it specifies a ``mhub_worker``
+* it specifies a ``mhub_queue``
+* its inputs and outputs are not local
 
+mhub CLI
+--------
 
-mhub
-----
+The ``mhub`` tool is not an admin tool but a user tool. It allows for submitting jobs, quering job states and statuses, current queues and workers of the mapchete Hub cluster and available processes to run.
 
-log into mhub server & start venv
+mhub execute
+~~~~~~~~~~~~
 
-.. code-block:: shell
+This is the asynchronous equivalent of ``mapchete execute``.
 
-    ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.194.7.82
-    workon venv
+.. code-block:: none
 
+    Usage: mhub execute [OPTIONS] [MAPCHETE_FILES]...
 
-inspect commands:
+      Execute a process.
 
-.. code-block:: shell
+    Options:
+      -z, --zoom TEXT          Single zoom level or min and max separated by ','.
+      -b, --bounds FLOAT...    Left, bottom, right, top bounds in tile pyramid
+                               CRS.
+      -p, --point FLOAT...     Process tiles over single point location.
+      -g, --wkt-geometry TEXT  Take boundaries from WKT geometry in tile pyramid
+                               CRS.
+      -t, --tile INTEGER...    Zoom, row, column of single tile.
+      -o, --overwrite          Overwrite if tile(s) already exist(s).
+      -v, --verbose            Print info for each process tile.
+      -d, --debug              Print debug log output.
+      -q, --queue TEXT         Queue the job should be added to.
+      --help                   Show this message and exit.
 
-    # list all jobs
-    mhub jobs
-    # list successful
-    mhub jobs | grep SUCCESS
-    # list failed
-    mhub jobs | grep FAILURE
-    # list currently processing
-    mhub jobs | grep PROGRESS
-    # list progress of all currently progressing
-    mhub jobs --progress
-    # dump as GeoJSON
-    mhub jobs --geojson > current_jobs.geojson
+If the process is started with ``mhub execute``, ``mhub_worker`` is set automatically to ``execute_worker`` and ``mhub_queue`` can be specified explicitly otherwise the job will be sent to ``execute_queue``.
 
-    # job specific commands
-    ## use one of the job_ids listed by mhub jobs
-    ## when job is finished successfully, it prints the elapsed time
-    ## when job failed, it prints latest traceback
-    ## when job is in progress, it shows a progress bar
-    mhub status <job_id>
+**NOTE: already submitted jobs cannot be removed from queue. Be careful before you submit a job!**
 
-    # print job as GeoJSON
-    ## use this to find out IP of worker processing the job
-    mhub status --geojson <job_id>
+mhub index
+~~~~~~~~~~
 
-add job:
+This is the asynchronous equivalent of ``mapchete index``.
 
-.. code-block:: shell
+.. code-block:: none
 
-    zone="6 15 75"; mhub start z${zone// /-} mosaic_north.mapchete --bounds `tmx bounds $zone`
+    Usage: mhub index [OPTIONS] [MAPCHETE_FILES]...
 
+      Create index of output tiles.
 
-manually fix tiles
-------------------
+    Options:
+      -z, --zoom TEXT          Single zoom level or min and max separated by ','.
+      -b, --bounds FLOAT...    Left, bottom, right, top bounds in tile pyramid
+                               CRS.
+      -p, --point FLOAT...     Process tiles over single point location.
+      -g, --wkt-geometry TEXT  Take boundaries from WKT geometry in tile pyramid
+                               CRS.
+      -t, --tile INTEGER...    Zoom, row, column of single tile.
+      -v, --verbose            Print info for each process tile.
+      -q, --queue TEXT         Queue the job should be added to.
+      --help                   Show this message and exit.
 
-log into ``preview worker`` & start venv
+If an index job is started with ``mhub index``, ``mhub_worker`` is set automatically to ``index_worker`` and ``mhub_queue`` can be specified explicitly otherwise the job will be sent to ``index_queue``.
 
-.. code-block:: shell
+**NOTE: already submitted jobs cannot be removed from queue. Be careful before you submit a job!**
 
-    ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.184.146.112
-    workon mapchete
-    export AWS_ACCESS_KEY_ID=REDACTED_API_KEY AWS_SECRET_ACCESS_KEY=REDACTED_API_KEY
+mhub jobs
+~~~~~~~~~
 
-NOTE: shut down ``preview_worker`` before updating index files!
+This command lists all submitted jobs and their current job state: PENDING, PROGRESS, RECEIVED, STARTED, SUCCESS, FAILURE.
 
-.. code-block:: shell
+.. code-block:: none
 
-    docker container stop preview_worker
+    Usage: mhub jobs [OPTIONS]
 
+      Show current jobs.
 
-create overviews and update index files for zone ``17-78``:
+    Options:
+      --geojson           Print as GeoJSON
+      --output_path TEXT  only print jobs with specific output_path
+      --help              Show this message and exit.
 
-.. code-block:: shell
+More details on a job status can be printed using ``mhub status``
 
-    zone="6 17 78"
-    mapchete execute overviews.mapchete --verbose --logfile missing.log -m 8 -b `tmx bounds $zone` -z 8,12 -o && mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b `tmx bounds $zone` -z 8,13
+mhub status
+~~~~~~~~~~~
 
-    # or use the script from the preview_worker home directory
-    ./update_overviews_zone.sh 6 17 78
+Print detailed information on a job.
 
+.. code-block:: none
 
-create overviews and update index files for bounds ``-8.4375 36.5625 -5.625 39.375``:
+    Usage: mhub status [OPTIONS] JOB_ID
 
-.. code-block:: shell
+      Show job status.
 
-    bounds="-8.4375 36.5625 -5.625 39.375"
-    mapchete execute overviews.mapchete --verbose --logfile missing.log -m 8 -b $bounds -z 8,12 -o && \
-    mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b $bounds -z 8,13
+    Options:
+      --geojson    Print as GeoJSON
+      --traceback  Print only traceback if available.
+      --help       Show this message and exit.
 
-    # or use the script from the preview_worker home directory
-    ./update_overviews_bounds.sh -8.4375 36.5625 -5.625 39.375
+mhub progress
+~~~~~~~~~~~~~
 
+Show progressbar if job state is PROGRESS.
 
-fix single tile over point
+.. code-block:: none
 
-.. code-block:: shell
+    Usage: mhub progress [OPTIONS] JOB_ID
 
-    point="6.5504 59.9003"
-    bounds=`tmx -m 4 bounds -- \`tmx -m 4 tile -- 13 $point\``
-    mapchete execute mosaic_north_nocache.mapchete --verbose --logfile missing.log -m 8 -b $bounds -z 8,13 -o && \
-    mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b $bounds -z 8,13
+      Show job progress.
 
-    # or use the script from the preview_worker home directory
-    ./reprocess_point.sh 6.5504 59.9003
+    Options:
+      --help  Show this message and exit.
 
+mhub processes
+~~~~~~~~~~~~~~
 
-fix smaller area over bounds ``5.7689 59.4053 6.1759 59.5111``
+List all available processes which can be used in a mapchete file.
 
-.. code-block:: shell
+.. code-block:: none
 
-    bounds="5.7689 59.4053 6.1759 59.5111"
-    mapchete execute mosaic_north_nocache.mapchete --verbose --logfile missing.log -m 8 -b $bounds -z 8,13 -o && \
-    mapchete index overviews.mapchete --verbose --shp --for_gdal --out_dir /mnt/data/indexes/ -b $bounds -z 8,13
+    Usage: mhub processes [OPTIONS]
 
-    # or use the script from the preview_worker home directory
-    ./reprocess_bounds.sh 5.7689 59.4053 6.1759 59.5111
+      Show available processes.
 
+    Options:
+      -n, --process_name TEXT  Print docstring of process.
+      --docstrings             Print docstrings of all processes.
+      --help                   Show this message and exit.
 
-broker
-------
+mhub queues
+~~~~~~~~~~~
 
-list queues & workers:
+List all queues together with the registered workers.
 
-.. code-block:: shell
+.. code-block:: none
 
-    ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.197.182.82
-    sudo rabbitmqctl list_queues
+    Usage: mhub queues [OPTIONS]
 
+      Show available queues and workers.
 
-purge queue ``zone_queue``:
-
-.. code-block:: shell
-
-    ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.197.182.82
-    sudo rabbitmqctl purge_queue zone_queue
-
-Celery will remove all tasks from queue unless they are currently processed by a worker.
-
-
-generate index files
---------------------
-
-log into preview worker & start venv
-
-.. code-block:: shell
-
-    ssh -A -i ~/.ssh/eox_specops.pem ubuntu@18.184.146.112
-    workon mapchete
-    export AWS_ACCESS_KEY_ID=REDACTED_API_KEY AWS_SECRET_ACCESS_KEY=REDACTED_API_KEY
-
-NOTE: shut down ``preview_worker`` before updating index files!
-
-.. code-block:: shell
-
-    docker container stop preview_worker
-
-
-for all zoom levels:
-
-.. code-block:: shell
-
-    bounds="-33.75 22.5 56.25 84.375"
-    mapchete index mosaic_north.mapchete --out_dir /mnt/data/indexes/ --shp --for_gdal --bounds $bounds
-
-
-zoom level 8:
-
-.. code-block:: shell
-
-    bounds="-33.75 22.5 56.25 84.375"
-    mapchete index mosaic_north.mapchete --out_dir /mnt/data/indexes/ --shp --for_gdal --bounds $bounds --zoom 8
+    Options:
+      --help  Show this message and exit.
 
 
 ------------
 Installation
 ------------
 
-see docker/base_app/Dockerfile
+.. code-block:: shell
+
+    sudo apt install -y libgdal-dev libspatialindex-dev
+    pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
+    pip install .[cli,mundi,s1,xarray]
 
 
-----------
-Deployment
-----------
+------
+Docker
+------
 
-Use ``run.sh`` scripts as user data when launching instances.
+Build and upload mhub image
+---------------------------
 
-* ``docker/server/run.sh`` starts monitor container & devserver container
-* ``docker/preview_worker/run.sh`` starts preview_worker container & mapserver container
-* ``docker/zone_worker/run.sh`` starts zone_worker container
+All required mhub services use the mhub base image: ``registry.gitlab.eox.at/maps/mapchete_hub/mhub``
 
-
-update instances
-----------------
 
 .. code-block:: shell
 
-    docker container stop zone_worker
-    rm -f /mnt/data/cache/*
-    docker pull registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
-    LOGLEVEL='INFO'
-    LOGFILE=/mnt/data/log/worker.log
-    AWS_ACCESS_KEY_ID='REDACTED_API_KEY'
-    AWS_SECRET_ACCESS_KEY='REDACTED_API_KEY'
-    MHUB_BROKER_URL='amqp://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
-    MHUB_RESULT_BACKEND='rpc://s2processor:REDACTED_API_KEY@18.197.182.82:5672//'
-    MHUB_CONFIG_DIR='/mnt/processes'
-    WORKER='zone_worker'
-    docker run \
-      --rm \
-      --name $WORKER \
-      -e WORKER=$WORKER \
-      -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-      -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-      -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
-      -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
-      -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
-      -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-      -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
-      -e LOGLEVEL=$LOGLEVEL \
-      -e LOGFILE=$LOGFILE \
-      -v /mnt/data:/mnt/data \
-      -d \
-      registry.gitlab.eox.at/maps/mapchete_hub/base_worker:latest
+    # this will create an image named registry.gitlab.eox.at/maps/mapchete_hub/mhub:<name_of_current_git_branch>
+    ./build_upload_docker.sh
+    # to use a custom image tag, pass it on to the script:
+    ./build_upload_docker.sh 0.3
 
 
----------------
-Useful commands
----------------
 
-Execute command via ssh on multiple workers
-
-.. code-block:: shell
-
-    for ip in `cat worker_ips.txt`;do ssh -A -i ~/.ssh/eox_specops.pem ubuntu@$ip -t "tail /mnt/data/log/worker.log";done
-    ## for example to check if all workers are still processing
-    for ip in `cat worker_ips.txt`;do ssh -A -i ~/.ssh/eox_specops.pem ubuntu@$ip -t "tail /mnt/data/log/worker.log";done|grep heartbeat_tick
-
-
-Get all worker logs
-
-.. code-block:: shell
-
-for ip in `cat worker_ips.txt`
-  do
-    echo "get logs for worker ${ip}"
-    mkdir ${ip}
-    ssh -oStrictHostKeyChecking=no -A -i ~/.ssh/eox_specops.pem ubuntu@$ip -t "cp /mnt/data/log/worker.log worker.log && tar -czvf worker_log.tar.gz worker.log" && scp -i ~/.ssh/eox_specops.pem ubuntu@$ip:~/worker_log.tar.gz ${ip}/ && tar -xzvf ${ip}/worker_log.tar.gz -C ${ip}/ && rm ${ip}/worker_log.tar.gz
-  done
-
-parallel -k --no-notice 'mkdir {}; ssh -oStrictHostKeyChecking=no -A -i ~/.ssh/eox_specops.pem ubuntu@{} -t "cp /mnt/data/log/worker.log worker.log && tar -czvf worker_log.tar.gz worker.log" && scp -i ~/.ssh/eox_specops.pem ubuntu@{}:~/worker_log.tar.gz {}/ && tar -xzvf {}/worker_log.tar.gz -C {}/ && rm {}/worker_log.tar.gz' < worker_ips.txt
-
-
-Update all workers
-
-.. code-block:: shell
-
-parallel -k --no-notice scp -i ~/.ssh/eox_specops.pem update_worker.sh ubuntu@{}:~ < worker_ips.txt
-parallel -k --no-notice ssh -oStrictHostKeyChecking=no -A -i ~/.ssh/eox_specops.pem ubuntu@{} -t "./update_worker.sh" < worker_ips.txt
-
-
--------
 License
 -------
 
 MIT License
 
-Copyright (c) 2018 `EOX IT Services`_
+Copyright (c) 2018, 2019 `EOX IT Services`_
 
 .. _`EOX IT Services`: https://eox.at/

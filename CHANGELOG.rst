@@ -5,13 +5,18 @@ Changelog
 ---
 0.3
 ---
+* Docker image registry.gitlab.eox.at/maps/mapchete_hub/mhub:0.3
+    * bases on registry.gitlab.eox.at/maps/docker-base/mapchete:0.2
 * add ``mhub execute`` and ``mhub index`` commands (#54)
 * API returns more useful error message for client
 * automatically assign job ID (#64)
+* only use one docker image for all mhub services: registry.gitlab.eox.at/maps/mapchete_hub/mhub
 
 ---
 0.2
 ---
+* Docker image registry.gitlab.eox.at/maps/mapchete_hub/mhub:0.2
+    * bases on registry.gitlab.eox.at/maps/docker-base/mapchete:0.1
 * celery worker now capture logs again (#62)
 * zone_worker and preview_worker modules renamed to execute and index like their mapchete counterparts (#60)
 * use tagged versions instead of branches in docker base images & depdendencies (#58)
