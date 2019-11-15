@@ -21,11 +21,11 @@ def run(self, *args, mapchete_config=None, process_area=None, **kwargs):
 
     # first, the inputs get parsed, i.e. all metadat queried from catalogue
     # this may take a while
-    if "INDEX_OUTPUT_DIR" in os.environ:
+    if "MHUB_INDEX_OUTPUT_DIR" in os.environ:
         # create subfolder using process output path in order not to mix up index files
         # from multiple outputs
         index_output_path = os.path.join(
-            os.environ.get("INDEX_OUTPUT_DIR"),
+            os.environ.get("MHUB_INDEX_OUTPUT_DIR"),
             os.path.join(
                 *mapchete_config["output"]["path"].replace("s3://", "").split("/")
             )

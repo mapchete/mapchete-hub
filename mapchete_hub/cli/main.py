@@ -28,6 +28,11 @@ opt_debug = click.option(
     callback=_set_debug_log_level,
     help="Print debug log output."
 )
+opt_geojson = click.option(
+    "--geojson",
+    is_flag=True,
+    help="Print as GeoJSON"
+)
 
 
 @click.version_option(version=mapchete_hub.__version__, message="%(version)s")
@@ -192,7 +197,7 @@ def index(
             click.echo("Error: %s" % e)
 
 
-@mhub.command(short_help="Start job.")
+@mhub.command(short_help="Start job. (deprecated)")
 @click.argument("job_id", type=click.STRING)
 @click.argument("mapchete_file", type=click.STRING)
 @click.option("--bounds", "-b", type=float, nargs=4)
@@ -226,8 +231,12 @@ def start(ctx, job_id, mapchete_file, bounds=None, mode=None, debug=False):
 
 @mhub.command(short_help="Show job status.")
 @click.argument("job_id", type=click.STRING)
-@click.option("--geojson", is_flag=True)
-@click.option("--traceback", is_flag=True)
+@opt_geojson
+@click.option(
+    "--traceback",
+    is_flag=True,
+    help="Print only traceback if available."
+)
 @click.pass_context
 def status(ctx, job_id, geojson=False, traceback=False):
     """Show job status."""
@@ -262,7 +271,7 @@ def progress(ctx, job_id):
 
 
 @mhub.command(short_help="Show current jobs.")
-@click.option("--geojson", is_flag=True)
+@opt_geojson
 @click.option(
     "--output_path",
     type=click.STRING,

@@ -1,7 +1,11 @@
 #!/bin/bash
 
 # set environment variables
-MHUB_DOCKER_IMAGE_TAG="latest"
+MHUB_DOCKER_IMAGE_TAG=${1:-"stable"}
+LOGLEVEL="INFO"
+
+LOCAL_VOLUME_DIR=/mnt/data
+GUNICORN_CMD_ARGS="--bind 0.0.0.0:5000 --log-level $LOGLEVEL --workers 4 --threads 4 --worker-class=gthread --worker-tmp-dir /dev/shm"
 GITLAB_REGISTRY_TOKEN=REDACTED_API_KEY
 AWS_ACCESS_KEY_ID="REDACTED_API_KEY"
 AWS_SECRET_ACCESS_KEY="REDACTED_API_KEY"
@@ -12,7 +16,6 @@ MHUB_BROKER_URL=$"amqp://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
 MHUB_RESULT_BACKEND=$"rpc://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
 MHUB_CONFIG_DIR="/mnt/data/"
 MHUB_STATUS_GPKG="/mnt/data/status.gpkg"
-LOGLEVEL="INFO"
 
 # from https://gist.github.com/sj26/88e1c6584397bb7c13bd11108a579746
 function retry {
@@ -53,15 +56,13 @@ fi
 
 # get rgb_worker docker container
 retry 10 docker login -u gitlab-ci-token -p $GITLAB_REGISTRY_TOKEN registry.gitlab.eox.at
-retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/monitor:$MHUB_DOCKER_IMAGE_TAG
-retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/server:$MHUB_DOCKER_IMAGE_TAG
+retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG
 
 # set environment and run containers
 docker run \
   --rm \
-  --name=server \
-  -p 5000:5000 \
-  -v /mnt/data/:/mnt/data \
+  --name=monitor \
+  -v $LOCAL_VOLUME_DIR:/mnt/data \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
@@ -70,17 +71,21 @@ docker run \
   -e MHUB_STATUS_GPKG=$MHUB_STATUS_GPKG \
   -e LOGLEVEL=$LOGLEVEL \
   -d \
-  registry.gitlab.eox.at/maps/mapchete_hub/server:$MHUB_DOCKER_IMAGE_TAG
+  registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG \
+  ./manage.py monitor --loglevel=$LOGLEVEL
 docker run \
   --rm \
-  --name=monitor \
-  -v /mnt/data/:/mnt/data \
+  --name=server \
+  -p 5000:5000 \
+  -v $LOCAL_VOLUME_DIR:/mnt/data \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+  -e GUNICORN_CMD_ARGS="$GUNICORN_CMD_ARGS" \
+  -e LOGLEVEL=$LOGLEVEL \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
   -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
   -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
   -e MHUB_STATUS_GPKG=$MHUB_STATUS_GPKG \
-  -e LOGLEVEL=$LOGLEVEL \
   -d \
-  registry.gitlab.eox.at/maps/mapchete_hub/monitor:$MHUB_DOCKER_IMAGE_TAG
+  registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG \
+  gunicorn "mapchete_hub.application:flask_app()"
