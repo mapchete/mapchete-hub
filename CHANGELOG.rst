@@ -3,6 +3,11 @@ Changelog
 #########
 
 ---
+0.4
+---
+* fixed preprocessing dependency from version 0.4 to 0.5
+
+---
 0.3
 ---
 * Docker image registry.gitlab.eox.at/maps/mapchete_hub/mhub:0.3
