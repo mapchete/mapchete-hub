@@ -6,19 +6,15 @@ import pytest
 from shapely.geometry import box, shape
 from tempfile import NamedTemporaryFile
 
-from mapchete_hub import mapchete_index, mapchete_execute, cleanup_config, log
-from mapchete_hub.application import process_area_from_config, get_next_jobs
-from mapchete_hub._misc import announce_on_slack, format_as_geojson
+from mapchete_hub import log
+from mapchete_hub.application import get_next_jobs, process_area_from_config
+from mapchete_hub.api import format_as_geojson
+from mapchete_hub.commands._execute import mapchete_execute
+from mapchete_hub.commands._index import mapchete_index
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 TESTDATA_DIR = os.path.join(SCRIPT_DIR, "testdata")
-
-
-def test_cleanup_config(example_mapchete):
-    assert [k for k in example_mapchete.dict.keys() if k.startswith("mhub_")]
-    cleaned = cleanup_config(example_mapchete.dict)
-    assert not [k for k in cleaned.keys() if k.startswith("mhub_")]
 
 
 def test_mapchete_index(mp_tmpdir, example_mapchete):
@@ -55,17 +51,6 @@ def test_mapchete_execute(mp_tmpdir, example_mapchete):
         process_area=box(3, 1, 4, 2).wkt,
         zoom=11,
     ))
-
-
-def test_announce_on_slack(example_mapchete):
-    with pytest.raises(KeyError):
-        announce_on_slack(
-            mapchete_config=dict(
-                example_mapchete.dict,
-                mhub_announce_on_slack=True
-            ),
-            process_area=process_area_from_config(example_mapchete.dict)
-        )
 
 
 def test_process_area_from_config(example_mapchete):

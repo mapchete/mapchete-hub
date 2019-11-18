@@ -2,9 +2,9 @@ from celery.utils.log import get_task_logger
 from mapchete.io import makedirs
 import os
 
-from mapchete_hub import mapchete_index
+from mapchete_hub.commands._misc import announce_on_slack
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub._misc import announce_on_slack
+from mapchete_hub.commands._index import mapchete_index
 
 
 logger = get_task_logger(__name__)
