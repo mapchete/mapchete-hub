@@ -4,18 +4,21 @@
 MHUB_DOCKER_IMAGE_TAG=${1:-"stable"}
 LOGLEVEL="INFO"
 
-LOCAL_VOLUME_DIR=/mnt/data
-GUNICORN_CMD_ARGS="--bind 0.0.0.0:5000 --log-level $LOGLEVEL --workers 4 --threads 4 --worker-class=gthread --worker-tmp-dir /dev/shm"
-GITLAB_REGISTRY_TOKEN=REDACTED_API_KEY
 AWS_ACCESS_KEY_ID="REDACTED_API_KEY"
 AWS_SECRET_ACCESS_KEY="REDACTED_API_KEY"
 BROKER_USER="mhub"
 BROKER_PW="uwoo0aVo"
 BROKER_IP="3.120.139.183:5672"
+GITLAB_REGISTRY_TOKEN=REDACTED_API_KEY
+GUNICORN_CMD_ARGS="--bind 0.0.0.0:5000 --log-level $LOGLEVEL --workers 4 --threads 4 --worker-class=gthread --worker-tmp-dir /dev/shm"
+LOCAL_VOLUME_DIR=/mnt/data
 MHUB_BROKER_URL=$"amqp://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
-MHUB_RESULT_BACKEND=$"rpc://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
+MHUB_CELERY_SLACK=TRUE
 MHUB_CONFIG_DIR="/mnt/data/"
+MHUB_RESULT_BACKEND=$"rpc://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
 MHUB_STATUS_GPKG="/mnt/data/status.gpkg"
+SLACK_WEBHOOK_URL="REDACTED_API_KEY"
+
 
 # from https://gist.github.com/sj26/88e1c6584397bb7c13bd11108a579746
 function retry {
@@ -66,10 +69,12 @@ docker run \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
+  -e MHUB_CELERY_SLACK=$MHUB_CELERY_SLACK \
   -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
   -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
   -e MHUB_STATUS_GPKG=$MHUB_STATUS_GPKG \
   -e LOGLEVEL=$LOGLEVEL \
+  -e SLACK_WEBHOOK_URL=$SLACK_WEBHOOK_URL \
   -d \
   registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG \
   ./manage.py monitor --loglevel=$LOGLEVEL
@@ -83,9 +88,11 @@ docker run \
   -e GUNICORN_CMD_ARGS="$GUNICORN_CMD_ARGS" \
   -e LOGLEVEL=$LOGLEVEL \
   -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
+  -e MHUB_CELERY_SLACK=$MHUB_CELERY_SLACK \
   -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
   -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
   -e MHUB_STATUS_GPKG=$MHUB_STATUS_GPKG \
+  -e SLACK_WEBHOOK_URL=$SLACK_WEBHOOK_URL \
   -d \
   registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG \
   gunicorn "mapchete_hub.application:flask_app()"

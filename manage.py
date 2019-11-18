@@ -56,16 +56,16 @@ def cli(ctx, **kwargs):
 
 @cli.command(short_help='Launches Flask Development Server.')
 @click.option(
-    "--no-monitor",
+    "--monitor",
     is_flag=True,
     help="Launch monitor in separate thread."
 )
 @opt_loglevel
 @opt_logfile
 @click.pass_context
-def devserver(ctx, no_monitor, **kwargs):
+def devserver(ctx, monitor, **kwargs):
     click.echo("launch devserver")
-    flask_app(launch_monitor=not no_monitor).run(
+    flask_app(launch_monitor=monitor).run(
         host=host_options['host_ip'], port=host_options['port']
     )
 
