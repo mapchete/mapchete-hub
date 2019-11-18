@@ -16,7 +16,7 @@ from mapchete_hub import log
 import os
 
 import mapchete_hub
-from mapchete_hub.application import available_workers, flask_app
+from mapchete_hub.application import flask_app
 from mapchete_hub.celery_app import celery_app
 from mapchete_hub.config import host_options, flask_options
 from mapchete_hub.monitor import status_monitor
@@ -84,7 +84,7 @@ def monitor(ctx, **kwargs):
 @cli.command(short_help='Launches Celery worker.')
 @click.option(
     "--worker-name", "-n",
-    type=click.Choice(available_workers.keys()),
+    type=click.Choice(["execute_worker", "index_worker"]),
     default="execute_worker",
     help="Worker type to be spawned."
 )

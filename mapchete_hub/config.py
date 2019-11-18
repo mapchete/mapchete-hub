@@ -1,4 +1,17 @@
+"""Default Flask and Celery configuration and related functions."""
+
+
+import datetime
 import os
+
+
+def cleanup_datetime(d):
+    """Represent timestamps as strings, not datetime.date objects."""
+    return {
+        k: cleanup_datetime(v) if isinstance(v, dict)
+        else str(v) if isinstance(v, datetime.date) else v
+        for k, v in d.items()
+    }
 
 
 def _get_host_options():
@@ -16,8 +29,8 @@ def _get_flask_options():
         event_serializer='pickle',
         accept_content=['pickle', 'json'],
         task_routes={
-            'mapchete_hub.workers.execute.*': {'queue': 'execute_queue'},
-            'mapchete_hub.workers.index.*': {'queue': 'index_queue'},
+            'mapchete_hub.commands.execute.*': {'queue': 'execute_queue'},
+            'mapchete_hub.commands.index.*': {'queue': 'index_queue'},
         },
         task_acks_late=True,
         worker_send_task_events=True,
@@ -61,6 +74,8 @@ def _get_main_options():
 
 def _get_opts(default):
     """
+    Get mhub config options from environement.
+
     Use environmental variables starting with 'MHUB_', otherwise fall back to default
     values.
     """

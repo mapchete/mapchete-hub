@@ -1,3 +1,9 @@
+"""
+Main web application.
+
+This module configures Flask and defines all required endpoints.
+"""
+
 from flask import Flask, jsonify, request, abort, make_response
 from flask_restful import Api, Resource
 import json
@@ -14,11 +20,9 @@ from webargs import fields
 from webargs.flaskparser import use_kwargs
 
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub.config import flask_options, main_options
-from mapchete_hub._core import cleanup_config
-from mapchete_hub._misc import cleanup_datetime
+from mapchete_hub.config import cleanup_datetime, flask_options, main_options
 from mapchete_hub.monitor import StatusHandler, status_monitor
-from mapchete_hub.workers import execute, index
+from mapchete_hub.commands import get_command_func, get_command_func_path
 
 
 logger = logging.getLogger(__name__)
@@ -29,16 +33,6 @@ states = StatusHandler(
 )
 
 
-available_workers = {
-    "execute_worker": execute,
-    "index_worker": index,
-}
-deprecated_workers = {
-    "zone_worker": execute,
-    "preview_worker": index,
-}
-
-
 def get_next_jobs(config=None, **kwargs):
     """Append next jobs to queue."""
     def _gen_next_job(job_conf, **kwargs):
@@ -47,12 +41,12 @@ def get_next_jobs(config=None, **kwargs):
                 next_conf = job_conf["mhub_next_process"]
                 worker = next_conf["mhub_worker"]
                 job_kwargs = dict(
-                    mapchete_config=cleanup_config(next_conf),
+                    mapchete_config=next_conf,
                     **dict(kwargs, mode=next_conf.get("mhub_mode"))
                 )
                 task_id = uuid.uuid4().hex
                 job_kwargs_repr = json.dumps(job_kwargs)
-                yield dict(available_workers, **deprecated_workers)[worker].run.signature(
+                yield get_command_func(worker).signature(
                     args=(None, ),
                     kwargs=job_kwargs,
                     task_id=task_id,
@@ -98,8 +92,10 @@ def flask_app(launch_monitor=False):
 
 
 class Capabilities(Resource):
+    """Resouce for capabilities.json."""
 
     def __init__(self):
+        """Initialize resource."""
         processes = list(pkg_resources.iter_entry_points("mapchete.processes"))
         self._capabilities = {}
         self._capabilities["processes"] = {}
@@ -111,6 +107,7 @@ class Capabilities(Resource):
             }
 
     def get(self):
+        """Return /capabilities.json."""
         # append current information on queues and workers
         insp = celery_app.control.inspect().active_queues()
         queues_out = {}
@@ -125,24 +122,30 @@ class Capabilities(Resource):
 
 
 class QueuesOverview(Resource):
+    """Resource for /queues."""
 
     def get(self):
+        """Return queues."""
         return jsonify(celery_app.control.inspect())
 
 
 class JobsOverview(Resource):
+    """Resource for /jobs."""
 
     args = {"output_path": fields.Str(required=False)}
 
     @use_kwargs(args)
     def get(self, output_path=None):
+        """Return jobs."""
         logger.debug("output_path: %s", output_path)
         return jsonify(states.all(output_path=output_path))
 
 
 class Jobs(Resource):
+    """Resource for /jobs/<job_id>."""
 
     def get(self, job_id):
+        """Return job metadata."""
         res = states.job(job_id)
         logger.debug("return get(): %s", res)
         if res:
@@ -151,16 +154,15 @@ class Jobs(Resource):
             abort(404)
 
     def post(self, job_id):
+        """Receive new job."""
         raw = request.get_json()
         data = raw if isinstance(raw, dict) else json.loads(raw)
 
         try:
-            mhub_worker = dict(
-                available_workers, **deprecated_workers
-            )[data["mapchete_config"]["mhub_worker"]].__name__
+            command_path = get_command_func_path(data["mapchete_config"]["mhub_worker"])
             mhub_queue = data["mapchete_config"].get(
                 "mhub_queue",
-                "%s_queue" % mhub_worker.split(".")[-1]
+                "%s_queue" % command_path.split(".")[-2]
             )
         except Exception as e:
             logger.error(e)
@@ -186,7 +188,7 @@ class Jobs(Resource):
             kwargs = dict(data, process_area=process_area.wkt)
             logger.debug("send task %s to queue %s", job_id, mhub_queue)
             celery_app.send_task(
-                "%s.run" % mhub_worker,
+                str(command_path),
                 task_id=job_id,
                 queue=mhub_queue,
                 kwargs=kwargs,
@@ -208,6 +210,7 @@ class Jobs(Resource):
 
 
 def process_area_from_config(config):
+    """Calculate process area from process config."""
     # bounds
     bounds = config.get("bounds")
     if bounds:
@@ -231,7 +234,7 @@ def process_area_from_config(config):
         x, y = point
         zoom_levels = get_zoom_levels(
             process_zoom_levels=config["mapchete_config"]["zoom_levels"],
-            init_zoom_levels=config["zoom"]
+            init_zoom_levels=config.get("zoom")
         )
         return _tp().tile_from_xy(x, y, max(zoom_levels)).bbox
 

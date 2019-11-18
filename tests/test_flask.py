@@ -1,4 +1,4 @@
-import mapchete_hub
+from mapchete_hub.config import cleanup_datetime
 
 
 def test_get_all_jobs(client):
@@ -21,7 +21,7 @@ def test_start_job(client, example_mapchete):
     config = dict(example_mapchete.dict)
     # config.pop("mhub_next_process")
 
-    data = mapchete_hub.cleanup_datetime(
+    data = cleanup_datetime(
         dict(
             mapchete_config=config,
             zoom=11,

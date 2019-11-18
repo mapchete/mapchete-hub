@@ -33,7 +33,7 @@ mhub_queue: execute_worker_queue
 mhub_next_process:
     mhub_mode: overwrite
     mhub_worker: execute_worker
-    process: example_process.py
+    process: mapchete.processes.examples.example_process
     bounds: [3.0, 1.0, 4.0, 2.0]
     zoom_levels:
         min: 7
@@ -42,9 +42,8 @@ mhub_next_process:
         grid: geodetic
         metatiling: 4
     input:
-        file1:
-            zoom>=10: dummy1.tif
-        file2: dummy2.tif
+        file1: https://ungarj.github.io/mapchete_testdata/tiled_data/raster/cleantopo/1/0/0.tif
+        file2: https://ungarj.github.io/mapchete_testdata/tiled_data/raster/cleantopo/1/0/1.tif
     output:
         path: test
         format: GTiff
@@ -53,7 +52,7 @@ mhub_next_process:
 
     mhub_next_process:
         mhub_worker: index_worker
-        process: example_process.py
+        process: mapchete.processes.examples.example_process
         zoom_levels:
             min: 7
             max: 11

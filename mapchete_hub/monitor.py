@@ -1,3 +1,6 @@
+"""Monitor module required to keep track on job statuses."""
+
+
 from collections import OrderedDict
 import fiona
 import json
@@ -72,8 +75,10 @@ def status_monitor(celery_app):
 
 
 class StatusHandler():
+    """Class to communicate with backend database."""
 
     def __init__(self, filename, mode='r', profile=None):
+        """Initialize."""
         logger.debug("mode: %s", mode)
         self.mode = mode
         if os.path.isfile(filename):
@@ -120,6 +125,7 @@ class StatusHandler():
         logger.debug(self.fields)
 
     def all(self, output_path=None):
+        """Return all jobs."""
         c = self.connection.cursor()
         all_entries = [
             self._decode_row(row)
@@ -141,6 +147,7 @@ class StatusHandler():
             return [i for i in all_entries if _has_output_path(i, output_path)]
 
     def job(self, job_id):
+        """Return job."""
         logger.debug("get job %s status", job_id)
         c = self.connection.cursor()
         row = c.execute(
@@ -153,14 +160,20 @@ class StatusHandler():
             return self._decode_row(row)
 
     def update(self, job_id, metadata={}):
+        """Update job."""
         if self.mode == 'r':
             raise AttributeError('update not allowed in read mode')
 
         # get cursor
         c = self.connection.cursor()
 
+        # remember timestamp when process started
+        if metadata.get("type") in ["task-started", "task-received"]:
+            metadata.update(started=metadata.get("timestamp"))
+
         # update incoming metadata
         entry = dict(self._filtered_by_schema(metadata), job_id=metadata['uuid'])
+
         if 'kwargs' in metadata:
             kwargs = json.loads(metadata['kwargs'].replace("'", '"'))
             entry.update(
@@ -204,6 +217,7 @@ class StatusHandler():
         self.connection.commit()
 
     def close(self):
+        """Close database connection."""
         self.connection.close()
 
     def _filtered_by_schema(self, metadata):
@@ -244,7 +258,9 @@ class StatusHandler():
         )
 
     def __enter__(self):
+        """Enter context."""
         return self
 
-    def __exit__(self, t, v, tb):
+    def __exit__(self, *args):
+        """Exit context."""
         self.close()

@@ -1,5 +1,6 @@
 import click
 import click_spinner
+import datetime
 import logging
 from mapchete import Timer
 from mapchete.cli import utils
@@ -8,6 +9,7 @@ import warnings
 
 import mapchete_hub
 from mapchete_hub.api import API, job_states
+from mapchete_hub.application import process_area_from_config
 from mapchete_hub.config import host_options
 from mapchete_hub.exceptions import JobFailed
 from mapchete_hub import log
@@ -246,15 +248,12 @@ def status(ctx, job_id, geojson=False, traceback=False):
             if geojson
             else API(host=ctx.obj["host"]).job(job_id)
         )
-        click.echo(
-            response
-            if geojson
-            else "%s" % (
-                response.json["properties"]["traceback"]
-                if traceback
-                else response.state,
-            )
-        )
+        if geojson:
+            click.echo(response)
+        elif traceback:
+            click.echo(response.json["properties"]["traceback"])
+        else:
+            _print_job_details(response)
     except Exception as e:
         click.echo("Error: %s" % e)
 
@@ -281,18 +280,87 @@ def progress(ctx, job_id):
 def jobs(ctx, geojson=False, output_path=None):
     """Show current jobs."""
     try:
-        click.echo(
-            API(host=ctx.obj["host"]).jobs(geojson=geojson, output_path=output_path)
-            if geojson
-            else "\n".join([
-                "%s: %s" % (job_id, state)
-                for job_id, state in API(
-                    host=ctx.obj["host"]
-                ).jobs_states(output_path=output_path).items()
-            ])
-        )
+        if geojson:
+            click.echo(
+                API(host=ctx.obj["host"]).jobs(geojson=True, output_path=output_path)
+            )
+        else:
+            # sort by state and then by timestamp
+            jobs = sorted(
+                API(host=ctx.obj["host"]).jobs(output_path=output_path).values(),
+                key=lambda x: (
+                    x.json["properties"]["state"],
+                    x.json["properties"]["timestamp"]
+                )
+            )
+            for i in jobs:
+                print(i)
+                _print_job_details(i)
+                click.echo("")
     except Exception as e:
         click.echo("Error: %s" % e)
+
+
+def _print_job_details(job):
+    for group, states in job_states.items():
+        for state in states:
+            if job.state == state:
+                if group == "todo":
+                    color = "blue"
+                elif group == "doing":
+                    color = "yellow"
+                elif state == "SUCCESS":
+                    color = "green"
+                elif state == "FAILURE":
+                    color = "red"
+    properties = job.json["properties"]
+    properties["config"] = properties["config"] or {}
+    mapchete_config = properties.get("config", {}).get("mapchete_config", {})
+
+    # job ID and job state
+    click.echo(click.style("%s: %s" % (job.job_id, job.state), fg=color, bold=True))
+
+    # command
+    click.echo(
+        "command: %s" % mapchete_config.get("mhub_worker", "None").replace("_worker", "")
+    )
+
+    # queue
+    click.echo("queue: %s" % mapchete_config.get("mhub_queue"))
+
+    # output path
+    click.echo("output path: %s" % mapchete_config.get("output", {}).get("path"))
+
+    # bounds
+    try:
+        bounds = ", ".join(
+            map(str, process_area_from_config(properties["config"]).bounds)
+        )
+    except:
+        bounds = None
+    click.echo("process bounds: %s" % bounds)
+
+    # start time
+    click.echo(
+        "started: %s" % (
+            datetime.datetime.utcfromtimestamp(
+                properties.get("started")
+            ).strftime('%Y-%m-%d %H:%M:%S') if properties.get("started") else None
+        )
+    )
+
+    # runtime
+    runtime = properties.get("runtime")
+    click.echo(
+        "runtime: %s" % (Timer(runtime) if runtime else None)
+    )
+
+    # last received update
+    click.echo(
+        "last received update: %s" % datetime.datetime.utcfromtimestamp(
+            properties.get("timestamp")
+        ).strftime('%Y-%m-%d %H:%M:%S')
+    )
 
 
 def _show_progress(ctx, job_id):

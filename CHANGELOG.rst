@@ -3,6 +3,13 @@ Changelog
 #########
 
 ---
+0.5
+---
+* print more details using ``mhub jobs`` and ``mhub status <job_id>``
+* rename ``mapchete_hub.worker`` module to ``mapchete_hub.commands``
+* remember timestamp on ``task-received`` and ``task-started`` events in ``started`` property
+
+---
 0.4
 ---
 * fixed preprocessing dependency from version 0.4 to 0.5

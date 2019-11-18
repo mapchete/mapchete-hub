@@ -1,3 +1,5 @@
+"""Celery app initialization."""
+
 from flask_celery import Celery
 
 

@@ -1,11 +1,12 @@
 """
-API requests wrapper.
+Convenience tools to wrap API.
 
 This module wraps around the requests module for real-life usage and Flask's test_client()
 in order to be able to test mhub CLI.
 """
 
 from collections import namedtuple
+import geojson
 import json
 import logging
 import requests
@@ -14,10 +15,8 @@ import time
 import uuid
 import yaml
 
-import mapchete_hub
-from mapchete_hub.config import timeout
+from mapchete_hub.config import cleanup_datetime, timeout
 from mapchete_hub.exceptions import JobFailed, JobNotFound, JobRejected
-from mapchete_hub._misc import format_as_geojson
 
 
 logger = logging.getLogger(__name__)
@@ -31,9 +30,12 @@ job_states = {
 
 
 class Job():
+    """Job metadata class."""
+
     def __init__(
         self, status_code=None, state=None, job_id=None, json=None
     ):
+        """Initialize."""
         self.status_code = status_code
         self.state = state
         self.job_id = job_id
@@ -41,6 +43,7 @@ class Job():
         self.json = json
 
     def __repr__(self):
+        """Print Job."""
         return "Job(status_code=%s, state=%s, job_id=%s, json=%s" % (
             self.status_code, self.state, self.job_id, self.json
         )
@@ -50,16 +53,17 @@ Response = namedtuple("Response", "status_code json")
 
 
 class API():
+    """API class which abstracts REST interface."""
+
     def __init__(self, host=None, _test_client=None):
+        """Initialize."""
         self.host = host
         self._test_client = _test_client
         self._api = _test_client if _test_client else requests
         self._baseurl = "" if _test_client else "http://%s/" % host
 
     def get(self, url, **kwargs):
-        """
-        Make a GET request to _test_client or host.
-        """
+        """Make a GET request to _test_client or host."""
         try:
             res = self._api.get(
                 self._baseurl + url,
@@ -73,9 +77,7 @@ class API():
             raise ConnectionError("no mhub server found at %s" % self.host)
 
     def post(self, url, **kwargs):
-        """
-        Make a POST request to _test_client or host.
-        """
+        """Make a POST request to _test_client or host."""
         try:
             res = self._api.post(self._baseurl + url, **self._get_kwargs(kwargs))
             return Response(
@@ -93,11 +95,9 @@ class API():
         mhub_queue=None,
         **kwargs
     ):
-        """
-        Start a job and return job state.
-        """
+        """Start a job and return job state."""
         job_id = job_id or uuid.uuid4().hex
-        data = mapchete_hub.cleanup_datetime(
+        data = cleanup_datetime(
             dict(
                 mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
                 **kwargs
@@ -124,9 +124,7 @@ class API():
         )
 
     def job(self, job_id, geojson=False):
-        """
-        Return job state.
-        """
+        """Return job metadata."""
         res = self.get("jobs/%s" % job_id, timeout=timeout)
         if res.status_code == 404:
             raise JobNotFound("job %s does not exist" % job_id)
@@ -143,15 +141,11 @@ class API():
             )
 
     def job_state(self, job_id):
-        """
-        Return job state.
-        """
+        """Return job state."""
         return self.job(job_id).state
 
     def jobs(self, geojson=False, output_path=None):
-        """
-        Return job state.
-        """
+        """Return jobs metadata."""
         res = self.get("jobs/", timeout=timeout, params=dict(output_path=output_path))
         return (
             format_as_geojson(res.json)
@@ -168,9 +162,7 @@ class API():
         )
 
     def jobs_states(self, output_path=None):
-        """
-        Return jobs states.
-        """
+        """Return jobs states."""
         return {
             job["properties"]["job_id"]: job["properties"]["state"]
             for job in self.get(
@@ -181,9 +173,7 @@ class API():
         }
 
     def job_progress(self, job_id, interval=1, timeout=60):
-        """
-        Yield job progress information.
-        """
+        """Yield job progress information."""
         last = -1
         updated = time.time()
         while True:
@@ -218,11 +208,45 @@ class API():
 
     def _get_kwargs(self, kwargs):
         """
+        Clean up kwargs.
+
         For test client:
-        remove timeout kwarg
-        rename params kwarg to query_string
+            - remove timeout kwarg
+            - rename params kwarg to query_string
         """
         if self._test_client:
             kwargs.pop("timeout", None)
             kwargs.update(query_string=kwargs.pop("params", {}))
         return kwargs
+
+
+def format_as_geojson(inp, indent=4):
+    """Return a pretty GeoJSON."""
+    space = " " * indent
+    out_gj = (
+        '{\n'
+        '%s"type": "FeatureCollection",\n'
+        '%s"features": [\n'
+    ) % (space, space)
+    features = (i for i in ([inp] if isinstance(inp, dict) else inp))
+    try:
+        feature = next(features)
+        level = 2
+        while True:
+            feature_gj = (space * level).join(
+                json.dumps(
+                    json.loads('%s' % geojson.Feature(**feature)),
+                    indent=indent,
+                    sort_keys=True
+                ).splitlines(True)
+            )
+            try:
+                feature = next(features)
+                out_gj += "%s%s,\n" % (space * level, feature_gj)
+            except StopIteration:
+                out_gj += "%s%s\n" % (space * level, feature_gj)
+                break
+    except StopIteration:
+        pass
+    out_gj += '%s]\n}' % space
+    return out_gj
