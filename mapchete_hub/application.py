@@ -8,19 +8,21 @@ from flask import Flask, jsonify, request, abort, make_response
 from flask_restful import Api, Resource
 import json
 import logging
-from mapchete.config import get_zoom_levels
-from mapchete.tile import BufferedTilePyramid
 from multiprocessing import Process
 import os
 import pkg_resources
-from shapely.geometry import box, mapping
-from shapely import wkt
+from shapely.geometry import mapping
 import uuid
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub.config import cleanup_datetime, flask_options, main_options
+from mapchete_hub.config import (
+    cleanup_datetime,
+    flask_options,
+    main_options,
+    process_area_from_config
+)
 from mapchete_hub.monitor import StatusHandler, status_monitor
 from mapchete_hub.commands import get_command_func, get_command_func_path
 
@@ -207,46 +209,3 @@ class Jobs(Resource):
                     )
                 ), 202
             )
-
-
-def process_area_from_config(config):
-    """Calculate process area from process config."""
-    # bounds
-    bounds = config.get("bounds")
-    if bounds:
-        return box(*bounds)
-
-    # wkt_geometry
-    wkt_geometry = config.get("wkt_geometry")
-    if wkt_geometry:
-        return wkt.loads(wkt_geometry)
-
-    def _tp():
-        return BufferedTilePyramid(
-            config["mapchete_config"]["pyramid"]["grid"],
-            metatiling=config["mapchete_config"]["pyramid"].get("metatiling", 1),
-            pixelbuffer=config["mapchete_config"]["pyramid"].get("pixelbuffer", 0)
-        )
-
-    # point
-    point = config.get("point")
-    if point:
-        x, y = point
-        zoom_levels = get_zoom_levels(
-            process_zoom_levels=config["mapchete_config"]["zoom_levels"],
-            init_zoom_levels=config.get("zoom")
-        )
-        return _tp().tile_from_xy(x, y, max(zoom_levels)).bbox
-
-    # tile
-    tile = config.get("tile")
-    if tile:
-        return _tp().tile(*tile).bbox
-
-    # mapchete_config
-    process_bounds = config.get("mapchete_config", {}).get("process_bounds")
-    if process_bounds:
-        return box(*process_bounds)
-
-    # raise error if no process areas is given
-    raise AttributeError("no bounds, wkt_geometry, point, tile or process bounds given.")

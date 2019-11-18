@@ -7,12 +7,11 @@ from mapchete.cli import utils
 from tqdm import tqdm
 import warnings
 
-import mapchete_hub
 from mapchete_hub.api import API, job_states
-from mapchete_hub.application import process_area_from_config
-from mapchete_hub.config import host_options
+from mapchete_hub.config import host_options, process_area_from_config
+from mapchete_hub.log import set_log_level
 from mapchete_hub.exceptions import JobFailed
-from mapchete_hub import log
+from mapchete_hub import __version__
 
 # https://github.com/tqdm/tqdm/issues/481
 tqdm.monitor_interval = 0
@@ -20,7 +19,7 @@ tqdm.monitor_interval = 0
 
 def _set_debug_log_level(ctx, param, debug):
     if debug:
-        log.set_log_level(logging.DEBUG)
+        set_log_level(logging.DEBUG)
     return debug
 
 
@@ -37,7 +36,7 @@ opt_geojson = click.option(
 )
 
 
-@click.version_option(version=mapchete_hub.__version__, message="%(version)s")
+@click.version_option(version=__version__, message="%(version)s")
 @click.group(help="Process control on Mapchete Hub.")
 @click.option(
     "--host", "-h",
@@ -294,7 +293,6 @@ def jobs(ctx, geojson=False, output_path=None):
                 )
             )
             for i in jobs:
-                print(i)
                 _print_job_details(i)
                 click.echo("")
     except Exception as e:

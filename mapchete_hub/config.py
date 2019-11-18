@@ -2,7 +2,11 @@
 
 
 import datetime
+from mapchete.config import get_zoom_levels
+from mapchete.tile import BufferedTilePyramid
 import os
+from shapely.geometry import box
+from shapely import wkt
 
 
 def cleanup_datetime(d):
@@ -12,6 +16,49 @@ def cleanup_datetime(d):
         else str(v) if isinstance(v, datetime.date) else v
         for k, v in d.items()
     }
+
+
+def process_area_from_config(config):
+    """Calculate process area from process config."""
+    # bounds
+    bounds = config.get("bounds")
+    if bounds:
+        return box(*bounds)
+
+    # wkt_geometry
+    wkt_geometry = config.get("wkt_geometry")
+    if wkt_geometry:
+        return wkt.loads(wkt_geometry)
+
+    def _tp():
+        return BufferedTilePyramid(
+            config["mapchete_config"]["pyramid"]["grid"],
+            metatiling=config["mapchete_config"]["pyramid"].get("metatiling", 1),
+            pixelbuffer=config["mapchete_config"]["pyramid"].get("pixelbuffer", 0)
+        )
+
+    # point
+    point = config.get("point")
+    if point:
+        x, y = point
+        zoom_levels = get_zoom_levels(
+            process_zoom_levels=config["mapchete_config"]["zoom_levels"],
+            init_zoom_levels=config.get("zoom")
+        )
+        return _tp().tile_from_xy(x, y, max(zoom_levels)).bbox
+
+    # tile
+    tile = config.get("tile")
+    if tile:
+        return _tp().tile(*tile).bbox
+
+    # mapchete_config
+    process_bounds = config.get("mapchete_config", {}).get("process_bounds")
+    if process_bounds:
+        return box(*process_bounds)
+
+    # raise error if no process areas is given
+    raise AttributeError("no bounds, wkt_geometry, point, tile or process bounds given.")
 
 
 def _get_host_options():

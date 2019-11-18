@@ -8,6 +8,7 @@ Changelog
 * print more details using ``mhub jobs`` and ``mhub status <job_id>``
 * rename ``mapchete_hub.worker`` module to ``mapchete_hub.commands``
 * remember timestamp on ``task-received`` and ``task-started`` events in ``started`` property
+* add Celery-Slack integration (#26)
 
 ---
 0.4
