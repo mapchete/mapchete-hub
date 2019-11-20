@@ -7,11 +7,12 @@ import json
 from json.decoder import JSONDecodeError
 import logging
 import os
-from shapely.geometry import Polygon, mapping
+from shapely.geometry import box, Polygon, mapping
 from shapely import wkt
 import spatialite
 import sys
 
+from mapchete_hub.api import job_states
 from mapchete_hub.config import main_options, flask_options
 
 logger = logging.getLogger(__name__)
@@ -124,27 +125,79 @@ class StatusHandler():
         )
         logger.debug(self.fields)
 
-    def all(self, output_path=None):
+    def all(
+        self,
+        output_path=None,
+        state=None,
+        command=None,
+        queue=None,
+        bounds=None,
+        from_date=None,
+        to_date=None
+    ):
         """Return all jobs."""
         c = self.connection.cursor()
-        all_entries = [
-            self._decode_row(row)
-            for row in c.execute('SELECT * FROM %s;' % self.tablename)
-        ]
 
-        def _has_output_path(x, output_path):
-            try:
-                mp_config = x["properties"]["config"]["mapchete_config"]
-                return mp_config["output"]["path"] == output_path
-            except KeyError:
+        # build SQL query
+        query = "SELECT * FROM %s" % self.tablename
+
+        # add filter by job states
+        if state:
+            # for todo, doing and done state groups
+            if state in job_states:
+                query += " WHERE state IN (%s)" % (
+                    ", ".join(["'%s'" % i.upper() for i in job_states[state]])
+                )
+            # for all Celery task states
+            else:
+                query += " WHERE state='%s'" % state.upper()
+
+        # add spatial filter
+        if bounds:
+            connect = " AND" if "WHERE" in query else " WHERE"
+            query += "%s ST_Intersects(GeomFromText(geom), GeomFromText('%s', 4326))" % (
+                connect, box(*bounds).wkt
+            )
+
+        # add temporal
+        if from_date:
+            connect = " AND" if "WHERE" in query else " WHERE"
+            query += "%s timestamp>=%s" % (connect, from_date.timestamp())
+        if to_date:
+            connect = " AND" if "WHERE" in query else " WHERE"
+            query += "%s timestamp<=%s" % (connect, to_date.timestamp())
+
+        query += ";"
+        logger.debug(query)
+
+        def _mapchete_config_filter(row):
+            """Filter out by mapchete config properties."""
+            properties = row.get("properties") or dict()
+            config = properties.get("config") or dict()
+            mapchete_config = config.get("mapchete_config") or dict()
+            if (
+                output_path and
+                mapchete_config.get("output", {}).get("path") != output_path
+            ):
                 return False
+            elif (
+                command and
+                mapchete_config.get("mhub_worker", "").replace("_worker", "") != command
+            ):
+                return False
+            elif (
+                queue and
+                mapchete_config.get("mhub_queue") != queue
+            ):
+                return False
+            else:
+                return True
 
-        if output_path is None:
-            logger.debug("get status of all jobs")
-            return all_entries
-        else:
-            logger.debug("get status jobs with output_path %s", output_path)
-            return [i for i in all_entries if _has_output_path(i, output_path)]
+        # return result
+        return [
+            i for i in map(self._decode_row, c.execute(query).fetchall())
+            if _mapchete_config_filter(i)
+        ]
 
     def job(self, job_id):
         """Return job."""

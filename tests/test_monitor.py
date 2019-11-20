@@ -118,3 +118,23 @@ def test_statushandler(status_gpkg, status_profile):
             status_w.update(another_test_job, another_pending)
             all_jobs = status_r.all()
             assert len(all_jobs) == 2
+
+            # filter by state
+            assert len(status_r.all(state="SUCCESS")) == 0
+            assert len(status_r.all(state="FAILURE")) == 1
+            assert len(status_r.all(state="done")) == 1
+            assert len(status_r.all(state="PENDING")) == 1
+            assert len(status_r.all(state="todo")) == 1
+
+            # filter by output path
+            assert len(status_r.all(output_path="test")) == 2
+
+            # filter by command
+            assert len(status_r.all(command="execute")) == 0
+
+            # filter by queue
+            assert len(status_r.all(queue="execute_queue")) == 0
+
+            # filter by bounds
+            assert len(status_r.all(bounds=[1, 2, 3, 4])) == 2
+            assert len(status_r.all(bounds=[11, 12, 13, 14])) == 0

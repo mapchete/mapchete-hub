@@ -16,7 +16,9 @@ import uuid
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
+from mapchete_hub import __version__
 from mapchete_hub.celery_app import celery_app
+from mapchete_hub.commands import get_command_func, get_command_func_path
 from mapchete_hub.config import (
     cleanup_datetime,
     flask_options,
@@ -24,7 +26,6 @@ from mapchete_hub.config import (
     process_area_from_config
 )
 from mapchete_hub.monitor import StatusHandler, status_monitor
-from mapchete_hub.commands import get_command_func, get_command_func_path
 
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,7 @@ class Capabilities(Resource):
         """Initialize resource."""
         processes = list(pkg_resources.iter_entry_points("mapchete.processes"))
         self._capabilities = {}
+        self._capabilities["version"] = __version__
         self._capabilities["processes"] = {}
         for v in processes:
             process_module = v.load()
@@ -134,13 +136,20 @@ class QueuesOverview(Resource):
 class JobsOverview(Resource):
     """Resource for /jobs."""
 
-    args = {"output_path": fields.Str(required=False)}
+    args = {
+        "output_path": fields.Str(required=False),
+        "state": fields.Str(required=False),
+        "command": fields.Str(required=False),
+        "queue": fields.Str(required=False),
+        "bounds": fields.DelimitedList(fields.Float(), required=False),
+        "from_date": fields.DateTime(required=False),
+        "to_date": fields.DateTime(required=False),
+    }
 
     @use_kwargs(args)
-    def get(self, output_path=None):
+    def get(self, **kwargs):
         """Return jobs."""
-        logger.debug("output_path: %s", output_path)
-        return jsonify(states.all(output_path=output_path))
+        return jsonify(states.all(**kwargs))
 
 
 class Jobs(Resource):

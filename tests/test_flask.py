@@ -1,6 +1,14 @@
 from mapchete_hub.config import cleanup_datetime
 
 
+# TODO: this test hangs because of celery_app.control.inspect().active_queues()
+# def test_get_capabilities(client):
+#     url = "/capabilities.json"
+#     response = client.get(url)
+#     assert response.status_code == 200
+#     assert len(response.json)
+
+
 def test_get_all_jobs(client):
     url = "/jobs/"
     response = client.get(url)
