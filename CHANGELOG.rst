@@ -5,6 +5,7 @@ Changelog
 ---
 0.5
 ---
+* enable filters to better query jobs (#53)
 * print more details using ``mhub jobs`` and ``mhub status <job_id>``
 * rename ``mapchete_hub.worker`` module to ``mapchete_hub.commands``
 * remember timestamp on ``task-received`` and ``task-started`` events in ``started`` property

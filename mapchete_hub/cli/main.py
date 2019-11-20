@@ -1,17 +1,18 @@
 import click
 import click_spinner
-import datetime
+from datetime import datetime, timedelta
 import logging
 from mapchete import Timer
 from mapchete.cli import utils
 from tqdm import tqdm
 import warnings
 
+from mapchete_hub import __version__
 from mapchete_hub.api import API, job_states
 from mapchete_hub.config import host_options, process_area_from_config
-from mapchete_hub.log import set_log_level
 from mapchete_hub.exceptions import JobFailed
-from mapchete_hub import __version__
+from mapchete_hub.log import set_log_level
+from mapchete_hub._utils import str_to_date, date_to_str
 
 # https://github.com/tqdm/tqdm/issues/481
 tqdm.monitor_interval = 0
@@ -23,6 +24,37 @@ def _set_debug_log_level(ctx, param, debug):
     return debug
 
 
+def _get_timestamp(ctx, param, timestamp):
+    """Convert timestamp to datetime object."""
+    if timestamp:
+        try:
+            # for a convertable timestamp like '2019-11-01T15:00:00'
+            timestamp = str_to_date(timestamp)
+        except ValueError:
+            # for a time range like '1d', '12h', '30m'
+            try:
+                time_types = {
+                    "d": "days",
+                    "h": "hours",
+                    "m": "minutes",
+                    "s": "seconds",
+                }
+                for k, v in time_types.items():
+                    if timestamp.endswith(k):
+                        timestamp = datetime.now() - timedelta(
+                            **{v: int(timestamp[:-1])}
+                        )
+                        break
+                else:
+                    raise ValueError()
+            except ValueError:
+                raise click.BadParameter(
+                    """either provide a timestamp like '2019-11-01T15:00:00' or a time """
+                    """range in the format '1d', '12h', '30m', etc."""
+                )
+        return date_to_str(timestamp)
+
+
 opt_debug = click.option(
     "--debug", "-d",
     is_flag=True,
@@ -30,9 +62,9 @@ opt_debug = click.option(
     help="Print debug log output."
 )
 opt_geojson = click.option(
-    "--geojson",
+    "--geojson", "-g",
     is_flag=True,
-    help="Print as GeoJSON"
+    help="Print as GeoJSON."
 )
 
 
@@ -271,35 +303,84 @@ def progress(ctx, job_id):
 @mhub.command(short_help="Show current jobs.")
 @opt_geojson
 @click.option(
-    "--output_path",
+    "--output_path", "-p",
     type=click.STRING,
-    help="only print jobs with specific output_path"
+    help="Filter jobs by output_path."
+)
+@click.option(
+    "--state", "-s",
+    type=click.Choice(
+        [
+            "todo", "doing", "done", "pending", "progress", "received", "started",
+            "success", "failure"
+        ]
+    ),
+    help="Filter jobs by job state."
+)
+@click.option(
+    "--command", "-c",
+    type=click.Choice(["execute", "index"]),
+    help="Filter jobs by command."
+)
+@click.option(
+    "--queue", "-q",
+    type=click.STRING,
+    help="Filter jobs by queue."
+)
+@utils.opt_bounds
+@click.option(
+    "--since",
+    type=click.STRING,
+    callback=_get_timestamp,
+    help="Filter jobs by timestamp since given time."
+)
+@click.option(
+    "--until",
+    type=click.STRING,
+    callback=_get_timestamp,
+    help="Filter jobs by timestamp until given time.",
+)
+@click.option(
+    "--verbose", "-v",
+    is_flag=True,
+    help="Print job details. (Does not work with --geojson.)"
 )
 @click.pass_context
-def jobs(ctx, geojson=False, output_path=None):
+def jobs(
+    ctx,
+    geojson=False,
+    since=None,
+    until=None,
+    verbose=False,
+    **kwargs
+):
     """Show current jobs."""
+    kwargs.update(from_date=since, to_date=until)
     try:
         if geojson:
             click.echo(
-                API(host=ctx.obj["host"]).jobs(geojson=True, output_path=output_path)
+                API(host=ctx.obj["host"]).jobs(geojson=True, **kwargs)
             )
         else:
             # sort by state and then by timestamp
-            jobs = sorted(
-                API(host=ctx.obj["host"]).jobs(output_path=output_path).values(),
-                key=lambda x: (
-                    x.json["properties"]["state"],
-                    x.json["properties"]["timestamp"]
+            jobs = list(
+                sorted(
+                    API(host=ctx.obj["host"]).jobs(**kwargs).values(),
+                    key=lambda x: (
+                        x.json["properties"]["state"],
+                        x.json["properties"]["timestamp"]
+                    )
                 )
             )
+            if verbose:
+                click.echo("%s jobs found. \n" % len(jobs))
             for i in jobs:
-                _print_job_details(i)
-                click.echo("")
+                _print_job_details(i, verbose=verbose)
     except Exception as e:
         click.echo("Error: %s" % e)
 
 
-def _print_job_details(job):
+def _print_job_details(job, verbose=False):
     for group, states in job_states.items():
         for state in states:
             if job.state == state:
@@ -318,47 +399,53 @@ def _print_job_details(job):
     # job ID and job state
     click.echo(click.style("%s: %s" % (job.job_id, job.state), fg=color, bold=True))
 
-    # command
-    click.echo(
-        "command: %s" % mapchete_config.get("mhub_worker", "None").replace("_worker", "")
-    )
-
-    # queue
-    click.echo("queue: %s" % mapchete_config.get("mhub_queue"))
-
-    # output path
-    click.echo("output path: %s" % mapchete_config.get("output", {}).get("path"))
-
-    # bounds
-    try:
-        bounds = ", ".join(
-            map(str, process_area_from_config(properties["config"]).bounds)
+    if verbose:
+        # command
+        click.echo(
+            "command: %s" % (
+                mapchete_config.get("mhub_worker", "None").replace("_worker", "")
+            )
         )
-    except:
-        bounds = None
-    click.echo("process bounds: %s" % bounds)
 
-    # start time
-    click.echo(
-        "started: %s" % (
-            datetime.datetime.utcfromtimestamp(
-                properties.get("started")
-            ).strftime('%Y-%m-%d %H:%M:%S') if properties.get("started") else None
+        # queue
+        click.echo("queue: %s" % mapchete_config.get("mhub_queue"))
+
+        # output path
+        click.echo("output path: %s" % mapchete_config.get("output", {}).get("path"))
+
+        # bounds
+        try:
+            bounds = ", ".join(
+                map(str, process_area_from_config(properties["config"]).bounds)
+            )
+        except:
+            bounds = None
+        click.echo("process bounds: %s" % bounds)
+
+        # start time
+        click.echo(
+            "started: %s" % date_to_str(
+                datetime.utcfromtimestamp(properties.get("started")),
+                microseconds=False
+            ) if properties.get("started") else None
         )
-    )
 
-    # runtime
-    runtime = properties.get("runtime")
-    click.echo(
-        "runtime: %s" % (Timer(runtime) if runtime else None)
-    )
+        # runtime
+        runtime = properties.get("runtime")
+        click.echo(
+            "runtime: %s" % (Timer(runtime) if runtime else None)
+        )
 
-    # last received update
-    click.echo(
-        "last received update: %s" % datetime.datetime.utcfromtimestamp(
-            properties.get("timestamp")
-        ).strftime('%Y-%m-%d %H:%M:%S')
-    )
+        # last received update
+        click.echo(
+            "last received update: %s" % date_to_str(
+                datetime.utcfromtimestamp(properties.get("timestamp")),
+                microseconds=False
+            )
+        )
+
+        # append newline
+        click.echo("")
 
 
 def _show_progress(ctx, job_id):

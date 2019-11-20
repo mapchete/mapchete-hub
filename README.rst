@@ -107,14 +107,24 @@ This command lists all submitted jobs and their current job state: PENDING, PROG
 
 .. code-block:: none
 
-    Usage: mhub jobs [OPTIONS]
+Usage: mhub jobs [OPTIONS]
 
-      Show current jobs.
+  Show current jobs.
 
-    Options:
-      --geojson           Print as GeoJSON
-      --output_path TEXT  only print jobs with specific output_path
-      --help              Show this message and exit.
+Options:
+  -g, --geojson                   Print as GeoJSON.
+  -p, --output_path TEXT          Filter jobs by output_path.
+  -s, --state [todo|doing|done|pending|progress|received|started|success|failure]
+                                  Filter jobs by job state.
+  -c, --command [execute|index]   Filter jobs by command.
+  -q, --queue TEXT                Filter jobs by queue.
+  -b, --bounds FLOAT...           Left, bottom, right, top bounds in tile
+                                  pyramid CRS.
+  --since TEXT                    Filter jobs by timestamp since given time.
+  --until TEXT                    Filter jobs by timestamp until given time.
+  -v, --verbose                   Print job details. (Does not work with
+                                  --geojson.)
+  --help                          Show this message and exit.
 
 More details on a job status can be printed using ``mhub status``
 

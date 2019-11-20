@@ -144,9 +144,16 @@ class API():
         """Return job state."""
         return self.job(job_id).state
 
-    def jobs(self, geojson=False, output_path=None):
+    def jobs(self, geojson=False, bounds=None, **kwargs):
         """Return jobs metadata."""
-        res = self.get("jobs/", timeout=timeout, params=dict(output_path=output_path))
+        res = self.get(
+            "jobs/",
+            timeout=timeout,
+            params=dict(
+                kwargs,
+                bounds=",".join(map(str, bounds)) if bounds else None
+            )
+        )
         return (
             format_as_geojson(res.json)
             if geojson
