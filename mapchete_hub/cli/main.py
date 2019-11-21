@@ -284,7 +284,7 @@ def status(ctx, job_id, geojson=False, traceback=False):
         elif traceback:
             click.echo(response.json["properties"]["traceback"])
         else:
-            _print_job_details(response)
+            _print_job_details(response, verbose=True)
     except Exception as e:
         click.echo("Error: %s" % e)
 
@@ -332,7 +332,8 @@ def progress(ctx, job_id):
     "--since",
     type=click.STRING,
     callback=_get_timestamp,
-    help="Filter jobs by timestamp since given time."
+    help="Filter jobs by timestamp since given time.",
+    default="7d"
 )
 @click.option(
     "--until",
