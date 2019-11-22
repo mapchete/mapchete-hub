@@ -1,4 +1,3 @@
-from celery.canvas import Signature
 import geojson
 from mapchete.config import raw_conf_process_pyramid, get_zoom_levels
 import os
@@ -7,7 +6,7 @@ from shapely.geometry import box, shape
 from tempfile import NamedTemporaryFile
 
 from mapchete_hub import log
-from mapchete_hub.application import get_next_jobs, process_area_from_config
+from mapchete_hub.application import process_area_from_config
 from mapchete_hub.api import format_as_geojson
 from mapchete_hub.commands._execute import mapchete_execute
 from mapchete_hub.commands._index import mapchete_index
@@ -48,7 +47,7 @@ def test_mapchete_index(mp_tmpdir, example_mapchete):
 def test_mapchete_execute(mp_tmpdir, example_mapchete):
     assert list(mapchete_execute(
         mapchete_config=example_mapchete.dict,
-        process_area=box(3, 1, 4, 2).wkt,
+        process_area=box(3, 1, 4, 2),
         zoom=11,
     ))
 
@@ -110,13 +109,3 @@ def test_format_as_geojson(response_json):
     for f in gj["features"]:
         assert "state" in f["properties"]
         assert shape(f["geometry"]).is_valid
-
-
-def test_get_next_jobs(example_mapchete):
-    for i in get_next_jobs(
-        config=dict(mapchete_config=example_mapchete.dict),
-        process_area="SOME POLYGON",
-        zoom=[0, 5],
-        mode="hanse"
-    ):
-        assert isinstance(i, Signature)

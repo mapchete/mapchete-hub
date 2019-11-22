@@ -3,7 +3,6 @@ from billiard import cpu_count
 import logging
 import mapchete
 from mapchete.config import get_zoom_levels
-from shapely import wkt
 
 from mapchete_hub.config import main_options
 
@@ -32,7 +31,7 @@ def mapchete_execute(
     zoom : int or list of ints
         Zoom levels to be processed.
     process_area : str
-        Area to be processed as WKT.
+        Area to be processed as shapely.Geometry.
     multi : int
         Number of CPU cores to be used. Default is number of available cores.
     max_chunksize : int
@@ -49,7 +48,7 @@ def mapchete_execute(
             dict(mapchete_config, config_dir=main_options['config_dir']),
             mode=mode or "continue",
             zoom=zoom,
-            bounds=wkt.loads(process_area).bounds
+            bounds=process_area.bounds
         ) as mp:
             zoom_levels = get_zoom_levels(
                 process_zoom_levels=mp.config.zoom_levels,

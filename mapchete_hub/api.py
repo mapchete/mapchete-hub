@@ -5,15 +5,17 @@ This module wraps around the requests module for real-life usage and Flask's tes
 in order to be able to test mhub CLI.
 """
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 import geojson
 import json
 import logging
+from mapchete._validate import validate_zooms
+import os
 import requests
 from requests.exceptions import ConnectionError
 import time
 import uuid
-import yaml
+import oyaml as yaml
 
 from mapchete_hub.config import cleanup_datetime, timeout
 from mapchete_hub.exceptions import JobFailed, JobNotFound, JobRejected
@@ -89,39 +91,123 @@ class API():
 
     def start_job(
         self,
-        mapchete_file,
+        mapchete_config=None,
+        command=None,
         job_id=None,
-        mhub_worker=None,
-        mhub_queue=None,
+        queue=None,
         **kwargs
     ):
-        """Start a job and return job state."""
+        """
+        Start a job and return job state.
+
+        Sends HTTP POST to /jobs/<job_id> and appends mapchete configuration as well
+        as processing parameters as JSON.
+
+        Parameters
+        ----------
+        mapchete_config : path or dict
+            Either path to .mapchete file or dictionary with mapchete parameters.
+        command : str
+            Either "execute" or "index".
+        job_id : str (optional)
+            Unique job ID.
+        bounds : list
+            Left, bottom, right, top coordinate of process area.
+        point : list
+            X and y coordinate of point over process tile.
+        tile : list
+            Zoom, row and column of process tile.
+        wkt_geometry : str
+            WKT representaion of process area.
+        zoom : list or int
+            Minimum and maximum zoom level or single zoom level.
+
+        Returns
+        -------
+        mapchete_hub.api.Job
+        """
         job_id = job_id or uuid.uuid4().hex
-        data = cleanup_datetime(
-            dict(
-                mapchete_config=yaml.safe_load(open(mapchete_file, "r").read()),
-                **kwargs
-            )
-        )
-        mhub_worker = mhub_worker or data["mapchete_config"].get("mhub_worker")
-        if not mhub_worker:
-            raise ValueError("specify mhub_worker")
-        mhub_queue = mhub_queue or data["mapchete_config"].get("mhub_queue")
-        if not mhub_queue:
-            raise ValueError("specify mhub_queue")
-        data["mapchete_config"].update(mhub_worker=mhub_worker, mhub_queue=mhub_queue)
+        data = dict(mapchete_config=load_mapchete_config(mapchete_config), **kwargs)
+
+        command = command or data.get("command")
+        if command not in ["execute", "index"]:
+            raise ValueError("invalid command given: %s" % command)
 
         logger.debug("send job %s to API", job_id)
-        res = self.post("jobs/%s" % job_id, json=json.dumps(data), timeout=timeout)
+        res = self.post(
+            "jobs/%s" % job_id,
+            json=json.dumps(
+                dict(
+                    data,
+                    command=command,
+                    queue=queue or data.get("queue", "%s_queue" % command)
+                )
+            ),
+            timeout=timeout
+        )
+
         if res.status_code != 202:
             raise JobRejected(res.json)
-        logger.debug("job %s sent", job_id)
-        return Job(
-            status_code=res.status_code,
-            state=res.json["properties"]["state"],
-            job_id=job_id,
-            json=res.json
+        else:
+            logger.debug("job %s sent", job_id)
+            return Job(
+                status_code=res.status_code,
+                state=res.json["properties"]["state"],
+                job_id=job_id,
+                json=res.json
+            )
+
+    def start_batch(
+        self,
+        batch=None,
+        job_id=None,
+        **kwargs
+    ):
+        """
+        Start a batch of jobs and return job state of first job.
+
+        Sends HTTP POST to /jobs/<job_id> and appends mapchete configuration as well
+        as processing parameters as JSON.
+
+        Parameters
+        ----------
+        batch : path or dict
+            Either path to .mhub file or dictionary with batch parameters.
+        job_id : str (optional)
+            Unique job ID of first job.
+        bounds : list
+            Left, bottom, right, top coordinate of process area.
+        point : list
+            X and y coordinate of point over process tile.
+        tile : list
+            Zoom, row and column of process tile.
+        wkt_geometry : str
+            WKT representaion of process area.
+
+        Returns
+        -------
+        mapchete_hub.api.Job
+        """
+        job_id = job_id or uuid.uuid4().hex
+        data = list(load_batch_config(batch, **kwargs)["jobs"].values())
+
+        logger.debug("send batch job %s to API", job_id)
+        res = self.post(
+            "jobs/%s" % job_id,
+            json=json.dumps(data),
+            timeout=timeout
         )
+
+        if res.status_code != 202:
+            raise JobRejected(res.json)
+        else:
+            logger.debug("job %s sent", job_id)
+            return Job(
+                status_code=res.status_code,
+                state=res.json["properties"]["state"],
+                job_id=job_id,
+                json=res.json
+            )
 
     def job(self, job_id, geojson=False):
         """Return job metadata."""
@@ -257,3 +343,81 @@ def format_as_geojson(inp, indent=4):
         pass
     out_gj += '%s]\n}' % space
     return out_gj
+
+
+def load_mapchete_config(mapchete_config):
+    """Return OrderedDict either from dict or file."""
+    if isinstance(mapchete_config, OrderedDict):
+        return cleanup_datetime(mapchete_config)
+    elif isinstance(mapchete_config, str):
+        return cleanup_datetime(yaml.safe_load(open(mapchete_config, "r").read()))
+    else:
+        raise TypeError(
+            "mapchete config must either be a path to an existing file or an OrderedDict"
+        )
+
+
+def load_batch_config(batch_config, **kwargs):
+    """Return OrderedDict from file."""
+    loaded_mapchete_configs = {}
+
+    def _get_mapchete_config(mapchete_config):
+        if mapchete_config not in loaded_mapchete_configs:
+            loaded_mapchete_configs[mapchete_config] = load_mapchete_config(
+                os.path.join(
+                    os.path.dirname(batch_config),
+                    mapchete_config
+                )
+            )
+        return loaded_mapchete_configs[mapchete_config]
+
+    def _parse_and_verify(batch_config):
+        if isinstance(batch_config, str) and batch_config.endswith(".mhub"):
+            raw = yaml.safe_load(open(batch_config, "r").read())
+            if raw is None or not raw.get("jobs", {}):
+                raise ValueError("no jobs given")
+            parent_zoom = None
+            for job_name, params in raw.get("jobs", {}).items():
+                if "command" not in params:
+                    raise ValueError("no command provided for job %s" % job_name)
+                if "mapchete" in params:
+                    mapchete = _get_mapchete_config(params["mapchete"])
+                elif "job" in params:
+                    if params["job"] not in raw["jobs"]:
+                        raise ValueError(
+                            "job %s points to invalid other job %s" % (
+                                job_name, params["job"]
+                            )
+                        )
+                    else:
+                        mapchete = _get_mapchete_config(
+                            raw["jobs"][params["job"]]["mapchete"]
+                        )
+                else:
+                    raise ValueError(
+                        "job %s must either provide a mapchete file or point other job"
+                    )
+                if "zoom" in params:
+                    zoom = validate_zooms(params["zoom"], expand=False)
+                else:
+                    zoom = parent_zoom
+                yield (
+                    job_name,
+                    dict(
+                        command=params["command"],
+                        job_name=job_name,
+                        mapchete_config=mapchete,
+                        mode=params.get("mode", "continue"),
+                        queue=params.get("queue", None),
+                        zoom=zoom,
+                        bounds=kwargs.get("bounds"),
+                        point=kwargs.get("point"),
+                        tile=kwargs.get("tile"),
+                        wkt_geometry=kwargs.get("wkt_geometry"),
+                        announce_on_slack=params.get("announce_on_slack", False)
+                    )
+                )
+        else:
+            raise TypeError("batch_config must be a .mhub file")
+
+    return OrderedDict(jobs=OrderedDict(list(_parse_and_verify(batch_config))))

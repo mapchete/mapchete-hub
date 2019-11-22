@@ -3,7 +3,6 @@ import mapchete
 from mapchete.config import _map_to_new_config, get_zoom_levels
 from mapchete.index import zoom_index_gen
 from mapchete.tile import BufferedTilePyramid
-from shapely import wkt
 
 from mapchete_hub.config import main_options
 
@@ -35,7 +34,7 @@ def mapchete_index(
     mapchete_config : dict
         A valid Mapchete configuration.
     process_area : str
-        Area to be processed as WKT.
+        Area to be processed as shapely.Geometry.
     bounds : tuple
         Bounds to be processed.
     tile : tuple or Tile
@@ -107,7 +106,7 @@ def mapchete_index(
             dict(mapchete_config, config_dir=main_options['config_dir']),
             mode="readonly",
             zoom=zoom,
-            bounds=wkt.loads(process_area).bounds if process_area else bounds
+            bounds=process_area.bounds if process_area else bounds
         ) as mp:
             num_processed = 0
             logger.debug("process bounds: %s", mp.config.init_bounds)

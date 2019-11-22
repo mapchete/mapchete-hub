@@ -6,21 +6,6 @@ from mapchete_hub.cli import main
 from mapchete_hub.config import host_options
 
 
-def test_start(example_mapchete):
-    """mhub start"""
-    result = CliRunner().invoke(
-        main.mhub,
-        [
-            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
-            "start",
-            "test_job",
-            example_mapchete.path,
-        ]
-    )
-    assert result.exit_code == 0
-    assert "no mhub server found" in result.output
-
-
 def test_status():
     """mhub status"""
     result = CliRunner().invoke(
