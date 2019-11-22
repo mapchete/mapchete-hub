@@ -36,7 +36,8 @@ def test_start_job(client, example_mapchete):
             point=None,
             wkt_geometry=None,
             tile=(11, 244, 517),
-            mode="continue"
+            mode="continue",
+            command="execute"
         )
     )
     response = client.post(url, json=data)

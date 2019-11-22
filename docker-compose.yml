@@ -70,7 +70,7 @@ services:
   execute_worker:
     build: .
     image: registry.gitlab.eox.at/maps/mapchete_hub/mhub:testing
-    command: ./manage.py worker -n execute_worker -q execute_queue --loglevel=DEBUG
+    command: ./manage.py worker -n execute_worker -q overview_queue,execute_queue --loglevel=DEBUG
     networks:
       - backend
     depends_on:

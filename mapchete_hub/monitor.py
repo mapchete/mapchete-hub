@@ -26,26 +26,26 @@ def status_monitor(celery_app):
 
     with StatusHandler(
         os.path.join(main_options.get("config_dir"), main_options.get("status_gpkg")),
-        mode='w',
+        mode="w",
         profile=main_options["status_gpkg_profile"]
     ) as status_handler:
 
         def announce_task_state(event):
             logger.debug("got event: %s", event)
             state.event(event)
-            task = state.tasks.get(event['uuid'])
+            task = state.tasks.get(event["uuid"])
             try:
-                logger.debug('task status: %s: %s', task.uuid, event["state"])
+                logger.debug("task status: %s: %s", task.uuid, event["state"])
             except:
-                logger.error('malformed task status: %s', event)
+                logger.error("malformed task status: %s", event)
             status_handler.update(task.uuid, event)
 
         def announce_failed_task_state(event):
             # task name is sent only with -received event, and state
             # will keep track of this for us.
             state.event(event)
-            task = state.tasks.get(event['uuid'])
-            logger.error('task failed: %s: %s', task.uuid, event)
+            task = state.tasks.get(event["uuid"])
+            logger.error("task failed: %s: %s", task.uuid, event)
             status_handler.update(task.uuid, event)
 
         while True:
@@ -56,15 +56,15 @@ def status_monitor(celery_app):
                     recv = celery_app.events.Receiver(
                         connection,
                         handlers={
-                            'task-sent': announce_task_state,
-                            'task-received': announce_task_state,
-                            'task-started': announce_task_state,
-                            'task-succeeded': announce_task_state,
-                            'task-failed': announce_failed_task_state,
-                            'task-rejected': announce_task_state,
-                            'task-revoked': announce_task_state,
-                            'task-retried': announce_task_state,
-                            'task-progress': announce_task_state,
+                            "task-sent": announce_task_state,
+                            "task-received": announce_task_state,
+                            "task-started": announce_task_state,
+                            "task-succeeded": announce_task_state,
+                            "task-failed": announce_failed_task_state,
+                            "task-rejected": announce_task_state,
+                            "task-revoked": announce_task_state,
+                            "task-retried": announce_task_state,
+                            "task-progress": announce_task_state,
                         }
                     )
                     logger.debug("ready to capture events")
@@ -78,7 +78,7 @@ def status_monitor(celery_app):
 class StatusHandler():
     """Class to communicate with backend database."""
 
-    def __init__(self, filename, mode='r', profile=None):
+    def __init__(self, filename, mode="r", profile=None):
         """Initialize."""
         logger.debug("mode: %s", mode)
         self.mode = mode
@@ -86,14 +86,14 @@ class StatusHandler():
             logger.debug("GPKG file exists: %s", filename)
         else:
             logger.debug("create new status GPKG %s, %s", filename, profile)
-            src = fiona.open(filename, 'w', **profile)
+            src = fiona.open(filename, "w", **profile)
             src.close()
 
-        if self.mode == 'w':
+        if self.mode == "w":
             logger.debug("open status handler in 'w' mode: %s", filename)
             self.connection = spatialite.connect(filename)
 
-        elif self.mode == 'r':
+        elif self.mode == "r":
             if os.path.isfile(filename):
                 logger.debug("open status handler in 'r' mode: %s", filename)
                 self.connection = spatialite.connect(filename, check_same_thread=False)
@@ -159,13 +159,23 @@ class StatusHandler():
                 connect, box(*bounds).wkt
             )
 
-        # add temporal
+        # add temporal filter
         if from_date:
             connect = " AND" if "WHERE" in query else " WHERE"
             query += "%s timestamp>=%s" % (connect, from_date.timestamp())
         if to_date:
             connect = " AND" if "WHERE" in query else " WHERE"
             query += "%s timestamp<=%s" % (connect, to_date.timestamp())
+
+        # add command filter
+        if command:
+            connect = " AND" if "WHERE" in query else " WHERE"
+            query += " WHERE command='%s'" % command.lower()
+
+        # add queue filter
+        if queue:
+            connect = " AND" if "WHERE" in query else " WHERE"
+            query += " WHERE queue='%s'" % queue.lower()
 
         query += ";"
         logger.debug(query)
@@ -178,16 +188,6 @@ class StatusHandler():
             if (
                 output_path and
                 mapchete_config.get("output", {}).get("path") != output_path
-            ):
-                return False
-            elif (
-                command and
-                mapchete_config.get("mhub_worker", "").replace("_worker", "") != command
-            ):
-                return False
-            elif (
-                queue and
-                mapchete_config.get("mhub_queue") != queue
             ):
                 return False
             else:
@@ -204,7 +204,7 @@ class StatusHandler():
         logger.debug("get job %s status", job_id)
         c = self.connection.cursor()
         row = c.execute(
-            'SELECT * FROM %s WHERE job_id=?;' % self.tablename, [job_id]
+            "SELECT * FROM %s WHERE job_id=?;" % self.tablename, [job_id]
         ).fetchone()
         if row is None:
             logger.debug("no job found named %s", job_id)
@@ -214,8 +214,8 @@ class StatusHandler():
 
     def update(self, job_id, metadata={}):
         """Update job."""
-        if self.mode == 'r':
-            raise AttributeError('update not allowed in read mode')
+        if self.mode == "r":
+            raise AttributeError("update not allowed in read mode")
 
         # get cursor
         c = self.connection.cursor()
@@ -224,28 +224,41 @@ class StatusHandler():
         if metadata.get("type") in ["task-started", "task-received"]:
             metadata.update(started=metadata.get("timestamp"))
 
-        # update incoming metadata
-        entry = dict(self._filtered_by_schema(metadata), job_id=metadata['uuid'])
+        logger.debug("got metadata: %s", metadata)
 
-        if 'kwargs' in metadata:
-            kwargs = json.loads(metadata['kwargs'].replace("'", '"'))
+        # update incoming metadata
+        entry = dict(self._filtered_by_schema(metadata))
+
+        logger.debug("filtered by schema: %s", entry)
+
+        if "kwargs" in metadata:
+            kwargs = json.loads(metadata["kwargs"].replace("'", '"'))
             entry.update(
-                geom=wkt.loads(kwargs['process_area']).wkt,
+                geom=wkt.loads(kwargs["process_area"]).wkt,
+                command=kwargs.get("command"),
                 config=dict(
-                    mapchete_config=kwargs['mapchete_config'],
+                    mapchete_config=kwargs["mapchete_config"],
                     mode=kwargs.get("mode"),
                     bounds=kwargs.get("bounds"),
                     tile=kwargs.get("tile"),
                     point=kwargs.get("point"),
                     wkt_geometry=kwargs.get("wkt_geometry")
-                )
+                ),
+                job_id=metadata["uuid"],
+                job_name=kwargs.get("job_name"),
+                parent_job_id=kwargs.get("parent_job_id"),
+                child_job_id=kwargs.get("child_job_id"),
             )
+
         encoded_values = self._encode_values(entry)
+
+        logger.debug("encoded keys: %s", entry.keys())
+        logger.debug("encoded entry: %s", encoded_values)
 
         # check if entry exists and insert new or update existing
         # TODO: there must be a better way!
         if c.execute(
-            'SELECT * FROM %s WHERE job_id=?;' % self.tablename, [job_id]
+            "SELECT * FROM %s WHERE job_id=?;" % self.tablename, [job_id]
         ).fetchone() is None:
             # insert new entry
             insert = "INSERT INTO %s (%s) VALUES (%s);" % (
@@ -291,7 +304,7 @@ class StatusHandler():
 
         def _decode():
             for k, v in zip(self.fields, row):
-                if k == 'geom':
+                if k == "geom":
                     if v is None:
                         yield (k, v)
                     else:
@@ -306,8 +319,8 @@ class StatusHandler():
 
         decoded = dict(_decode())
         return dict(
-            geometry=decoded['geom'],
-            properties={k: v for k, v in decoded.items() if k != 'geom'}
+            geometry=decoded["geom"],
+            properties={k: v for k, v in decoded.items() if k != "geom"}
         )
 
     def __enter__(self):

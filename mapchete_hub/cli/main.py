@@ -4,12 +4,12 @@ from datetime import datetime, timedelta
 import logging
 from mapchete import Timer
 from mapchete.cli import utils
+from shapely.geometry import shape
 from tqdm import tqdm
-import warnings
 
 from mapchete_hub import __version__
 from mapchete_hub.api import API, job_states
-from mapchete_hub.config import host_options, process_area_from_config
+from mapchete_hub.config import host_options
 from mapchete_hub.exceptions import JobFailed
 from mapchete_hub.log import set_log_level
 from mapchete_hub._utils import str_to_date, date_to_str
@@ -41,7 +41,7 @@ def _get_timestamp(ctx, param, timestamp):
                 }
                 for k, v in time_types.items():
                     if timestamp.endswith(k):
-                        timestamp = datetime.now() - timedelta(
+                        timestamp = datetime.utcnow() - timedelta(
                             **{v: int(timestamp[:-1])}
                         )
                         break
@@ -168,17 +168,15 @@ def execute(
     mapchete_files,
     overwrite=False,
     verbose=False,
-    queue=None,
     **kwargs
 ):
     """Execute a process."""
     for mapchete_file in mapchete_files:
         try:
             job = API(host=ctx.obj["host"]).start_job(
-                mapchete_file,
+                mapchete_config=mapchete_file,
                 mode="overwrite" if overwrite else "continue",
-                mhub_worker="execute_worker",
-                mhub_queue=queue,
+                command="execute",
                 **kwargs
             )
             if verbose:
@@ -216,9 +214,8 @@ def index(
     for mapchete_file in mapchete_files:
         try:
             job = API(host=ctx.obj["host"]).start_job(
-                mapchete_file,
-                mhub_worker="index_worker",
-                mhub_queue=queue,
+                mapchete_config=mapchete_file,
+                command="index",
                 **kwargs
             )
             if verbose:
@@ -230,35 +227,42 @@ def index(
             click.echo("Error: %s" % e)
 
 
-@mhub.command(short_help="Start job. (deprecated)")
-@click.argument("job_id", type=click.STRING)
-@click.argument("mapchete_file", type=click.STRING)
-@click.option("--bounds", "-b", type=float, nargs=4)
+@mhub.command(help="Execute a batch of processes.")
+@click.argument("batch_file", type=click.Path(exists=True))
+@utils.opt_bounds
+@utils.opt_point
+@utils.opt_wkt_geometry
+@utils.opt_tile
+@utils.opt_overwrite
 @click.option(
-    "--mode", "-m",
-    type=click.Choice(["continue", "overwrite"]),
-    default="overwrite"
+    "--slack",
+    is_flag=True,
+    help="Post message to slack if batch completed successfully."
 )
-@utils.opt_debug
+@utils.opt_verbose
+@opt_debug
 @click.pass_context
-def start(ctx, job_id, mapchete_file, bounds=None, mode=None, debug=False):
-    """Start job."""
-    warnings.warn(DeprecationWarning(
-        "This command will be deprecated. Please use `mhub execute` instead."
-    ))
+def batch(
+    ctx,
+    batch_file,
+    overwrite=False,
+    verbose=False,
+    **kwargs
+):
+    """Execute a batch of processes."""
     try:
-        click.echo(
-            "job %s state: %s" % (
-                job_id,
-                API(host=ctx.obj["host"]).start_job(
-                    mapchete_file,
-                    job_id=job_id,
-                    bounds=bounds,
-                    mode=mode
-                ).state
-            )
+        job = API(host=ctx.obj["host"]).start_batch(
+            batch=batch_file,
+            mode="overwrite" if overwrite else "continue",
+            **kwargs
         )
+        if verbose:
+            click.echo("job %s state: %s" % (job.job_id, job.state))
+            _show_progress(ctx, job.job_id)
+        else:
+            click.echo(job.job_id)
     except Exception as e:
+        raise
         click.echo("Error: %s" % e)
 
 
@@ -402,40 +406,34 @@ def _print_job_details(job, verbose=False):
 
     if verbose:
         # command
-        click.echo(
-            "command: %s" % (
-                mapchete_config.get("mhub_worker", "None").replace("_worker", "")
-            )
-        )
+        click.echo("command: %s" % properties.get("command"))
 
         # queue
-        click.echo("queue: %s" % mapchete_config.get("mhub_queue"))
+        click.echo("queue: %s" % properties.get("queue"))
 
         # output path
         click.echo("output path: %s" % mapchete_config.get("output", {}).get("path"))
 
         # bounds
         try:
-            bounds = ", ".join(
-                map(str, process_area_from_config(properties["config"]).bounds)
-            )
+            bounds = ", ".join(map(str, shape(job.json["geometry"]).bounds))
         except:
             bounds = None
-        click.echo("process bounds: %s" % bounds)
+        click.echo("bounds: %s" % bounds)
 
         # start time
         click.echo(
-            "started: %s" % date_to_str(
-                datetime.utcfromtimestamp(properties.get("started")),
-                microseconds=False
-            ) if properties.get("started") else None
+            "started: %s" % (
+                date_to_str(
+                    datetime.utcfromtimestamp(properties.get("started")),
+                    microseconds=False
+                ) if properties.get("started") else None
+            )
         )
 
         # runtime
         runtime = properties.get("runtime")
-        click.echo(
-            "runtime: %s" % (Timer(runtime) if runtime else None)
-        )
+        click.echo("runtime: %s" % (Timer(runtime) if runtime else None))
 
         # last received update
         click.echo(

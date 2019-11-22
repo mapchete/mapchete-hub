@@ -4,6 +4,7 @@ Main web application.
 This module configures Flask and defines all required endpoints.
 """
 
+import celery
 from flask import Flask, jsonify, request, abort, make_response
 from flask_restful import Api, Resource
 import json
@@ -11,14 +12,13 @@ import logging
 from multiprocessing import Process
 import os
 import pkg_resources
-from shapely.geometry import mapping
 import uuid
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
 from mapchete_hub import __version__
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub.commands import get_command_func, get_command_func_path
+from mapchete_hub.commands import command_func, command_func_path
 from mapchete_hub.config import (
     cleanup_datetime,
     flask_options,
@@ -34,33 +34,6 @@ states = StatusHandler(
     mode="r",
     profile=main_options["status_gpkg_profile"]
 )
-
-
-def get_next_jobs(config=None, **kwargs):
-    """Append next jobs to queue."""
-    def _gen_next_job(job_conf, **kwargs):
-        while True:
-            if "mhub_next_process" in job_conf:
-                next_conf = job_conf["mhub_next_process"]
-                worker = next_conf["mhub_worker"]
-                job_kwargs = dict(
-                    mapchete_config=next_conf,
-                    **dict(kwargs, mode=next_conf.get("mhub_mode"))
-                )
-                task_id = uuid.uuid4().hex
-                job_kwargs_repr = json.dumps(job_kwargs)
-                yield get_command_func(worker).signature(
-                    args=(None, ),
-                    kwargs=job_kwargs,
-                    task_id=task_id,
-                    kwargsrepr=job_kwargs_repr
-                )
-                job_conf = next_conf
-            else:
-                break
-
-    mapchete_config = cleanup_datetime(config["mapchete_config"])
-    return list(_gen_next_job(mapchete_config, **kwargs))
 
 
 def flask_app(launch_monitor=False):
@@ -156,7 +129,18 @@ class Jobs(Resource):
     """Resource for /jobs/<job_id>."""
 
     def get(self, job_id):
-        """Return job metadata."""
+        """
+        Return job metadata.
+
+        Parameters
+        ----------
+        job_id : str
+            Unique job ID.
+
+        Returns
+        -------
+        response
+        """
         res = states.job(job_id)
         logger.debug("return get(): %s", res)
         if res:
@@ -165,56 +149,163 @@ class Jobs(Resource):
             abort(404)
 
     def post(self, job_id):
-        """Receive new job."""
-        raw = request.get_json()
-        data = raw if isinstance(raw, dict) else json.loads(raw)
+        """
+        Receive new job or batch job. A batch job is simply a list of jobs.
 
+        The configuration has to be appended as JSON to the request. If the configuration
+        is a list, it will be handled as a batch job, if it is a dictionary it will be
+        handled as a single job.
+
+        A job configuration has to contain the following items:
+        - command : str
+            One of the mapchete_hub.commands items (execute or index)
+        - job_name : str
+            Only required for batch jobs, otherwise it is optional. Has to be unique
+            within batch job.
+        - job : str
+            In batch jobs this references to a mapchete configuration of a prior job and
+            can be used as an alternative to mapchete_config.
+        - mapchete_config : dict
+            A valid mapchete configuration. In batch jobs either this or job has to be
+            provided.
+        - mode : str
+            One of "continue" or "overwrite". (default: "continue")
+
+        Furthermore a job configuration has to contain one of the spatial subset items. In
+        a batch job, only the first job needs to have a spatial subset item as all of the
+        subsequent jobs inherit this:
+        - bounds : list
+            Left, bottom, right, top coordinate of process area.
+        - point : list
+            X and y coordinate of point over process tile.
+        - tile : list
+            Zoom, row and column of process tile.
+        - wkt_geometry : str
+            WKT representaion of process area.
+
+        In addition, optional items can be provided:
+        - queue : str
+            Queue the job will be added to. If no queue is provided, it will be appended
+            to the commmands default queue (i.e. execute_queue or index_queue.)
+        - zoom : list or int
+            Minimum and maximum zoom level or single zoom level.
+
+        Parameters
+        ----------
+        job_id : str
+            Unique job ID.
+
+        Returns
+        -------
+        response
+            202: If job was accepted.
+            400: If JSON does not contain required or does contain malformed data.
+            409: If job under this ID already exists.
+            500: If an internal server error occured.
+        """
         try:
-            command_path = get_command_func_path(data["mapchete_config"]["mhub_worker"])
-            mhub_queue = data["mapchete_config"].get(
-                "mhub_queue",
-                "%s_queue" % command_path.split(".")[-2]
-            )
+            jobs = list(_jobs_params(request.get_json(), init_job_id=job_id))
         except Exception as e:
             logger.error(e)
             return make_response(jsonify(dict(message=str(e))), 400)
 
-        res = states.job(job_id)
-        # job exists
-        if res:
-            logger.debug("job already exists: %s", job_id)
-            return make_response(jsonify(res), 409)
+        try:
+            res = states.job(job_id)
+            # job exists
+            if res:
+                logger.debug("job already exists: %s", job_id)
+                return make_response(jsonify(res), 409)
 
-        # job is new
-        else:
-            # pass on to celery cluster
-            logger.debug("job is new: %s", job_id)
-            try:
-                process_area = process_area_from_config(data)
-            except Exception as e:
-                logger.error(e)
-                return make_response(jsonify(dict(message=str(e))), 400)
-            logger.debug("process area: %s", process_area)
+            # job is new
+            else:
+                # pass on to celery cluster
+                logger.debug("job is new: %s", job_id)
+                process_area = jobs[0]["kwargs"]["process_area"]
 
-            kwargs = dict(data, process_area=process_area.wkt)
-            logger.debug("send task %s to queue %s", job_id, mhub_queue)
-            celery_app.send_task(
-                str(command_path),
-                task_id=job_id,
-                queue=mhub_queue,
-                kwargs=kwargs,
-                kwargsrepr=json.dumps(kwargs),
-                link=get_next_jobs(
-                    config=data,
-                    process_area=process_area.wkt,
+                logger.debug("process area: %s", process_area)
+                logger.debug("task %s has %s follow-up jobs", job_id, len(jobs[1:]))
+                logger.debug("send task %s to queue %s", job_id, jobs[0]["queue"])
+
+                # chain jobs sequentially
+                celery.chain(
+                    command_func(j["command"]).signature(**j) for j in jobs
+                ).apply_async()
+
+                return make_response(
+                    jsonify(
+                        dict(
+                            geometry=process_area,
+                            properties=dict(state="PENDING")
+                        )
+                    ), 202
+                )
+        except Exception as e:
+            logger.error(e)
+            return make_response(jsonify(dict(message=str(e))), 500)
+
+
+def _jobs_params(raw, init_job_id):
+    data = raw if isinstance(raw, (dict, list, tuple)) else json.loads(raw)
+    if isinstance(data, dict):
+        logger.debug("single job received")
+        jobs = [data]
+    elif isinstance(data, (list, tuple)):
+        logger.debug("batch job received")
+        jobs = data
+    else:
+        raise TypeError(
+            """JSON must contain either a dictionary or a list of dictionaries"""
+        )
+
+    process_area = process_area_from_config(jobs[0])
+
+    parent_job_id = None
+    job_id = init_job_id
+    child_job_ids = [uuid.uuid4().hex for _ in jobs]
+    for i, config in enumerate(jobs):
+        child_job_id = child_job_ids[i]
+        job_name = config.get("job_name", "unnamed_job")
+
+        if "mapchete_config" not in config:
+            raise KeyError("mapchete_config not provided")
+        if not isinstance(config["mapchete_config"], dict):
+            raise TypeError(
+                "%s: mapchete_config must be a dictionary, not %s" % (
+                    job_name, type(config["mapchete_config"])
                 )
             )
-            res = states.job(job_id)
-            return make_response(
-                jsonify(
-                    dict(
-                        geometry=mapping(process_area),
-                        properties=dict(state="PENDING")
-                    )
-                ), 202
+
+        mode = config.get("mode", "continue")
+        if mode not in ["continue", "overwrite"]:
+            raise ValueError(
+                "%s: mode must be one of continue, overwrite, not %s" % (
+                    job_name, config["mode"]
+                )
             )
+
+        if not config.get("command", None):
+            raise KeyError("%s: no command given" % job_name)
+
+        queue = config.get("queue") or "%s_queue" % config["command"]
+
+        kwargs = dict(
+            config,
+            mode=mode,
+            job_name=job_name,
+            command=config["command"],
+            queue=queue,
+            parent_job_id=parent_job_id,
+            child_job_id=child_job_id,
+            mapchete_config=cleanup_datetime(config["mapchete_config"]),
+            process_area=process_area.wkt,
+        )
+
+        yield dict(
+            task_id=job_id,
+            command=config["command"],
+            queue=queue,
+            args=(None, ),
+            kwargs=kwargs,
+            kwargsrepr=json.dumps(kwargs)
+        )
+        parent_job_id, job_id = job_id, child_job_id

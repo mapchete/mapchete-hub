@@ -100,6 +100,34 @@ If an index job is started with ``mhub index``, ``mhub_worker`` is set automatic
 
 **NOTE: already submitted jobs cannot be removed from queue. Be careful before you submit a job!**
 
+
+mhub batch
+~~~~~~~~~~
+
+Submit a chain of processes with different mode & zoom level setting. This requires a ``.mhub`` file. (See ``tests/testdata/batch_example.mhub``)
+
+.. code-block:: none
+
+  Usage: mhub batch [OPTIONS] BATCH_FILE
+
+    Execute a batch of processes.
+
+  Options:
+    -b, --bounds FLOAT...    Left, bottom, right, top bounds in tile pyramid
+                             CRS.
+    -p, --point FLOAT...     Process tiles over single point location.
+    -g, --wkt-geometry TEXT  Take boundaries from WKT geometry in tile pyramid
+                             CRS.
+    -t, --tile INTEGER...    Zoom, row, column of single tile.
+    -o, --overwrite          Overwrite if tile(s) already exist(s).
+    --slack                  Post message to slack if batch completed
+                             successfully.
+    -v, --verbose            Print info for each process tile.
+    -d, --debug              Print debug log output.
+    --help                   Show this message and exit.
+
+
+
 mhub jobs
 ~~~~~~~~~
 
@@ -107,24 +135,24 @@ This command lists all submitted jobs and their current job state: PENDING, PROG
 
 .. code-block:: none
 
-Usage: mhub jobs [OPTIONS]
+  Usage: mhub jobs [OPTIONS]
 
-  Show current jobs.
+    Show current jobs.
 
-Options:
-  -g, --geojson                   Print as GeoJSON.
-  -p, --output_path TEXT          Filter jobs by output_path.
-  -s, --state [todo|doing|done|pending|progress|received|started|success|failure]
-                                  Filter jobs by job state.
-  -c, --command [execute|index]   Filter jobs by command.
-  -q, --queue TEXT                Filter jobs by queue.
-  -b, --bounds FLOAT...           Left, bottom, right, top bounds in tile
-                                  pyramid CRS.
-  --since TEXT                    Filter jobs by timestamp since given time.
-  --until TEXT                    Filter jobs by timestamp until given time.
-  -v, --verbose                   Print job details. (Does not work with
-                                  --geojson.)
-  --help                          Show this message and exit.
+  Options:
+    -g, --geojson                   Print as GeoJSON.
+    -p, --output_path TEXT          Filter jobs by output_path.
+    -s, --state [todo|doing|done|pending|progress|received|started|success|failure]
+                                    Filter jobs by job state.
+    -c, --command [execute|index]   Filter jobs by command.
+    -q, --queue TEXT                Filter jobs by queue.
+    -b, --bounds FLOAT...           Left, bottom, right, top bounds in tile
+                                    pyramid CRS.
+    --since TEXT                    Filter jobs by timestamp since given time.
+    --until TEXT                    Filter jobs by timestamp until given time.
+    -v, --verbose                   Print job details. (Does not work with
+                                    --geojson.)
+    --help                          Show this message and exit.
 
 More details on a job status can be printed using ``mhub status``
 

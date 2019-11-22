@@ -1,6 +1,7 @@
 """Default Flask and Celery configuration and related functions."""
 
 
+from collections import OrderedDict
 import datetime
 from mapchete.config import get_zoom_levels
 from mapchete.tile import BufferedTilePyramid
@@ -11,11 +12,11 @@ from shapely import wkt
 
 def cleanup_datetime(d):
     """Represent timestamps as strings, not datetime.date objects."""
-    return {
-        k: cleanup_datetime(v) if isinstance(v, dict)
-        else str(v) if isinstance(v, datetime.date) else v
+    return OrderedDict(
+        (k, cleanup_datetime(v)) if isinstance(v, dict)
+        else (k, str(v)) if isinstance(v, datetime.date) else (k, v)
         for k, v in d.items()
-    }
+    )
 
 
 def process_area_from_config(config):
@@ -62,22 +63,22 @@ def process_area_from_config(config):
 
 
 def _get_host_options():
-    default = dict(host_ip='0.0.0.0', port=5000)
+    default = dict(host_ip="0.0.0.0", port=5000)
     return _get_opts(default)
 
 
 def _get_flask_options():
     default = dict(
-        broker_url='amqp://guest:guest@localhost:5672//',
-        result_backend='rpc://guest:guest@localhost:5672//',
+        broker_url="amqp://guest:guest@localhost:5672//",
+        result_backend="rpc://guest:guest@localhost:5672//",
         # required to hanlde exceptions raised by billiard
-        result_serializer='pickle',
-        task_serializer='pickle',
-        event_serializer='pickle',
-        accept_content=['pickle', 'json'],
+        result_serializer="json",
+        task_serializer="json",
+        event_serializer="json",
+        accept_content=["json"],
         task_routes={
-            'mapchete_hub.commands.execute.*': {'queue': 'execute_queue'},
-            'mapchete_hub.commands.index.*': {'queue': 'index_queue'},
+            "mapchete_hub.commands.execute.*": {"queue": "execute_queue"},
+            "mapchete_hub.commands.index.*": {"queue": "index_queue"},
         },
         task_acks_late=True,
         worker_send_task_events=True,
@@ -95,23 +96,28 @@ def _get_flask_options():
 def _get_main_options():
     default = dict(
         config_dir="/tmp/",
-        status_gpkg='status.gpkg',
+        status_gpkg="status.gpkg",
         status_gpkg_profile=dict(
-            crs={'init': 'epsg:4326'},
+            crs={"init": "epsg:4326"},
             driver="GPKG",
             schema=dict(
-                geometry='Polygon',
+                geometry="Polygon",
                 properties=dict(
-                    job_id='str:100',
-                    config='str:1000',
-                    state='str:50',
-                    timestamp='float',
-                    started='float',
-                    hostname='str:50',
-                    progress_data='str:100',
-                    runtime='float',
-                    exception='str:100',
-                    traceback='str:1000',
+                    command="str:20",
+                    config="str:1000",
+                    exception="str:100",
+                    hostname="str:50",
+                    job_id="str:100",
+                    job_name="str:100",
+                    parent_job_id="str:100",
+                    child_job_id="str:100",
+                    progress_data="str:100",
+                    queue="str:50",
+                    runtime="float",
+                    started="float",
+                    state="str:50",
+                    timestamp="float",
+                    traceback="str:1000",
                 )
             )
         ),
@@ -123,11 +129,11 @@ def _get_opts(default):
     """
     Get mhub config options from environement.
 
-    Use environmental variables starting with 'MHUB_', otherwise fall back to default
+    Use environmental variables starting with "MHUB_", otherwise fall back to default
     values.
     """
     return {
-        k: os.environ.get('MHUB_' + k.upper(), default.get(k)) for k in default.keys()
+        k: os.environ.get("MHUB_" + k.upper(), default.get(k)) for k in default.keys()
     }
 
 

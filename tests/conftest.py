@@ -5,7 +5,7 @@ import pytest
 import rasterio
 import shutil
 from tempfile import TemporaryDirectory
-import yaml
+import oyaml as yaml
 
 from mapchete_hub import api
 from mapchete_hub.application import flask_app
@@ -38,7 +38,7 @@ celery_app.conf.update(flask_options, task_always_eager=True)
 
 
 def _dict_from_mapchete(path, tmpdir):
-    conf = dict(yaml.load(open(path).read()), config_dir=os.path.dirname(path))
+    conf = dict(yaml.safe_load(open(path).read()), config_dir=os.path.dirname(path))
     if "s1" in conf["input"]:
         try:
             conf["input"]["s1"]["cache"]["path"] = S1_CACHE_DIR
@@ -131,16 +131,21 @@ def status_profile():
         schema=dict(
             geometry='Polygon',
             properties=OrderedDict(
-                job_id='str:100',
-                config='str:1000',
-                state='str:50',
-                timestamp='float',
-                started='float',
-                hostname='str:50',
-                progress_data='str:100',
-                runtime='float',
-                exception='str:100',
-                traceback='str:1000',
+                command="str:20",
+                config="str:1000",
+                exception="str:100",
+                hostname="str:50",
+                job_id="str:100",
+                job_name="str:100",
+                parent_job_id="str:100",
+                child_job_id="str:100",
+                progress_data="str:100",
+                queue="str:50",
+                runtime="float",
+                started="float",
+                state="str:50",
+                timestamp="float",
+                traceback="str:1000",
             )
         )
     )
@@ -154,9 +159,39 @@ def example_mapchete():
 
 
 @pytest.fixture
+def batch_example():
+    path = os.path.join(TESTDATA_DIR, 'batch_example.mhub')
+    yield ExampleConfig(path=path, dict=yaml.safe_load(open(path)))
+
+
+@pytest.fixture
+def batch_example_no_jobs_error():
+    path = os.path.join(TESTDATA_DIR, 'batch_example_no_jobs_error.mhub')
+    yield ExampleConfig(path=path, dict=yaml.safe_load(open(path)))
+
+
+@pytest.fixture
+def batch_example_invalid_job_pointer_error():
+    path = os.path.join(TESTDATA_DIR, 'batch_example_invalid_job_pointer_error.mhub')
+    yield ExampleConfig(path=path, dict=yaml.safe_load(open(path)))
+
+
+@pytest.fixture
+def batch_example_no_job_mapchete_error():
+    path = os.path.join(TESTDATA_DIR, 'batch_example_no_job_mapchete_error.mhub')
+    yield ExampleConfig(path=path, dict=yaml.safe_load(open(path)))
+
+
+@pytest.fixture
+def batch_example_no_command_error():
+    path = os.path.join(TESTDATA_DIR, 'batch_example_no_command_error.mhub')
+    yield ExampleConfig(path=path, dict=yaml.safe_load(open(path)))
+
+
+@pytest.fixture
 def example_config():
     return dict(
-        mapchete_config=yaml.load(
+        mapchete_config=yaml.safe_load(
             open(os.path.join(TESTDATA_DIR, 'example.mapchete')).read()
         ),
         tile=None,

@@ -10,6 +10,10 @@ Changelog
 * rename ``mapchete_hub.worker`` module to ``mapchete_hub.commands``
 * remember timestamp on ``task-received`` and ``task-started`` events in ``started`` property
 * add Celery-Slack integration (#26)
+* add ``mhub batch`` command
+* pass on mapchete config as ``OrderedDict`` (#48)
+* serialize Cerlery messages as ``JSON`` instead of pickling
+* fix ``announce_on_slack`` setting (#66 #25)
 
 ---
 0.4

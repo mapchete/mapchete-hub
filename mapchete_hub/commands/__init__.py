@@ -11,11 +11,11 @@ command_funcs_paths = {
 }
 
 
-def get_command_func(command_name):
+def command_func(command_name):
     """Return comand function."""
     return command_funcs[command_name.replace("_worker", "")]
 
 
-def get_command_func_path(command_name):
+def command_func_path(command_name):
     """Return comand function."""
     return command_funcs_paths[command_name.replace("_worker", "")]
