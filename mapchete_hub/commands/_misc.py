@@ -18,7 +18,7 @@ def send_slack_message(x, y):
                 "username": "mapchete_hub",
                 "channel": "#mapchete_hub",
                 "text": "%s#zoom=8&lon=%s&lat=%s" % (
-                    os.environ.get("PREVIEW_PERMALINK"), y, x
+                    os.environ.get("PREVIEW_PERMALINK"), x, y
                 )
             }
         )
