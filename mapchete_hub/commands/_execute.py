@@ -1,10 +1,11 @@
 import billiard
 from billiard import cpu_count
+from collections import OrderedDict
 import logging
 import mapchete
 from mapchete.config import get_zoom_levels
 
-from mapchete_hub.config import main_options
+from mapchete_hub.config import custom_process_tempfile, main_options
 
 
 logger = logging.getLogger(__name__)
@@ -43,30 +44,34 @@ def mapchete_execute(
     Following items are ProcessInfo objects containing process and write information for
     each process tile.
     """
-    with mapchete.Timer() as t:
-        with mapchete.open(
-            dict(mapchete_config, config_dir=main_options['config_dir']),
-            mode=mode or "continue",
-            zoom=zoom,
-            bounds=process_area.bounds
-        ) as mp:
-            zoom_levels = get_zoom_levels(
-                process_zoom_levels=mp.config.zoom_levels,
-                init_zoom_levels=zoom
-            )
-            total_tiles = mp.count_tiles(min(zoom_levels), max(zoom_levels))
-            yield total_tiles
-            if total_tiles:
-                logger.debug(
-                    "run process on %s tiles using %s workers", total_tiles, multi
+    with custom_process_tempfile(mapchete_config) as tmpfile_config:
+        with mapchete.Timer() as t:
+            with mapchete.open(
+                OrderedDict(
+                    tmpfile_config,
+                    config_dir=main_options['config_dir']
+                ),
+                mode=mode or "continue",
+                zoom=zoom,
+                bounds=process_area.bounds
+            ) as mp:
+                zoom_levels = get_zoom_levels(
+                    process_zoom_levels=mp.config.zoom_levels,
+                    init_zoom_levels=zoom
                 )
-                # run process on tiles
-                for process_info in mp.batch_processor(
-                    multiprocessing_module=billiard,
-                    multi=multi,
-                    zoom=zoom,
-                    max_chunksize=max_chunksize
-                ):
-                    yield process_info
+                total_tiles = mp.count_tiles(min(zoom_levels), max(zoom_levels))
+                yield total_tiles
+                if total_tiles:
+                    logger.debug(
+                        "run process on %s tiles using %s workers", total_tiles, multi
+                    )
+                    # run process on tiles
+                    for process_info in mp.batch_processor(
+                        multiprocessing_module=billiard,
+                        multi=multi,
+                        zoom=zoom,
+                        max_chunksize=max_chunksize
+                    ):
+                        yield process_info
 
-    logger.debug("processing finished in %s" % t)
+        logger.debug("processing finished in %s" % t)
