@@ -170,12 +170,12 @@ class StatusHandler():
         # add command filter
         if command:
             connect = " AND" if "WHERE" in query else " WHERE"
-            query += " WHERE command='%s'" % command.lower()
+            query += "%s command='%s'" % (connect, command.lower())
 
         # add queue filter
         if queue:
             connect = " AND" if "WHERE" in query else " WHERE"
-            query += " WHERE queue='%s'" % queue.lower()
+            query += "%s queue='%s'" % (connect, queue.lower())
 
         query += ";"
         logger.debug(query)
