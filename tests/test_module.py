@@ -1,4 +1,5 @@
 import geojson
+import mapchete
 from mapchete.config import raw_conf_process_pyramid, get_zoom_levels
 import os
 import pytest
@@ -6,10 +7,10 @@ from shapely.geometry import box, shape
 from tempfile import NamedTemporaryFile
 
 from mapchete_hub import log
-from mapchete_hub.application import process_area_from_config
 from mapchete_hub.api import format_as_geojson
 from mapchete_hub.commands._execute import mapchete_execute
 from mapchete_hub.commands._index import mapchete_index
+from mapchete_hub.config import custom_process_tempfile, process_area_from_config
 
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -58,12 +59,10 @@ def test_process_area_from_config(example_mapchete):
     zoom = 11
 
     # bounds
-    assert process_area_from_config(dict(bounds=bounds)).equals(box(*bounds))
+    assert process_area_from_config(bounds=bounds).equals(box(*bounds))
 
     # wkt
-    assert process_area_from_config(
-        dict(wkt_geometry=box(*bounds).wkt)
-    ).equals(box(*bounds))
+    assert process_area_from_config(wkt_geometry=box(*bounds).wkt).equals(box(*bounds))
 
     # point
     control_geom = raw_conf_process_pyramid(example_mapchete.dict).tile_from_xy(
@@ -74,22 +73,34 @@ def test_process_area_from_config(example_mapchete):
         ))
     ).bbox
     assert process_area_from_config(
-        dict(mapchete_config=example_mapchete.dict, point=point, zoom=zoom)
+        mapchete_config=example_mapchete.dict, point=point, zoom=zoom
     ).equals(control_geom)
 
     # config process bounds
     assert process_area_from_config(
-        dict(
-            mapchete_config=dict(
-                example_mapchete.dict,
-                process_bounds=bounds
-            )
+        mapchete_config=dict(
+            example_mapchete.dict,
+            process_bounds=bounds
         )
     ).equals(box(*bounds))
 
     # raise AttributeError
     with pytest.raises(AttributeError):
         process_area_from_config(dict())
+
+
+def test_custom_process_tempfile(example_mapchete):
+    custom_process = dict(
+        example_mapchete.dict,
+        process="""
+def execute(mp):
+    return "empty"
+        """
+    )
+    with custom_process_tempfile(custom_process) as config:
+        assert config.get("process").endswith(".py")
+        with mapchete.open(config):
+            pass
 
 
 def test_log():

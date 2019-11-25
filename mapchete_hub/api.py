@@ -11,6 +11,7 @@ import json
 import logging
 from mapchete._validate import validate_zooms
 import os
+import py_compile
 import requests
 from requests.exceptions import ConnectionError
 import time
@@ -127,9 +128,10 @@ class API():
         mapchete_hub.api.Job
         """
         job_id = job_id or uuid.uuid4().hex
-        data = dict(mapchete_config=load_mapchete_config(mapchete_config), **kwargs)
+        job = dict(mapchete_config=load_mapchete_config(mapchete_config), **kwargs)
 
-        command = command or data.get("command")
+        # make sure correct command is provided
+        command = command or job.get("command")
         if command not in ["execute", "index"]:
             raise ValueError("invalid command given: %s" % command)
 
@@ -138,9 +140,9 @@ class API():
             "jobs/%s" % job_id,
             json=json.dumps(
                 dict(
-                    data,
+                    job,
                     command=command,
-                    queue=queue or data.get("queue", "%s_queue" % command)
+                    queue=queue or job.get("queue", "%s_queue" % command)
                 )
             ),
             timeout=timeout
@@ -189,12 +191,12 @@ class API():
         mapchete_hub.api.Job
         """
         job_id = job_id or uuid.uuid4().hex
-        data = list(load_batch_config(batch, **kwargs)["jobs"].values())
+        jobs = list(load_batch_config(batch, **kwargs)["jobs"].values())
 
         logger.debug("send batch job %s to API", job_id)
         res = self.post(
             "jobs/%s" % job_id,
-            json=json.dumps(data),
+            json=json.dumps(jobs),
             timeout=timeout
         )
 
@@ -346,11 +348,50 @@ def format_as_geojson(inp, indent=4):
 
 
 def load_mapchete_config(mapchete_config):
-    """Return OrderedDict either from dict or file."""
+    """
+    Return preprocessed mapchete config provided as dict or file.
+
+    This function reads a mapchete config into an OrderedDict which keeps the item order
+    stated in the .mapchete file.
+    If the configuration is passed on via a .mapchete file and if a process file path
+    instead of a process module path was given, it will also check the syntax and replace
+    the process item with the python code as string.
+
+    Parameters
+    ----------
+    mapchete_config : str or dict
+        A valid mapchete configuration either as path or dictionary.
+
+    Returns
+    -------
+    OrderedDict
+        Preprocessed mapchete configuration.
+    """
     if isinstance(mapchete_config, OrderedDict):
         return cleanup_datetime(mapchete_config)
+
     elif isinstance(mapchete_config, str):
-        return cleanup_datetime(yaml.safe_load(open(mapchete_config, "r").read()))
+        conf = cleanup_datetime(yaml.safe_load(open(mapchete_config, "r").read()))
+
+        if not conf.get("process"):
+            raise KeyError("no or empty process in configuration")
+
+        # local python file
+        if conf.get("process").endswith(".py"):
+            custom_process_path = os.path.join(
+                os.path.dirname(mapchete_config),
+                conf.get("process")
+            )
+            # check syntax
+            py_compile.compile(custom_process_path, doraise=True)
+            # assert file is not empty
+            process_code = open(custom_process_path).read()
+            if not process_code:
+                raise ValueError("process file is empty")
+            conf.update(process=process_code)
+
+        return conf
+
     else:
         raise TypeError(
             "mapchete config must either be a path to an existing file or an OrderedDict"
@@ -358,7 +399,22 @@ def load_mapchete_config(mapchete_config):
 
 
 def load_batch_config(batch_config, **kwargs):
-    """Return OrderedDict from file."""
+    """
+    Return preprocessed batch config.
+
+    This function verifies a batch configuration and loads and preprocesses all given
+    jobs mapchete configurations (see ``load_mapchete_config()`` for details).
+
+    Parameters
+    ----------
+    batch_config : str
+        Path to .mhub batch configuration file.
+
+    Returns
+    -------
+    OrderedDict
+        Preprocessed mhub batch configuration.
+    """
     loaded_mapchete_configs = {}
 
     def _get_mapchete_config(mapchete_config):

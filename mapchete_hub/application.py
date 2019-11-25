@@ -18,9 +18,10 @@ from webargs.flaskparser import use_kwargs
 
 from mapchete_hub import __version__
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub.commands import command_func, command_func_path
+from mapchete_hub.commands import command_func
 from mapchete_hub.config import (
     cleanup_datetime,
+    custom_process_tempfile,
     flask_options,
     main_options,
     process_area_from_config
@@ -257,7 +258,7 @@ def _jobs_params(raw, init_job_id):
             """JSON must contain either a dictionary or a list of dictionaries"""
         )
 
-    process_area = process_area_from_config(jobs[0])
+    process_area = process_area_from_config(**jobs[0])
 
     parent_job_id = None
     job_id = init_job_id
@@ -266,6 +267,7 @@ def _jobs_params(raw, init_job_id):
         child_job_id = child_job_ids[i]
         job_name = config.get("job_name", "unnamed_job")
 
+        # check mapchete configuration
         if "mapchete_config" not in config:
             raise KeyError("mapchete_config not provided")
         if not isinstance(config["mapchete_config"], dict):
@@ -274,7 +276,13 @@ def _jobs_params(raw, init_job_id):
                     job_name, type(config["mapchete_config"])
                 )
             )
+        # verify process code
+        # by calling this context manager, a syntax check and import will be conducted
+        # TODO maby a bad idea to run this on the server
+        with custom_process_tempfile(config["mapchete_config"]):
+            pass
 
+        # process mode
         mode = config.get("mode", "continue")
         if mode not in ["continue", "overwrite"]:
             raise ValueError(
@@ -283,9 +291,11 @@ def _jobs_params(raw, init_job_id):
                 )
             )
 
+        # mapchete hub command
         if not config.get("command", None):
             raise KeyError("%s: no command given" % job_name)
 
+        # mapchete hub queue
         queue = config.get("queue") or "%s_queue" % config["command"]
 
         kwargs = dict(

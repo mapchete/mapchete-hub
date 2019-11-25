@@ -2,16 +2,25 @@
 
 
 from collections import OrderedDict
+from contextlib import contextmanager
 import datetime
+import importlib
+import logging
 from mapchete.config import get_zoom_levels
+from mapchete.errors import MapcheteProcessImportError
 from mapchete.tile import BufferedTilePyramid
 import os
+import py_compile
 from shapely.geometry import box
 from shapely import wkt
+from tempfile import NamedTemporaryFile
+
+
+logger = logging.getLogger(__name__)
 
 
 def cleanup_datetime(d):
-    """Represent timestamps as strings, not datetime.date objects."""
+    """Convert datetime objects in dictionary to strings."""
     return OrderedDict(
         (k, cleanup_datetime(v)) if isinstance(v, dict)
         else (k, str(v)) if isinstance(v, datetime.date) else (k, v)
@@ -19,47 +28,126 @@ def cleanup_datetime(d):
     )
 
 
-def process_area_from_config(config):
-    """Calculate process area from process config."""
+def process_area_from_config(
+    mapchete_config=None,
+    bounds=None,
+    wkt_geometry=None,
+    point=None,
+    tile=None,
+    zoom=None,
+    **kwargs
+):
+    """
+    Calculate process area from mapchete configuration and process parameters.
+
+    Parameters
+    ----------
+
+    mapchete_config : dict
+        A valid mapchete configuration.
+    bounds : list
+        Left, bottom, right, top coordinate of process area.
+    point : list
+        X and y coordinate of point over process tile.
+    tile : list
+        Zoom, row and column of process tile.
+    wkt_geometry : str
+        WKT representaion of process area.
+    zoom : list or int
+        Minimum and maximum zoom level or single zoom level.
+    """
     # bounds
-    bounds = config.get("bounds")
     if bounds:
         return box(*bounds)
 
     # wkt_geometry
-    wkt_geometry = config.get("wkt_geometry")
     if wkt_geometry:
         return wkt.loads(wkt_geometry)
 
     def _tp():
         return BufferedTilePyramid(
-            config["mapchete_config"]["pyramid"]["grid"],
-            metatiling=config["mapchete_config"]["pyramid"].get("metatiling", 1),
-            pixelbuffer=config["mapchete_config"]["pyramid"].get("pixelbuffer", 0)
+            mapchete_config["pyramid"]["grid"],
+            metatiling=mapchete_config["pyramid"].get("metatiling", 1),
+            pixelbuffer=mapchete_config["pyramid"].get("pixelbuffer", 0)
         )
 
     # point
-    point = config.get("point")
     if point:
         x, y = point
         zoom_levels = get_zoom_levels(
-            process_zoom_levels=config["mapchete_config"]["zoom_levels"],
-            init_zoom_levels=config.get("zoom")
+            process_zoom_levels=mapchete_config["zoom_levels"],
+            init_zoom_levels=zoom
         )
         return _tp().tile_from_xy(x, y, max(zoom_levels)).bbox
 
     # tile
-    tile = config.get("tile")
     if tile:
         return _tp().tile(*tile).bbox
 
     # mapchete_config
-    process_bounds = config.get("mapchete_config", {}).get("process_bounds")
+    process_bounds = mapchete_config.get("process_bounds")
     if process_bounds:
         return box(*process_bounds)
 
     # raise error if no process areas is given
     raise AttributeError("no bounds, wkt_geometry, point, tile or process bounds given.")
+
+
+@contextmanager
+def custom_process_tempfile(mapchete_config):
+    """
+    Dump custom process in a temporary file and update configuration.
+
+    This works only in case a custom process (i.e. raw python code) was passed on as a
+    string in the "process" section. Otherwise it will return the configuration as is.
+
+    Works as a context manager which removes temporary file on close.
+
+    Examples
+    --------
+    >>> with custom_process_tempfile(mapchete_config) as config:
+            # use config with mapchete
+            with mapchete.open(config):
+                ...
+        # now, mapchete_config is reset to initial values and the tempfile is deleted
+
+
+    Parameters
+    ----------
+    mapchete_config : dict
+        A valid mapchete configuration.
+
+    Yields
+    ------
+    mapchete_config : dict
+        Modified mapchete config.
+    """
+    process = mapchete_config.get("process")
+
+    if not process:
+        raise MapcheteProcessImportError("no or empty process in configuration")
+
+    try:
+        # assume process module paths on successful import
+        importlib.import_module(process)
+        logger.debug("process module path found")
+        yield mapchete_config
+
+    except ImportError:
+        # assume custom process: dump as temporary python file and update path
+        with NamedTemporaryFile(suffix=".py") as temp_process_file:
+            with open(temp_process_file.name, "w") as dst:
+                logger.debug("dump custom process to %s" % temp_process_file.name)
+                dst.write(process)
+            # verify syntax is correct
+            logger.debug("verifying syntax")
+            py_compile.compile(temp_process_file.name, doraise=True)
+            try:
+                mapchete_config.update(process=temp_process_file.name)
+                yield mapchete_config
+            finally:
+                mapchete_config.update(process=process)
+        logger.debug("removed %s" % temp_process_file.name)
 
 
 def _get_host_options():
@@ -71,7 +159,6 @@ def _get_flask_options():
     default = dict(
         broker_url="amqp://guest:guest@localhost:5672//",
         result_backend="rpc://guest:guest@localhost:5672//",
-        # required to hanlde exceptions raised by billiard
         result_serializer="json",
         task_serializer="json",
         event_serializer="json",

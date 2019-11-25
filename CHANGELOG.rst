@@ -3,6 +3,13 @@ Changelog
 #########
 
 ---
+0.6
+---
+* fix query error when filtering by queues or commands (#73)
+* enable posting of custom process file (#52)
+
+
+---
 0.5
 ---
 * enable filters to better query jobs (#53)
