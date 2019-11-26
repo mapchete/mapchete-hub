@@ -7,3 +7,4 @@ __pycache__
 *.gpkg
 htmlcov
 .env
+.credentials.map

@@ -96,7 +96,8 @@ retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_
 retry 10 docker pull registry.gitlab.eox.at/maps/docker-base/mapserver:$MAPSERVER_IMAGE_TAG
 
 # move map directory in place
-mv map ${LOCAL_VOLUME_DIR}
+cp -R map ${LOCAL_VOLUME_DIR}/
+printf "CONFIG \"AWS_ACCESS_KEY_ID\" \"${AWS_ACCESS_KEY_ID}\"\nCONFIG \"AWS_SECRET_ACCESS_KEY\" \"${AWS_SECRET_ACCESS_KEY}\"\n" > ${LOCAL_VOLUME_DIR}/map/.credentials.map
 
 # try to stop container if they are running
 docker container stop mapserver ${MHUB_WORKER} || true
