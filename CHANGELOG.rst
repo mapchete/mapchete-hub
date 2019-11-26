@@ -7,7 +7,8 @@ Changelog
 ---
 * fix query error when filtering by queues or commands (#73)
 * enable posting of custom process file (#52)
-
+* fix rendering artefacts by changing mapserver scaling
+* remove AWS credentials from mapfile & adapted starter script to temporarily include credentials from environment
 
 ---
 0.5
