@@ -1,4 +1,4 @@
-FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.2
+FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.3
 MAINTAINER Joachim Ungar
 
 ENV AWS_REQUEST_PAYER=requester

@@ -9,7 +9,11 @@ from collections import namedtuple, OrderedDict
 import geojson
 import json
 import logging
-from mapchete._validate import validate_zooms
+try:
+    from mapchete.validate import validate_zooms
+except ImportError:
+    # fix for mapchete<=0.30
+    from mapchete._validate import validate_zooms
 import os
 import py_compile
 import requests

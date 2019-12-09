@@ -9,6 +9,8 @@ Changelog
 * enable posting of custom process file (#52)
 * fix rendering artefacts by changing mapserver scaling
 * remove AWS credentials from mapfile & adapted starter script to temporarily include credentials from environment
+* increased ``eox_preprocessing`` dependency to ``0.8``
+* increased base image version for Dockerfile to ``0.3``
 
 ---
 0.5

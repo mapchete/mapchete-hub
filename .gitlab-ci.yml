@@ -13,6 +13,11 @@ test_base_image:0.2:
   script:
     - pytest -v --cov=mapchete_hub tests/
 
+test_base_image:0.3:
+  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:0.3
+  script:
+    - pytest -v --cov=mapchete_hub tests/
+
 test_base_image:latest:
   image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:latest
   script:
