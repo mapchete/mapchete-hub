@@ -191,6 +191,17 @@ var s2_debug = new ol.layer.Tile({
         ...mhub_defaults
     })
  });
+var biggles_debug = new ol.layer.Tile({
+    title: 'biggles hillshade',
+    type: 'overlay',
+    visible: false,
+    source: new ol.source.TileWMS({
+        attributions: '<a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2017 & 2018)',
+        url: "/mapserver?map=/map/" + dirname + "/biggles.map&",
+        params: {'LAYERS': 'map', 'FORMAT': 'image/png', 'TRANSPARENT': 'true'},
+        ...mhub_defaults
+    })
+ });
 
 var map = new ol.Map({
     layers: [
@@ -199,6 +210,7 @@ var map = new ol.Map({
         s2maps_terrain,
         s2_true_color,
         s2_debug,
+        biggles_debug,
         s2maps_base_overlay,
         s2maps_base_bright_overlay,
     ],
