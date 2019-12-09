@@ -8,3 +8,5 @@ __pycache__
 htmlcov
 .env
 .credentials.map
+ec2_user_data.sh
+spot_config.json
