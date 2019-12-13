@@ -1,5 +1,4 @@
 {
-  "SpotPrice": "0.648",
   "LaunchSpecification": {
     "ImageId": "ami-0bdf93799014acdc4",
     "InstanceType": "INSTANCE_TYPE",
@@ -36,6 +35,6 @@
       "AvailabilityZone": "AVAILABILITY_ZONE"
     }
   },
-  "InstanceCount": 1,
-  "BlockDurationMinutes": BLOCK_DURATION
+  "BlockDurationMinutes": BLOCK_DURATION,
+  "InstanceCount": 1
 }
