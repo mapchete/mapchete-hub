@@ -8,7 +8,7 @@ Parameters:
     -t   Instance type. (default: m5dn.2xlarge)
     -i   Number of instances to be started. (default: 1)
     -z   Zone to launch instances into. (default: eu-central-1a)
-    -b   Block spot duration in minutes. Must be a multiple of 60. (default: 120)
+    -b   Block spot duration in minutes. Must be a multiple of 60. A value of 0 won't trigger a block request. (default: 0)
 "
 
 while getopts i:z:b:t: option
@@ -22,7 +22,7 @@ while getopts i:z:b:t: option
         esac
     done
 AVAILABILITY_ZONE=${AVAILABILITY_ZONE:-"eu-central-1a"}
-BLOCK_DURATION=${BLOCK_DURATION:-120}
+BLOCK_DURATION=${BLOCK_DURATION:-0}
 INSTANCES=${INSTANCES:-1}
 INSTANCE_TYPE=${INSTANCE_TYPE:-"m5dn.2xlarge"}
 
@@ -32,7 +32,12 @@ if [ "$1" == "-h" ]; then
     exit 0
 fi
 
-echo "Submit spot request of $INSTANCES $INSTANCE_TYPE instances in zone $AVAILABILITY_ZONE with block duration of $BLOCK_DURATION minutes?"
+if [ "$BLOCK_DURATION" == 0 ]; then
+    echo "Submit spot request of $INSTANCES $INSTANCE_TYPE instances in zone $AVAILABILITY_ZONE without block?"
+else
+    echo "Submit spot request of $INSTANCES $INSTANCE_TYPE instances in zone $AVAILABILITY_ZONE with block duration of $BLOCK_DURATION minutes?"
+fi
+
 select yn in "Yes" "No"; do
     case $yn in
         Yes ) ./generate_spot_config.sh \
