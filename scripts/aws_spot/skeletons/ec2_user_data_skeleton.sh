@@ -13,7 +13,7 @@
 ###################
 DATA_DIR="/mnt/data"
 # find out name for 150G sized drive
-VOLUME=$(lsblk | grep 150G | head -n1 | sed -e 's/\s.*$//')
+VOLUME="/dev/$(lsblk | grep 150G | head -n1 | sed -e 's/\s.*$//')"
 
 sudo mkfs -t ext4 ${VOLUME}
 sudo mkdir -p ${DATA_DIR}
