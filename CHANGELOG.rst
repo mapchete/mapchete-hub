@@ -11,6 +11,8 @@ Changelog
 * remove AWS credentials from mapfile & adapted starter script to temporarily include credentials from environment
 * increased ``eox_preprocessing`` dependency to ``0.8``
 * increased base image version for Dockerfile to ``0.3``
+* added AWS management scripts
+* use multistage docker builds to reduce image size
 
 ---
 0.5
