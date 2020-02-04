@@ -3,7 +3,7 @@ celery-flower
 celery-slack
 click
 click-spinner
-eox_preprocessing @ git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.8
+eox_preprocessing @ git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.9
 Flask-Celery-py3
 flask_restful
 geojson
