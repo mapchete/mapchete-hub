@@ -10,6 +10,7 @@ var init_zoom = config.init_zoom || 2;
 var init_lon = config.init_lon || 0.0;
 var init_lat = config.init_lat || 0.0;
 var srs = config.srs || 'EPSG:4326'
+var mapcache_url = "http://MHUB_MAPCACHE_IP:8080/mapcache/wmts?service=wmts"
 
 if (srs == 'EPSG:4326') {
     var matrix_set = 'WGS84'
@@ -18,8 +19,9 @@ if (srs == 'EPSG:4326') {
     var s2maps_base_overlay_layer = 'overlay_base'
     var s2maps_base_bright_overlay_layer = 'overlay'
     var s2maps_terrain_layer = 'terrain-light'
-    var s2cloudless2018_layer = 's2cloudless-2018'
     var s2cloudless2016_layer = 's2cloudless'
+    var s2cloudless2018_layer = 's2cloudless-2018'
+    var s2cloudless2019_layer = 's2cloudless-2019'
     var dirname = "geodetic"
 } else {
     var matrix_set = 'GoogleMapsCompatible'
@@ -28,8 +30,9 @@ if (srs == 'EPSG:4326') {
     var s2maps_base_overlay_layer = 'overlay_base_3857'
     var s2maps_base_bright_overlay_layer = 'overlay_3857'
     var s2maps_terrain_layer = 'terrain-light_3857'
-    var s2cloudless2018_layer = 's2cloudless-2018_3857'
     var s2cloudless2016_layer = 's2cloudless_3857'
+    var s2cloudless2018_layer = 's2cloudless-2018_3857'
+    var s2cloudless2019_layer = 's2cloudless-2019_3857'
     var dirname = "mercator"
 }
 
@@ -180,6 +183,16 @@ var s2_true_color = new ol.layer.Tile({
         ...mhub_defaults
     })
 });
+var s2_true_color_cached = new ol.layer.Tile({
+    title: '8bit Color Corrected cache',
+    type: 'overlay',
+    visible: false,
+    source: new ol.source.WMTS({
+        layer: s2cloudless2019_layer,
+        ...wmts_defaults,
+        urls: [mapcache_url]
+    })
+});
 var s2_debug = new ol.layer.Tile({
     title: '16bit Stretched',
     type: 'overlay',
@@ -208,9 +221,9 @@ var map = new ol.Map({
         s2cloudless2016,
         s2cloudless2018,
         s2maps_terrain,
-        s2_true_color,
         s2_debug,
-        biggles_debug,
+        s2_true_color,
+        s2_true_color_cached,
         s2maps_base_overlay,
         s2maps_base_bright_overlay,
     ],
