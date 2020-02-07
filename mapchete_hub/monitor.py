@@ -308,7 +308,7 @@ class StatusHandler():
                     if v is None:
                         yield (k, v)
                     else:
-                        yield (k, mapping(wkt.loads(v)))
+                        yield (k, wkt.loads(v))
                 elif isinstance(v, str):
                     try:
                         yield (k, json.loads(v))
@@ -319,7 +319,9 @@ class StatusHandler():
 
         decoded = dict(_decode())
         return dict(
-            geometry=decoded["geom"],
+            bounds=decoded["geom"].bounds,
+            geometry=mapping(decoded["geom"]),
+            id=decoded["job_id"],
             properties={k: v for k, v in decoded.items() if k != "geom"}
         )
 
