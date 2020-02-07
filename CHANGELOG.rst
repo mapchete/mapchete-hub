@@ -3,6 +3,12 @@ Changelog
 #########
 
 ---
+0.7
+---
+* increased ``eox_preprocessing`` dependency to ``0.9``
+* mhub handles jobs with other CRSes than EPSG:4326 (fixes #59)
+
+---
 0.6
 ---
 * fix query error when filtering by queues or commands (#73)
