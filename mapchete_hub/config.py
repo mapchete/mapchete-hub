@@ -243,4 +243,4 @@ def _get_opts(default):
 host_options = _get_host_options()
 flask_options = _get_flask_options()
 main_options = _get_main_options()
-timeout = 5
+default_timeout = 5

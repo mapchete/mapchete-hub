@@ -1,5 +1,5 @@
 """
-Convenience tools to wrap API.
+Convenience tools to communicate with mapchete Hub REST API.
 
 This module wraps around the requests module for real-life usage and Flask's test_client()
 in order to be able to test mhub CLI.
@@ -22,7 +22,7 @@ import time
 import uuid
 import oyaml as yaml
 
-from mapchete_hub.config import cleanup_datetime, timeout
+from mapchete_hub.config import cleanup_datetime, default_timeout
 from mapchete_hub.exceptions import JobFailed, JobNotFound, JobRejected
 
 
@@ -62,9 +62,10 @@ Response = namedtuple("Response", "status_code json")
 class API():
     """API class which abstracts REST interface."""
 
-    def __init__(self, host=None, _test_client=None):
+    def __init__(self, host=None, timeout=None, _test_client=None, **kwargs):
         """Initialize."""
         self.host = host
+        self.timeout = timeout or default_timeout
         self._test_client = _test_client
         self._api = _test_client if _test_client else requests
         self._baseurl = "" if _test_client else "http://%s/" % host
@@ -72,10 +73,7 @@ class API():
     def get(self, url, **kwargs):
         """Make a GET request to _test_client or host."""
         try:
-            res = self._api.get(
-                self._baseurl + url,
-                **self._get_kwargs(kwargs)
-            )
+            res = self._api.get(self._baseurl + url, **self._get_kwargs(kwargs))
             return Response(
                 status_code=res.status_code,
                 json=res.json if self._test_client else json.loads(res.text)
@@ -149,7 +147,7 @@ class API():
                     queue=queue or job.get("queue", "%s_queue" % command)
                 )
             ),
-            timeout=timeout
+            timeout=self.timeout
         )
 
         if res.status_code != 202:
@@ -201,7 +199,7 @@ class API():
         res = self.post(
             "jobs/%s" % job_id,
             json=json.dumps(jobs),
-            timeout=timeout
+            timeout=self.timeout
         )
 
         if res.status_code != 202:
@@ -217,7 +215,7 @@ class API():
 
     def job(self, job_id, geojson=False):
         """Return job metadata."""
-        res = self.get("jobs/%s" % job_id, timeout=timeout)
+        res = self.get("jobs/%s" % job_id, timeout=self.timeout)
         if res.status_code == 404:
             raise JobNotFound("job %s does not exist" % job_id)
         else:
@@ -240,7 +238,7 @@ class API():
         """Return jobs metadata."""
         res = self.get(
             "jobs/",
-            timeout=timeout,
+            timeout=self.timeout,
             params=dict(
                 kwargs,
                 bounds=",".join(map(str, bounds)) if bounds else None
@@ -266,7 +264,7 @@ class API():
             job["properties"]["job_id"]: job["properties"]["state"]
             for job in self.get(
                 "jobs/",
-                timeout=timeout,
+                timeout=self.timeout,
                 params=dict(output_path=output_path)
             ).json
         }

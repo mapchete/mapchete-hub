@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from mapchete_hub import __version__
 from mapchete_hub.api import API, job_states
-from mapchete_hub.config import host_options
+from mapchete_hub.config import default_timeout, host_options
 from mapchete_hub.exceptions import JobFailed
 from mapchete_hub.log import set_log_level
 from mapchete_hub._utils import str_to_date, date_to_str
@@ -79,6 +79,12 @@ opt_geojson = click.option(
         host_options["host_ip"], host_options["port"]
     )
 )
+@click.option(
+    "--timeout",
+    type=click.INT,
+    default=default_timeout,
+    help="Time in seconds to wait for server response. (default: %s)" % default_timeout,
+)
 @click.pass_context
 def mhub(ctx, **kwargs):
     """Main command group."""
@@ -107,7 +113,7 @@ def processes(ctx, process_name=None, docstrings=False):
             click.echo(process_module["docstring"])
 
     try:
-        res = API(host=ctx.obj["host"]).get("capabilities.json")
+        res = API(**ctx.obj).get("capabilities.json")
         if res.status_code != 200:
             raise ConnectionError(res.json)
         cap = res.json
@@ -132,7 +138,7 @@ def processes(ctx, process_name=None, docstrings=False):
 def queues(ctx):
     """Show available queues and workers."""
     try:
-        res = API(host=ctx.obj["host"]).get("capabilities.json")
+        res = API(**ctx.obj).get("capabilities.json")
         if res.status_code != 200:
             raise ConnectionError(res.json)
         if res.json["queues"]:
@@ -173,7 +179,7 @@ def execute(
     """Execute a process."""
     for mapchete_file in mapchete_files:
         try:
-            job = API(host=ctx.obj["host"]).start_job(
+            job = API(**ctx.obj).start_job(
                 mapchete_config=mapchete_file,
                 mode="overwrite" if overwrite else "continue",
                 command="execute",
@@ -213,7 +219,7 @@ def index(
     """Create index of output tiles."""
     for mapchete_file in mapchete_files:
         try:
-            job = API(host=ctx.obj["host"]).start_job(
+            job = API(**ctx.obj).start_job(
                 mapchete_config=mapchete_file,
                 command="index",
                 **kwargs
@@ -251,7 +257,7 @@ def batch(
 ):
     """Execute a batch of processes."""
     try:
-        job = API(host=ctx.obj["host"]).start_batch(
+        job = API(**ctx.obj).start_batch(
             batch=batch_file,
             mode="overwrite" if overwrite else "continue",
             **kwargs
@@ -279,9 +285,9 @@ def status(ctx, job_id, geojson=False, traceback=False):
     """Show job status."""
     try:
         response = (
-            API(host=ctx.obj["host"]).job(job_id, geojson=geojson)
+            API(**ctx.obj).job(job_id, geojson=geojson)
             if geojson
-            else API(host=ctx.obj["host"]).job(job_id)
+            else API(**ctx.obj).job(job_id)
         )
         if geojson:
             click.echo(response)
@@ -364,13 +370,13 @@ def jobs(
     try:
         if geojson:
             click.echo(
-                API(host=ctx.obj["host"]).jobs(geojson=True, **kwargs)
+                API(**ctx.obj).jobs(geojson=True, **kwargs)
             )
         else:
             # sort by state and then by timestamp
             jobs = list(
                 sorted(
-                    API(host=ctx.obj["host"]).jobs(**kwargs).values(),
+                    API(**ctx.obj).jobs(**kwargs).values(),
                     key=lambda x: (
                         x.json["properties"]["state"],
                         x.json["properties"]["timestamp"]
@@ -450,7 +456,7 @@ def _print_job_details(job, verbose=False):
 def _show_progress(ctx, job_id):
     try:
         with click_spinner.spinner():
-            states = API(host=ctx.obj["host"]).job_progress(job_id)
+            states = API(**ctx.obj).job_progress(job_id)
             i = next(states)
         if i["state"] == "SUCCESS":
             click.echo(
