@@ -8,6 +8,7 @@ import importlib
 import logging
 from mapchete.config import get_zoom_levels
 from mapchete.errors import MapcheteProcessImportError
+from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTilePyramid
 import os
 import py_compile
@@ -35,6 +36,7 @@ def process_area_from_config(
     point=None,
     tile=None,
     zoom=None,
+    dst_crs=None,
     **kwargs
 ):
     """
@@ -55,42 +57,56 @@ def process_area_from_config(
         WKT representaion of process area.
     zoom : list or int
         Minimum and maximum zoom level or single zoom level.
+    dst_crs : CRS
+        CRS the process area is to be transformed to.
+
+    Returns
+    -------
+    (geometry, geometry_process_crs) : tuple of shapely.Polygon
+        Geometry in mhub CRS (which is defined in status_gpkg_profile) and in process CRS.
     """
+    if not isinstance(mapchete_config, dict):
+        raise TypeError("mapchete_config must be a dictionary")
+    if "pyramid" not in mapchete_config:
+        raise KeyError("mapchete_config has no 'pyramid' defined")
+
+    tp = BufferedTilePyramid(
+        mapchete_config["pyramid"]["grid"],
+        metatiling=mapchete_config["pyramid"].get("metatiling", 1),
+        pixelbuffer=mapchete_config["pyramid"].get("pixelbuffer", 0)
+    )
+
     # bounds
     if bounds:
-        return box(*bounds)
-
+        geometry = box(*bounds)
     # wkt_geometry
-    if wkt_geometry:
-        return wkt.loads(wkt_geometry)
-
-    def _tp():
-        return BufferedTilePyramid(
-            mapchete_config["pyramid"]["grid"],
-            metatiling=mapchete_config["pyramid"].get("metatiling", 1),
-            pixelbuffer=mapchete_config["pyramid"].get("pixelbuffer", 0)
-        )
-
+    elif wkt_geometry:
+        geometry = wkt.loads(wkt_geometry)
     # point
-    if point:
+    elif point:
         x, y = point
         zoom_levels = get_zoom_levels(
             process_zoom_levels=mapchete_config["zoom_levels"],
             init_zoom_levels=zoom
         )
-        return _tp().tile_from_xy(x, y, max(zoom_levels)).bbox
-
+        geometry = tp.tile_from_xy(x, y, max(zoom_levels)).bbox
     # tile
-    if tile:
-        return _tp().tile(*tile).bbox
-
+    elif tile:
+        geometry = tp.tile(*tile).bbox
     # mapchete_config
-    process_bounds = mapchete_config.get("process_bounds")
-    if process_bounds:
-        return box(*process_bounds)
-
-    # raise error if no process areas is given
-    raise AttributeError("no bounds, wkt_geometry, point, tile or process bounds given.")
+    elif mapchete_config.get("process_bounds"):
+        geometry = box(*mapchete_config.get("process_bounds"))
+    else:
+        # raise error if no process areas is given
+        raise AttributeError(
+            "no bounds, wkt_geometry, point, tile or process bounds given."
+        )
+    # reproject geometry if necessary
+    return reproject_geometry(
+        geometry,
+        src_crs=tp.crs,
+        dst_crs=dst_crs or tp.crs
+    ), geometry
 
 
 @contextmanager

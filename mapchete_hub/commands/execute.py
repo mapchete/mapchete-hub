@@ -17,6 +17,7 @@ def run(
     *args,
     mapchete_config=None,
     process_area=None,
+    process_area_process_crs=None,
     announce_on_slack=False,
     **kwargs
 ):
@@ -24,7 +25,9 @@ def run(
     logger.info("got job %s", self.request.id)
     logger.debug("extra kwargs: %s", kwargs)
     process_area = wkt.loads(process_area)
-    # print(mapchete_config)
+    process_area_process_crs = wkt.loads(process_area_process_crs)
+    logger.debug("process_area: %s", process_area)
+    logger.debug("process_area_process_crs: %s", process_area_process_crs)
 
     # send first event in order to have an empty progress_data dictionary
     self.send_event("task-progress", progress_data=dict(current=None, total=None))
@@ -33,7 +36,7 @@ def run(
     # first, the inputs get parsed, i.e. all metadata queried from catalogue
     # this may take a while
     executor = mapchete_execute(
-        mapchete_config=mapchete_config, process_area=process_area, **kwargs
+        mapchete_config=mapchete_config, process_area=process_area_process_crs, **kwargs
     )
 
     # first item of executor is the number of total tiles; send them to task-progress
@@ -49,4 +52,6 @@ def run(
 
     logger.info("processing successful.")
     if announce_on_slack:
-        send_slack_message(process_area.centroid.x, process_area.centroid.y)
+        send_slack_message(
+            process_area_process_crs.centroid.x, process_area_process_crs.centroid.y
+        )

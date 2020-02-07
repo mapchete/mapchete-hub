@@ -12,6 +12,7 @@ import logging
 from multiprocessing import Process
 import os
 import pkg_resources
+from shapely import wkt
 import uuid
 from webargs import fields
 from webargs.flaskparser import use_kwargs
@@ -205,7 +206,13 @@ class Jobs(Resource):
             500: If an internal server error occured.
         """
         try:
-            jobs = list(_jobs_params(request.get_json(), init_job_id=job_id))
+            jobs = list(
+                _jobs_params(
+                    request.get_json(),
+                    init_job_id=job_id,
+                    dst_crs=main_options["status_gpkg_profile"]["crs"]
+                )
+            )
         except Exception as e:
             logger.error(e)
             return make_response(jsonify(dict(message=str(e))), 400)
@@ -235,7 +242,9 @@ class Jobs(Resource):
                 return make_response(
                     jsonify(
                         dict(
+                            bounds=wkt.loads(process_area).bounds,
                             geometry=process_area,
+                            id=job_id,
                             properties=dict(state="PENDING")
                         )
                     ), 202
@@ -245,7 +254,7 @@ class Jobs(Resource):
             return make_response(jsonify(dict(message=str(e))), 500)
 
 
-def _jobs_params(raw, init_job_id):
+def _jobs_params(raw, init_job_id, dst_crs):
     data = raw if isinstance(raw, (dict, list, tuple)) else json.loads(raw)
     if isinstance(data, dict):
         logger.debug("single job received")
@@ -258,7 +267,9 @@ def _jobs_params(raw, init_job_id):
             """JSON must contain either a dictionary or a list of dictionaries"""
         )
 
-    process_area = process_area_from_config(**jobs[0])
+    process_area, process_area_process_crs = process_area_from_config(
+        **jobs[0], dst_crs=dst_crs
+    )
 
     parent_job_id = None
     job_id = init_job_id
@@ -308,6 +319,7 @@ def _jobs_params(raw, init_job_id):
             child_job_id=child_job_id,
             mapchete_config=cleanup_datetime(config["mapchete_config"]),
             process_area=process_area.wkt,
+            process_area_process_crs=process_area_process_crs.wkt,
         )
 
         yield dict(

@@ -59,13 +59,21 @@ def test_process_area_from_config(example_mapchete):
     zoom = 11
 
     # bounds
-    assert process_area_from_config(bounds=bounds).equals(box(*bounds))
+    assert process_area_from_config(
+        example_mapchete.dict,
+        bounds=bounds
+    )[0].equals(box(*bounds))
 
     # wkt
-    assert process_area_from_config(wkt_geometry=box(*bounds).wkt).equals(box(*bounds))
+    assert process_area_from_config(
+        example_mapchete.dict,
+        wkt_geometry=box(*bounds).wkt
+    )[0].equals(box(*bounds))
 
     # point
-    control_geom = raw_conf_process_pyramid(example_mapchete.dict).tile_from_xy(
+    control_geom = raw_conf_process_pyramid(
+        example_mapchete.dict
+    ).tile_from_xy(
         *point,
         zoom=max(get_zoom_levels(
             process_zoom_levels=example_mapchete.dict["zoom_levels"],
@@ -73,8 +81,10 @@ def test_process_area_from_config(example_mapchete):
         ))
     ).bbox
     assert process_area_from_config(
-        mapchete_config=example_mapchete.dict, point=point, zoom=zoom
-    ).equals(control_geom)
+        mapchete_config=example_mapchete.dict,
+        point=point,
+        zoom=zoom
+    )[0].equals(control_geom)
 
     # config process bounds
     assert process_area_from_config(
@@ -82,11 +92,15 @@ def test_process_area_from_config(example_mapchete):
             example_mapchete.dict,
             process_bounds=bounds
         )
-    ).equals(box(*bounds))
+    )[0].equals(box(*bounds))
 
-    # raise AttributeError
+    # errors
+    with pytest.raises(TypeError):
+        process_area_from_config(mapchete_config=None)
+    with pytest.raises(KeyError):
+        process_area_from_config(mapchete_config=dict())
     with pytest.raises(AttributeError):
-        process_area_from_config(dict())
+        process_area_from_config(mapchete_config=example_mapchete.dict)
 
 
 def test_custom_process_tempfile(example_mapchete):
