@@ -116,25 +116,28 @@ def test_statushandler(status_gpkg, status_profile):
 
             # write another job
             status_w.update(another_test_job, another_pending)
-            all_jobs = status_r.all()
+            all_jobs = status_r.jobs()
             assert len(all_jobs) == 2
 
             # filter by state
-            assert len(status_r.all(state="SUCCESS")) == 0
-            assert len(status_r.all(state="FAILURE")) == 1
-            assert len(status_r.all(state="done")) == 1
-            assert len(status_r.all(state="PENDING")) == 1
-            assert len(status_r.all(state="todo")) == 1
+            assert len(status_r.jobs(state="SUCCESS")) == 0
+            assert len(status_r.jobs(state="FAILURE")) == 1
+            assert len(status_r.jobs(state="done")) == 1
+            assert len(status_r.jobs(state="PENDING")) == 1
+            assert len(status_r.jobs(state="todo")) == 1
 
             # filter by output path
-            assert len(status_r.all(output_path="test")) == 2
+            assert len(status_r.jobs(output_path="test")) == 2
 
             # filter by command
-            assert len(status_r.all(command="execute")) == 2
+            assert len(status_r.jobs(command="execute")) == 2
 
             # filter by queue
-            assert len(status_r.all(queue="execute_queue")) == 0
+            assert len(status_r.jobs(queue="execute_queue")) == 0
 
             # filter by bounds
-            assert len(status_r.all(bounds=[1, 2, 3, 4])) == 2
-            assert len(status_r.all(bounds=[11, 12, 13, 14])) == 0
+            assert len(status_r.jobs(bounds=[1, 2, 3, 4])) == 2
+            assert len(status_r.jobs(bounds=[11, 12, 13, 14])) == 0
+
+            # filter by job_name
+            assert len(status_r.jobs(job_name="unnamed_job")) == 0

@@ -159,6 +159,13 @@ def example_mapchete():
 
 
 @pytest.fixture
+def example_custom_process_mapchete():
+    path = os.path.join(TESTDATA_DIR, 'example_custom_process.mapchete')
+    with TemporaryDirectory() as temp_dir:
+        yield ExampleConfig(path=path, dict=_dict_from_mapchete(path, temp_dir))
+
+
+@pytest.fixture
 def batch_example():
     path = os.path.join(TESTDATA_DIR, 'batch_example.mhub')
     yield ExampleConfig(path=path, dict=yaml.safe_load(open(path)))

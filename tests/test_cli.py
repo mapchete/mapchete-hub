@@ -6,6 +6,19 @@ from mapchete_hub.cli import main
 from mapchete_hub.config import host_options
 
 
+def test_remote_versions():
+    """mhub remote-versions"""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
+            "remote-versions",
+        ]
+    )
+    assert result.exit_code == 0
+    assert "no mhub server found" in result.output
+
+
 def test_status():
     """mhub status"""
     result = CliRunner().invoke(
@@ -88,6 +101,21 @@ def test_index(example_mapchete):
             example_mapchete.path,
         ]
     )
+    assert result.exit_code == 0
+    assert "no mhub server found" in result.output
+
+
+def test_batch(batch_example):
+    """mhub batch"""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
+            "batch",
+            batch_example.path,
+        ]
+    )
+    print(result)
     assert result.exit_code == 0
     assert "no mhub server found" in result.output
 
