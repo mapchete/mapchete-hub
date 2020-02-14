@@ -8,15 +8,13 @@ MAP
   CONFIG "MS_ERRORFILE" "stderr"
   IMAGECOLOR "#182c4e"
 
-    # AWS credentials
+  # AWS credentials
   INCLUDE "../.credentials.map"
 
   # GDAL settings
   CONFIG "CPL_VSIL_CURL_ALLOWED_EXTENSIONS" ".tif"
   CONFIG "GDAL_DISABLE_READDIR_ON_OPEN" "TRUE"
-  # cache size in bytes
-  # CONFIG "VSI_CACHE" "TRUE"
-  # CONFIG "VSI_CACHE_SIZE" "50000000"
+  CONFIG "VSI_CACHE" "FALSE"
 
   OUTPUTFORMAT
     NAME "png"
