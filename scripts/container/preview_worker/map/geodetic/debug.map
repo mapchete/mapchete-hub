@@ -60,7 +60,7 @@ MAP
     NAME ne_land
     STATUS ON
     TYPE POLYGON
-    DATA "/mapdata/naturalearth/ne_10m_land"
+    DATA "/mapdata/naturalearth/ne_10m_eox_white_land_merged_disolved"
     PROJECTION
       "init=epsg:4326"
     END

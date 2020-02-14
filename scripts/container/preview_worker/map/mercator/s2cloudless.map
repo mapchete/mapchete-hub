@@ -8,14 +8,13 @@ MAP
   CONFIG "MS_ERRORFILE" "stderr"
   IMAGECOLOR "#182c4e"
 
-  CONFIG "AWS_ACCESS_KEY_ID" "REDACTED_API_KEY"
-  CONFIG "AWS_SECRET_ACCESS_KEY" "ceeZEwISRbBr5GwcNacG7QmqIJqm5Sj0xZ6uoD1F"
-  # Constrain GDAL to read just the tif it is pointed at
+  # AWS credentials
+  INCLUDE "../.credentials.map"
+
+  # GDAL settings
   CONFIG "CPL_VSIL_CURL_ALLOWED_EXTENSIONS" ".tif"
   CONFIG "GDAL_DISABLE_READDIR_ON_OPEN" "TRUE"
-  # cache size in bytes
-  CONFIG "VSI_CACHE" "TRUE"
-  CONFIG "VSI_CACHE_SIZE" "50000000"
+  CONFIG "VSI_CACHE" "FALSE"
 
   OUTPUTFORMAT
     NAME "png"
@@ -76,7 +75,7 @@ MAP
     MINSCALEDENOM 400000000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/0.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/0.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -88,7 +87,7 @@ MAP
     MINSCALEDENOM 200000000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/1.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/1.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -100,7 +99,7 @@ MAP
     MINSCALEDENOM 100000000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/2.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/2.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -112,7 +111,7 @@ MAP
     MINSCALEDENOM 50000000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/3.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/3.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -124,7 +123,7 @@ MAP
     MINSCALEDENOM 25000000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/4.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/4.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -136,7 +135,7 @@ MAP
     MINSCALEDENOM 12500000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/5.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/5.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -148,7 +147,7 @@ MAP
     MINSCALEDENOM 6500000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/6.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/6.shp"
     TILEITEM "location"
     OFFSITE 0 0 0
     PROJECTION
@@ -161,7 +160,7 @@ MAP
     MINSCALEDENOM 3000000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/7.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/7.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -173,7 +172,7 @@ MAP
     MINSCALEDENOM 1500000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/8.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/8.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -185,7 +184,7 @@ MAP
     MINSCALEDENOM 750000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/9.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/9.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -197,7 +196,7 @@ MAP
     MINSCALEDENOM 400000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/10.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/10.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -209,7 +208,7 @@ MAP
     MINSCALEDENOM 200000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/11.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/11.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -221,7 +220,7 @@ MAP
     MINSCALEDENOM 100000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/12.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/12.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -233,7 +232,7 @@ MAP
     MINSCALEDENOM 50000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/13.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/13.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"
@@ -244,7 +243,7 @@ MAP
     MAXSCALEDENOM 50000
     STATUS ON
     TYPE RASTER
-    TILEINDEX "/indexes/eox-s2cloudless-2018/rgb_corrected_mercator/14.shp"
+    TILEINDEX "/indexes/eox-s2cloudless-2019/rgb_corrected/mercator/14.shp"
     TILEITEM "location"
     PROJECTION
       "init=epsg:3857"

@@ -10,6 +10,9 @@ var init_zoom = config.init_zoom || 2;
 var init_lon = config.init_lon || 0.0;
 var init_lat = config.init_lat || 0.0;
 var srs = config.srs || 'EPSG:4326'
+var s2_debug_visible = config.s2_debug_visible || false;
+var s2_true_color_visbile = config.s2_true_color_visbile || false;
+var s2_true_color_cached_visible = config.s2_true_color_cached_visible || false;
 var mapcache_url = "http://MHUB_MAPCACHE_IP:8080/mapcache/wmts?service=wmts"
 
 if (srs == 'EPSG:4326') {
@@ -17,7 +20,7 @@ if (srs == 'EPSG:4326') {
     var min_zoom = 0
     var max_zoom = 13
     var s2maps_base_overlay_layer = 'overlay_base'
-    var s2maps_base_bright_overlay_layer = 'overlay'
+    var s2maps_base_bright_overlay_layer = 'overlay_base_bright'
     var s2maps_terrain_layer = 'terrain-light'
     var s2cloudless2016_layer = 's2cloudless'
     var s2cloudless2018_layer = 's2cloudless-2018'
@@ -28,7 +31,7 @@ if (srs == 'EPSG:4326') {
     var min_zoom = 0
     var max_zoom = 14
     var s2maps_base_overlay_layer = 'overlay_base_3857'
-    var s2maps_base_bright_overlay_layer = 'overlay_3857'
+    var s2maps_base_bright_overlay_layer = 'overlay_base_bright_3857'
     var s2maps_terrain_layer = 'terrain-light_3857'
     var s2cloudless2016_layer = 's2cloudless_3857'
     var s2cloudless2018_layer = 's2cloudless-2018_3857'
@@ -175,7 +178,7 @@ var s2_false_color_infrared = new ol.layer.Tile({
 var s2_true_color = new ol.layer.Tile({
     title: '8bit Color Corrected',
     type: 'overlay',
-    visible: false,
+    visible: s2_true_color_visbile,
     source: new ol.source.TileWMS({
         attributions: '<a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2017 & 2018)',
         url: "/mapserver?map=/map/" + dirname + "/s2cloudless.map&",
@@ -186,7 +189,7 @@ var s2_true_color = new ol.layer.Tile({
 var s2_true_color_cached = new ol.layer.Tile({
     title: '8bit Color Corrected cache',
     type: 'overlay',
-    visible: false,
+    visible: s2_true_color_cached_visible,
     source: new ol.source.WMTS({
         layer: s2cloudless2019_layer,
         ...wmts_defaults,
@@ -196,22 +199,11 @@ var s2_true_color_cached = new ol.layer.Tile({
 var s2_debug = new ol.layer.Tile({
     title: '16bit Stretched',
     type: 'overlay',
-    visible: true,
+    visible: s2_debug_visible,
     source: new ol.source.TileWMS({
         attributions: '<a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2017 & 2018)',
         url: "/mapserver?map=/map/" + dirname + "/debug.map&",
         params: {'LAYERS': 'map', 'FORMAT': 'image/jpeg', 'TRANSPARENT': 'false'},
-        ...mhub_defaults
-    })
- });
-var biggles_debug = new ol.layer.Tile({
-    title: 'biggles hillshade',
-    type: 'overlay',
-    visible: false,
-    source: new ol.source.TileWMS({
-        attributions: '<a href="https://s2maps.eu">Sentinel-2 cloudless - https://s2maps.eu</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2017 & 2018)',
-        url: "/mapserver?map=/map/" + dirname + "/biggles.map&",
-        params: {'LAYERS': 'map', 'FORMAT': 'image/png', 'TRANSPARENT': 'true'},
         ...mhub_defaults
     })
  });
