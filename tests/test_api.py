@@ -5,7 +5,30 @@ from mapchete_hub.api import load_mapchete_config, load_batch_config
 from mapchete_hub.exceptions import JobNotFound
 
 
-def test_api_get(mhub_api):
+def test_api_get_capabilities(mhub_api):
+    url = "/capabilities.json"
+    response = mhub_api.get(url)
+    assert response.status_code == 200
+    assert response.json
+
+
+def test_api_get_queues(mhub_api):
+    url = "/queues"
+    response = mhub_api.get(url)
+    # TODO somehow the test client returns "308 Permanent Redirect"
+    assert response.status_code == 308
+    # assert response.json
+
+
+# def test_api_get_queue_name(mhub_api):
+#     url = "/queues/some_name"
+#     response = mhub_api.get(url)
+#     # TODO somehow the test client returns "308 Permanent Redirect"
+#     assert response.status_code == 308
+#     # assert response.json
+
+
+def test_api_get_jobs(mhub_api):
     url = "/jobs/"
     response = mhub_api.get(url)
     assert response.status_code == 200
@@ -43,7 +66,6 @@ def test_start_job(mhub_api, example_mapchete):
 
 
 def test_start_batch(mhub_api, batch_example):
-    job_id = "test"
     result = mhub_api.start_batch(
         batch_example.path,
         bounds=[1, 2, 3, 4],
@@ -78,15 +100,18 @@ def test_job_progress(mhub_api):
         next(mhub_api.job_progress(job_id))
 
 
-def test_load_mapchete_config(example_mapchete):
+def test_load_mapchete_config(example_mapchete, example_custom_process_mapchete):
     # from path
     from_path = load_mapchete_config(example_mapchete.path)
-    isinstance(from_path, OrderedDict)
+    assert isinstance(from_path, OrderedDict)
     # from_dict
     from_dict = load_mapchete_config(OrderedDict(example_mapchete.dict))
-    isinstance(from_dict, OrderedDict)
+    assert isinstance(from_dict, OrderedDict)
     with pytest.raises(TypeError):
         load_mapchete_config(example_mapchete.dict)
+    # custom process function
+    with_custom_process = load_mapchete_config(example_custom_process_mapchete.path)
+    assert isinstance(with_custom_process, OrderedDict)
 
 
 def test_load_batch_config(

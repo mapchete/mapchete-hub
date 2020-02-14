@@ -1,6 +1,6 @@
 # mandatory parameters
 process: mapchete.processes.examples.example_process
-bounds: [2.0, 1.0, 3.0, 4.0]
+bounds: [0, 0, 10, 10]
 zoom_levels:
     min: 7
     max: 11

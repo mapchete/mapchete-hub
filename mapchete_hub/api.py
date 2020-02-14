@@ -73,7 +73,10 @@ class API():
     def get(self, url, **kwargs):
         """Make a GET request to _test_client or host."""
         try:
-            res = self._api.get(self._baseurl + url, **self._get_kwargs(kwargs))
+            get_url = self._baseurl + url
+            get_kwargs = self._get_kwargs(kwargs)
+            logger.debug("GET: %s, %s", get_url, get_kwargs)
+            res = self._api.get(get_url, **get_kwargs)
             return Response(
                 status_code=res.status_code,
                 json=res.json if self._test_client else json.loads(res.text)
@@ -84,7 +87,10 @@ class API():
     def post(self, url, **kwargs):
         """Make a POST request to _test_client or host."""
         try:
-            res = self._api.post(self._baseurl + url, **self._get_kwargs(kwargs))
+            post_url = self._baseurl + url
+            post_kwargs = self._get_kwargs(kwargs)
+            logger.debug("POST: %s, %s", post_url, post_kwargs)
+            res = self._api.post(post_url, **post_kwargs)
             return Response(
                 status_code=res.status_code,
                 json=res.json if self._test_client else json.loads(res.text)

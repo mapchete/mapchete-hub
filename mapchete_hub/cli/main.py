@@ -91,6 +91,24 @@ def mhub(ctx, **kwargs):
     ctx.obj = dict(**kwargs)
 
 
+@mhub.command(short_help="Show remote package versions.")
+@opt_debug
+@click.pass_context
+def remote_versions(ctx, **kwargs):
+    """Print package versions installed on remote mapchete Hub."""
+    try:
+        res = API(**ctx.obj).get("capabilities.json")
+        if res.status_code != 200:
+            raise ConnectionError(res.json)
+        click.echo("mapchete_hub: %s" % res.json["version"])
+        click.echo("")
+        for package, version in sorted(res.json["packages"].items()):
+            click.echo("%s: %s" % (package, version))
+    except Exception as e:
+        click.echo("Error: %s" % e)
+    ctx.exit()
+
+
 @mhub.command(short_help="Show available processes.")
 @click.option(
     "--process_name", "-n", type=click.STRING, help="Print docstring of process."
@@ -98,8 +116,9 @@ def mhub(ctx, **kwargs):
 @click.option(
     "--docstrings", is_flag=True, help="Print docstrings of all processes."
 )
+@opt_debug
 @click.pass_context
-def processes(ctx, process_name=None, docstrings=False):
+def processes(ctx, process_name=None, docstrings=False, **kwargs):
     """Show available processes."""
     def _print_process_info(process_module, docstrings=False):
         click.echo(
@@ -134,20 +153,40 @@ def processes(ctx, process_name=None, docstrings=False):
 
 
 @mhub.command(short_help="Show available queues and workers.")
+@click.option(
+    "--queue_name", "-n", type=click.STRING, help="Print detailed information on queue."
+)
+@opt_debug
 @click.pass_context
-def queues(ctx):
-    """Show available queues and workers."""
+def queues(ctx, queue_name=None, **kwargs):
+    """Show available queues."""
     try:
-        res = API(**ctx.obj).get("capabilities.json")
-        if res.status_code != 200:
-            raise ConnectionError(res.json)
-        if res.json["queues"]:
-            for queue, workers in res.json["queues"].items():
-                click.echo("%s:" % queue)
-                for worker in workers:
+        if queue_name:
+            res = API(**ctx.obj).get("queues/%s" % queue_name)
+            if res.status_code == 404:
+                click.echo("no queue '%s' found" % queue_name)
+            elif res.status_code != 200:
+                raise ConnectionError(res.json)
+            else:
+                click.echo("workers (%s)" % res.json["worker_count"])
+                for worker in res.json["workers"]:
                     click.echo("    %s" % worker)
+                click.echo("jobs (%s in queue):" % res.json["job_count"])
+                for status, jobs in res.json["jobs"].items():
+                    click.echo("    %s:" % status)
+                    for job in jobs:
+                        click.echo("        %s" % job)
         else:
-            click.echo("no queues nor workers currently registered")
+            res = API(**ctx.obj).get("queues")
+            if res.status_code != 200:
+                raise ConnectionError(res.json)
+            if res.json.items():
+                for queue, properties in res.json.items():
+                    click.echo("%s:" % queue)
+                    click.echo("    workers: %s" % properties["worker_count"])
+                    click.echo("    pending jobs: %s" % properties["job_count"])
+            else:
+                click.echo("no queues nor workers currently registered")
     except Exception as e:
         click.echo("Error: %s" % e)
 
@@ -174,6 +213,7 @@ def execute(
     mapchete_files,
     overwrite=False,
     verbose=False,
+    debug=False,
     **kwargs
 ):
     """Execute a process."""
@@ -187,7 +227,7 @@ def execute(
             )
             if verbose:
                 click.echo("job %s state: %s" % (job.job_id, job.state))
-                _show_progress(ctx, job.job_id)
+                _show_progress(ctx, job.job_id, disable=debug)
             else:
                 click.echo(job.job_id)
         except Exception as e:
@@ -208,12 +248,14 @@ def execute(
     default="index_queue",
     help="Queue the job should be added to."
 )
+@opt_debug
 @click.pass_context
 def index(
     ctx,
     mapchete_files,
     verbose=False,
     queue=None,
+    debug=False,
     **kwargs
 ):
     """Create index of output tiles."""
@@ -226,7 +268,7 @@ def index(
             )
             if verbose:
                 click.echo("job %s state: %s" % (job.job_id, job.state))
-                _show_progress(ctx, job.job_id)
+                _show_progress(ctx, job.job_id, disable=debug)
             else:
                 click.echo(job.job_id)
         except Exception as e:
@@ -253,6 +295,7 @@ def batch(
     batch_file,
     overwrite=False,
     verbose=False,
+    debug=False,
     **kwargs
 ):
     """Execute a batch of processes."""
@@ -264,11 +307,10 @@ def batch(
         )
         if verbose:
             click.echo("job %s state: %s" % (job.job_id, job.state))
-            _show_progress(ctx, job.job_id)
+            _show_progress(ctx, job.job_id, disable=debug)
         else:
             click.echo(job.job_id)
     except Exception as e:
-        raise
         click.echo("Error: %s" % e)
 
 
@@ -280,8 +322,9 @@ def batch(
     is_flag=True,
     help="Print only traceback if available."
 )
+@opt_debug
 @click.pass_context
-def status(ctx, job_id, geojson=False, traceback=False):
+def status(ctx, job_id, geojson=False, traceback=False, **kwargs):
     """Show job status."""
     try:
         response = (
@@ -301,11 +344,12 @@ def status(ctx, job_id, geojson=False, traceback=False):
 
 @mhub.command(short_help="Show job progress.")
 @click.argument("job_id", type=click.STRING)
+@opt_debug
 @click.pass_context
-def progress(ctx, job_id):
+def progress(ctx, job_id, debug=False):
     """Show job progress."""
     try:
-        _show_progress(ctx, job_id)
+        _show_progress(ctx, job_id, disable=debug)
     except Exception as e:
         click.echo("Error: %s" % e)
 
@@ -352,10 +396,16 @@ def progress(ctx, job_id):
     help="Filter jobs by timestamp until given time.",
 )
 @click.option(
+    "--job-name", "-n",
+    type=click.STRING,
+    help="Filter jobs job name."
+)
+@click.option(
     "--verbose", "-v",
     is_flag=True,
     help="Print job details. (Does not work with --geojson.)"
 )
+@opt_debug
 @click.pass_context
 def jobs(
     ctx,
@@ -408,9 +458,15 @@ def _print_job_details(job, verbose=False):
     mapchete_config = properties.get("config", {}).get("mapchete_config", {})
 
     # job ID and job state
-    click.echo(click.style("%s: %s" % (job.job_id, job.state), fg=color, bold=True))
+    click.echo(click.style("%s" % job.job_id, fg=color, bold=True))
 
     if verbose:
+        # job name
+        click.echo("job name: %s" % properties.get("job_name"))
+
+        # state
+        click.echo(click.style("state: %s" % job.state))
+
         # command
         click.echo("command: %s" % properties.get("command"))
 
@@ -426,6 +482,12 @@ def _print_job_details(job, verbose=False):
         except:
             bounds = None
         click.echo("bounds: %s" % bounds)
+
+        # parent ID
+        click.echo("parent_job_id: %s" % properties.get("parent_job_id"))
+
+        # child ID
+        click.echo("child_job_id: %s" % properties.get("child_job_id"))
 
         # start time
         click.echo(
@@ -453,9 +515,9 @@ def _print_job_details(job, verbose=False):
         click.echo("")
 
 
-def _show_progress(ctx, job_id):
+def _show_progress(ctx, job_id, disable=False):
     try:
-        with click_spinner.spinner():
+        with click_spinner.spinner(disable=disable):
             states = API(**ctx.obj).job_progress(job_id)
             i = next(states)
         if i["state"] == "SUCCESS":
@@ -469,7 +531,8 @@ def _show_progress(ctx, job_id):
         if i["state"] in job_states["doing"]:
             with tqdm(
                 initial=i["progress_data"]["current"],
-                total=i["progress_data"]["total"]
+                total=i["progress_data"]["total"],
+                disable=disable
             ) as pbar:
                 for i in states:
                     if (

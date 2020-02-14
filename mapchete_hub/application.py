@@ -2,16 +2,71 @@
 Main web application.
 
 This module configures Flask and defines all required endpoints.
+
+API:
+
+/capabilities.json
+------------------
+Show remote package versions, processes, etc.
+
+/jobs
+-----
+Return submitted jobs. Jobs can be filtered by using the following keyword arguments:
+    output_path : str
+        Filter by output path.
+    state : str
+        Filter by job state.
+    command : str
+        Filter by mapchete Hub command.
+    queue : str
+        Filter by queue.
+    job_name : str
+        Filter by job name.
+    bounds : list or tuple
+        Filter by spatial bounds.
+    from_date : str
+        Filter by earliest date.
+    to_date : str
+        Filter by latest date.
+
+/jobs/<job_id>
+--------------
+Return job metadata.
+
+/processes
+----------
+Return available processes.
+
+/processes/<process_id>
+-----------------------
+Return detailed information on process.
+
+/queues
+-------
+List available queues, also showing number of pending jobs and workers attatched to each
+queue.
+
+/queues/<queue_name>
+--------------------
+Show detailed information on queue.
 """
 
+from amqp.exceptions import NotFound as QueueNotFound
 import celery
+from collections import defaultdict
+import eox_preprocessing
+import fiona
 from flask import Flask, jsonify, request, abort, make_response
 from flask_restful import Api, Resource
 import json
 import logging
+import mapchete
+import mapchete_satellite
 from multiprocessing import Process
+import orgonite
 import os
 import pkg_resources
+import rasterio
 from shapely import wkt
 import uuid
 from webargs import fields
@@ -56,6 +111,7 @@ def flask_app(launch_monitor=False):
     logger.debug("add endpoints to REST API")
     api.add_resource(Capabilities, "/capabilities.json")
     api.add_resource(QueuesOverview, "/queues/")
+    api.add_resource(Queues, "/queues/<string:queue_name>")
     api.add_resource(JobsOverview, "/jobs/")
     api.add_resource(Jobs, "/jobs/<string:job_id>")
 
@@ -77,6 +133,16 @@ class Capabilities(Resource):
         processes = list(pkg_resources.iter_entry_points("mapchete.processes"))
         self._capabilities = {}
         self._capabilities["version"] = __version__
+        self._capabilities["packages"] = {
+            "eox_preprocessing": eox_preprocessing.__version__,
+            "fiona": fiona.__version__,
+            "gdal": rasterio.__gdal_version__,
+            "mapchete": mapchete.__version__,
+            "mapchete_satellite": mapchete_satellite.__version__,
+            "orgonite": orgonite.__version__,
+            "rasterio": rasterio.__version__,
+        }
+
         self._capabilities["processes"] = {}
         for v in processes:
             process_module = v.load()
@@ -87,16 +153,6 @@ class Capabilities(Resource):
 
     def get(self):
         """Return /capabilities.json."""
-        # append current information on queues and workers
-        insp = celery_app.control.inspect().active_queues()
-        queues_out = {}
-        for worker, queues in (insp or {}).items():
-            for queue in queues:
-                if queue["name"] not in queues_out:
-                    queues_out[queue["name"]] = []
-                queues_out[queue["name"]].append(worker)
-        self._capabilities["queues"] = queues_out
-
         return jsonify(self._capabilities)
 
 
@@ -105,7 +161,80 @@ class QueuesOverview(Resource):
 
     def get(self):
         """Return queues."""
-        return jsonify(celery_app.control.inspect())
+        try:
+            insp = celery_app.control.inspect().active_queues() or {}
+            queue_workers = defaultdict(list)
+            for worker, queues in insp.items():
+                for queue in queues:
+                    queue_workers[queue["name"]].append(worker)
+            out_queues = {}
+            with celery_app.connection_or_acquire() as conn:
+                for queue_name, workers in queue_workers.items():
+                    queue_info = conn.default_channel.queue_declare(
+                        queue=queue_name,
+                        passive=True
+                    )
+                    out_queues[queue_name] = dict(
+                        worker_count=queue_info.consumer_count,
+                        job_count=queue_info.message_count
+                    )
+            return jsonify(out_queues)
+        except Exception as e:
+            logger.error(e)
+            return make_response(jsonify(dict(message=str(e))), 500)
+
+
+class Queues(Resource):
+    """Resource for /queues/<queue_name>."""
+
+    def get(self, queue_name):
+        """
+        Return queue metadata.
+
+        Parameters
+        ----------
+        queue_name : str
+            Name of queue.
+
+        Returns
+        -------
+        response
+        """
+        def _extract_jobs(job_list):
+            return list(set((y["id"] for x in job_list for y in x)))
+
+        try:
+            inspect = celery_app.control.inspect()
+            active_queues = inspect.active_queues() or {}
+            queue_workers = defaultdict(list)
+            for worker, queues in active_queues.items():
+                for queue in queues:
+                    queue_workers[queue["name"]].append(worker)
+            with celery_app.connection_or_acquire() as conn:
+                queue_info = conn.default_channel.queue_declare(
+                    queue=queue_name,
+                    passive=True
+                )
+                return make_response(
+                    jsonify(
+                        dict(
+                            workers=queue_workers[queue_name],
+                            worker_count=queue_info.consumer_count,
+                            job_count=queue_info.message_count,
+                            jobs=dict(
+                                active=_extract_jobs(inspect.active().values()),
+                                reserved=_extract_jobs(inspect.reserved().values()),
+                                scheduled=_extract_jobs(inspect.scheduled().values()),
+                            )
+                        )
+                    ),
+                    200
+                )
+        except QueueNotFound:
+            abort(404)
+        except Exception as e:
+            logger.error(e)
+            return make_response(jsonify(dict(message=str(e))), 500)
 
 
 class JobsOverview(Resource):
@@ -123,8 +252,33 @@ class JobsOverview(Resource):
 
     @use_kwargs(args)
     def get(self, **kwargs):
-        """Return jobs."""
-        return jsonify(states.all(**kwargs))
+        """
+        Return jobs as list of GeoJSON features.
+
+        Parameters
+        ----------
+        output_path : str
+            Filter by output path.
+        state : str
+            Filter by job state.
+        command : str
+            Filter by mapchete Hub command.
+        queue : str
+            Filter by queue.
+        job_name : str
+            Filter by job name.
+        bounds : list or tuple
+            Filter by spatial bounds.
+        from_date : str
+            Filter by earliest date.
+        to_date : str
+            Filter by latest date.
+
+        Returns
+        -------
+        GeoJSON features : list of dict
+        """
+        return jsonify(states.jobs(**kwargs))
 
 
 class Jobs(Resource):
@@ -141,7 +295,7 @@ class Jobs(Resource):
 
         Returns
         -------
-        response
+        GeoJSON feature
         """
         res = states.job(job_id)
         logger.debug("return get(): %s", res)

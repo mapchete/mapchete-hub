@@ -31,6 +31,8 @@ def status_monitor(celery_app):
     ) as status_handler:
 
         def announce_task_state(event):
+            # task name is sent only with -received event, and state
+            # will keep track of this for us.
             logger.debug("got event: %s", event)
             state.event(event)
             task = state.tasks.get(event["uuid"])
@@ -38,7 +40,8 @@ def status_monitor(celery_app):
                 logger.debug("task status: %s: %s", task.uuid, event["state"])
             except:
                 logger.error("malformed task status: %s", event)
-            status_handler.update(task.uuid, event)
+            if task.uuid:
+                status_handler.update(job_id=task.uuid, metadata=event)
 
         def announce_failed_task_state(event):
             # task name is sent only with -received event, and state
@@ -46,7 +49,8 @@ def status_monitor(celery_app):
             state.event(event)
             task = state.tasks.get(event["uuid"])
             logger.error("task failed: %s: %s", task.uuid, event)
-            status_handler.update(task.uuid, event)
+            if task.uuid:
+                status_handler.update(job_id=task.uuid, metadata=event)
 
         while True:
             try:
@@ -125,17 +129,43 @@ class StatusHandler():
         )
         logger.debug(self.fields)
 
-    def all(
+    def jobs(
         self,
         output_path=None,
         state=None,
         command=None,
         queue=None,
+        job_name=None,
         bounds=None,
         from_date=None,
         to_date=None
     ):
-        """Return all jobs."""
+        """
+        Return jobs as list of GeoJSON features.
+
+        Parameters
+        ----------
+        output_path : str
+            Filter by output path.
+        state : str
+            Filter by job state.
+        command : str
+            Filter by mapchete Hub command.
+        queue : str
+            Filter by queue.
+        job_name : str
+            Filter by job name.
+        bounds : list or tuple
+            Filter by spatial bounds.
+        from_date : str
+            Filter by earliest date.
+        to_date : str
+            Filter by latest date.
+
+        Returns
+        -------
+        GeoJSON features : list of dict
+        """
         c = self.connection.cursor()
 
         # build SQL query
@@ -167,15 +197,17 @@ class StatusHandler():
             connect = " AND" if "WHERE" in query else " WHERE"
             query += "%s timestamp<=%s" % (connect, to_date.timestamp())
 
-        # add command filter
-        if command:
-            connect = " AND" if "WHERE" in query else " WHERE"
-            query += "%s command='%s'" % (connect, command.lower())
-
-        # add queue filter
-        if queue:
-            connect = " AND" if "WHERE" in query else " WHERE"
-            query += "%s queue='%s'" % (connect, queue.lower())
+        # add other string based filters
+        for name, var in [
+            ("command", command),
+            ("queue", queue),
+            ("job_name", job_name),
+        ]:
+            # add filter
+            if var:
+                query += "%s LOWER(%s) LIKE LOWER('%s')" % (
+                    " AND" if "WHERE" in query else " WHERE", name, var
+                )
 
         query += ";"
         logger.debug(query)
@@ -193,14 +225,30 @@ class StatusHandler():
             else:
                 return True
 
-        # return result
-        return [
-            i for i in map(self._decode_row, c.execute(query).fetchall())
-            if _mapchete_config_filter(i)
-        ]
+        # decode rows and return results
+        results = []
+        for i in c.execute(query).fetchall():
+            try:
+                decoded = self._decode_row(i)
+                if _mapchete_config_filter(decoded):
+                    results.append(decoded)
+            except Exception as e:
+                logger.exception(e)
+        return results
 
     def job(self, job_id):
-        """Return job."""
+        """
+        Return job as GeoJSON feature.
+
+        Parameters
+        ----------
+        job_id : str
+            Unique job ID.
+
+        Returns
+        -------
+        GeoJSON feature : dict
+        """
         logger.debug("get job %s status", job_id)
         c = self.connection.cursor()
         row = c.execute(
@@ -212,10 +260,29 @@ class StatusHandler():
         else:
             return self._decode_row(row)
 
-    def update(self, job_id, metadata={}):
-        """Update job."""
+    def update(self, job_id=None, metadata={}):
+        """
+        Update job entry in database.
+
+        Parameters
+        ----------
+        job_id : str
+            Unique job ID.
+        metadate : dict
+            Job metadata.
+
+        Returns
+        -------
+        None
+        """
         if self.mode == "r":
             raise AttributeError("update not allowed in read mode")
+        if job_id is None:
+            raise ValueError("no job_id provided")
+        if not metadata:
+            return
+
+        logger.debug("got update for job %s", job_id)
 
         # get cursor
         c = self.connection.cursor()
@@ -226,7 +293,7 @@ class StatusHandler():
 
         logger.debug("got metadata: %s", metadata)
 
-        # update incoming metadata
+        # only use entries which are in schemea
         entry = dict(self._filtered_by_schema(metadata))
 
         logger.debug("filtered by schema: %s", entry)
@@ -234,7 +301,7 @@ class StatusHandler():
         if "kwargs" in metadata:
             kwargs = json.loads(metadata["kwargs"].replace("'", '"'))
             entry.update(
-                geom=wkt.loads(kwargs["process_area"]).wkt,
+                geom=kwargs["process_area"],
                 command=kwargs.get("command"),
                 config=dict(
                     mapchete_config=kwargs["mapchete_config"],
@@ -244,7 +311,7 @@ class StatusHandler():
                     point=kwargs.get("point"),
                     wkt_geometry=kwargs.get("wkt_geometry")
                 ),
-                job_id=metadata["uuid"],
+                job_id=job_id,
                 job_name=kwargs.get("job_name"),
                 parent_job_id=kwargs.get("parent_job_id"),
                 child_job_id=kwargs.get("child_job_id"),
@@ -269,12 +336,15 @@ class StatusHandler():
             c.execute(insert, encoded_values)
         else:
             # update existing entry
+
             update = "UPDATE %s SET %s WHERE job_id=?;" % (
                 self.tablename,
-                ", ".join([
-                    "%s=%s" % (column, value)
-                    for column, value in zip(entry.keys(), ["?" for _ in entry])
-                ])
+                ", ".join(
+                    [
+                        "%s=%s" % (column, value)
+                        for column, value in zip(entry.keys(), ["?" for _ in entry])
+                    ]
+                )
             )
             encoded_values.append(job_id)
             c.execute(update, encoded_values)
@@ -290,7 +360,7 @@ class StatusHandler():
         return {k: v for k, v in metadata.items() if k in self.fields}
 
     def _encode_values(self, entry):
-
+        """Encode dictionary for database."""
         def _encode():
             for v in entry.values():
                 if isinstance(v, dict):
@@ -301,14 +371,16 @@ class StatusHandler():
         return list(_encode())
 
     def _decode_row(self, row):
-
+        """Map database entry as GeoJSON."""
         def _decode():
             for k, v in zip(self.fields, row):
                 if k == "geom":
-                    if v is None:
-                        yield (k, v)
-                    else:
+                    try:
                         yield (k, wkt.loads(v))
+                    except Exception as e:
+                        raise ValueError(
+                            "row does not have a valid geometry: %s: %s" % (row, e)
+                        )
                 elif isinstance(v, str):
                     try:
                         yield (k, json.loads(v))
