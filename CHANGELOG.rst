@@ -3,6 +3,27 @@ Changelog
 #########
 
 ---
+0.8
+---
+* CLI
+    * add ``--timeout`` parameter
+    * increase verbose output
+    * add ``--debug`` flag to all subcommands
+    * add ``remote-versions`` query
+* monitor
+    * make sure job events have a ``job_id`` before updating the database
+    * add ``job_name`` filter
+    * rename ``StatusHandler.all()`` to ``StatusHandler.jobs()``
+* API
+    * don't append queue information in capabilities.json
+    * add queue length (i.e. number of jobs waiting) to response
+    * add /queues/<queue_name> to API
+* seeding
+    * added mercator configurations
+    * fixed compression setting in mapfiles
+
+
+---
 0.7
 ---
 * increased ``eox_preprocessing`` dependency to ``0.9``
