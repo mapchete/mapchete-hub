@@ -94,7 +94,7 @@
             </params>
         </getmap>
         <http>
-            <url>http://MHUB_PREVIEW_IP:80/mapserver?map=/map/geodetic/s2cloudless.map</url>
+            <url>http://MHUB_PREVIEW_IP:80/mapserver?map=/map/mercator/s2cloudless.map</url>
         </http>
         <connection_timeout>300</connection_timeout>
     </source>
@@ -106,7 +106,7 @@
         <source>s2cloudless-2019_3857</source>
         <cache>s2cloudless-2019_3857</cache>
         <format>eox_jpeg</format>
-        <grid maxzoom="17" max-cached-zoom="13" out-of-zoom-strategy="reassemble">GoogleMapsCompatible</grid>
+        <grid maxzoom="17" max-cached-zoom="14" out-of-zoom-strategy="reassemble">GoogleMapsCompatible</grid>
         <metatile>8 8</metatile>
         <expires>1800</expires>
     </tileset>
