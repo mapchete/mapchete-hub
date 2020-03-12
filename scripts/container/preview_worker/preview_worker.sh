@@ -95,9 +95,13 @@ retry 10 docker login -u gitlab-ci-token -p $GITLAB_REGISTRY_TOKEN registry.gitl
 retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG
 retry 10 docker pull registry.gitlab.eox.at/maps/docker-base/mapserver:$MAPSERVER_IMAGE_TAG
 
-# move map directory in place
+# move directories in place
+cp -R html ${LOCAL_VOLUME_DIR}/
+# map directory shall contain "geodetic" and "mercator" subdirectories with mapfiles
 cp -R map ${LOCAL_VOLUME_DIR}/
-sed "s/MHUB_MAPCACHE_IP/${MHUB_MAPCACHE_IP}/g" map/html/s2maps.js > ${LOCAL_VOLUME_DIR}/map/html/s2maps.js
+# insert mapcache IP for WMTS layer
+sed "s/MHUB_MAPCACHE_IP/${MHUB_MAPCACHE_IP}/g" html/s2maps.js > ${LOCAL_VOLUME_DIR}/html/s2maps.js
+# insert AWS credentials so mapserver can access bucket
 printf "CONFIG \"AWS_ACCESS_KEY_ID\" \"${AWS_ACCESS_KEY_ID}\"\nCONFIG \"AWS_SECRET_ACCESS_KEY\" \"${AWS_SECRET_ACCESS_KEY}\"\n" > ${LOCAL_VOLUME_DIR}/map/.credentials.map
 
 # try to stop container if they are running
@@ -108,7 +112,7 @@ docker run \
   --rm \
   --name=mapserver \
   -p 80:80 \
-  -v ${LOCAL_VOLUME_DIR}/map/html:/html \
+  -v ${LOCAL_VOLUME_DIR}/html:/html \
   -v ${LOCAL_VOLUME_DIR}/map:/map \
   -v ${LOCAL_VOLUME_DIR}/indexes:/indexes \
   -v ${LOCAL_VOLUME_DIR}/mapdata:/mapdata \
