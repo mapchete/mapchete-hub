@@ -4,13 +4,13 @@ default:
     - pip install cython numpy
     - pip install -e .[mundi,test]
 
-test_base_image:0.3:
-  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:0.3
+test_base_image:0.4:
+  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:0.4
   script:
     - pytest -v --cov=mapchete_hub tests/
 
-test_base_image:0.4:
-  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:0.4
+test_base_image:0.5:
+  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:0.5
   script:
     - pytest -v --cov=mapchete_hub tests/
 

@@ -1,6 +1,6 @@
 # use builder to build python wheels #
 ######################################
-FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.4 as builder
+FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.5 as builder
 MAINTAINER Joachim Ungar
 
 ENV GODALE_VERSION 0.2
