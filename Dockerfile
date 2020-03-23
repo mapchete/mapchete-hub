@@ -34,7 +34,7 @@ RUN pip install cython numpy \
 
 # build image using pre-built libraries and wheels #
 ####################################################
-FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.4 as final
+FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.5 as final
 MAINTAINER Joachim Ungar
 
 ENV AWS_REQUEST_PAYER requester
