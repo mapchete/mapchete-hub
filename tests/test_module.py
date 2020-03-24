@@ -22,7 +22,8 @@ def test_mapchete_index(mp_tmpdir, example_mapchete):
     assert len(list(mapchete_index(
         mapchete_config=example_mapchete.dict,
         shapefile=True,
-        out_dir=mp_tmpdir
+        out_dir=mp_tmpdir,
+        zoom=7
     )))
     # single tile
     assert len(list(mapchete_index(

@@ -1,6 +1,6 @@
 # use builder to build python wheels #
 ######################################
-FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.5 as builder
+FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.6 as builder
 MAINTAINER Joachim Ungar
 
 ENV GODALE_VERSION 0.2
@@ -34,7 +34,7 @@ RUN pip install cython numpy \
 
 # build image using pre-built libraries and wheels #
 ####################################################
-FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.5 as final
+FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.6 as final
 MAINTAINER Joachim Ungar
 
 ENV AWS_REQUEST_PAYER requester
