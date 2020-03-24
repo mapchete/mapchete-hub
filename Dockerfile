@@ -4,7 +4,7 @@ FROM registry.gitlab.eox.at/maps/docker-base/mapchete:0.6 as builder
 MAINTAINER Joachim Ungar
 
 ENV GODALE_VERSION 0.2
-ENV MAPCHETE_SATELLITE_VERSION 0.4
+ENV MAPCHETE_SATELLITE_VERSION 0.5
 ENV ORGONITE_VERSION 0.5
 
 ENV BUILD_DIR /usr/local
