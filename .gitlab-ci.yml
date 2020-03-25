@@ -1,20 +1,81 @@
+image: docker:19.03.1
+
+stages:
+  - build
+  - test
+  - push
+
 default:
   before_script:
-    - apt-get update && apt-get install --yes --no-install-recommends gcc git
-    - pip install cython numpy
-    - pip install -e .[mundi,test]
+    - docker info
+    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+    # tag as "latest" if current branch is master, else use branch name
+    - export IMAGE_TAG=`if [ "$CI_COMMIT_REF_NAME" == "master" ]; then echo "latest"; else echo $CI_COMMIT_REF_NAME; fi`
 
-test_base_image:0.4:
-  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:0.4
+# build docker images for mhub and mhub-s1
+build_mhub:
+  stage: build
+  variables:
+    IMAGE_NAME: mhub
+    BASE_IMAGE_NAME: mapchete
   script:
-    - pytest -v --cov=mapchete_hub tests/
+    - docker build --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
 
-test_base_image:0.6:
-  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:0.6
+build_mhub-s1:
+  stage: build
+  variables:
+    IMAGE_NAME: mhub-s1
+    BASE_IMAGE_NAME: snap-mapchete
   script:
-    - pytest -v --cov=mapchete_hub tests/
+    - docker build --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
 
-test_base_image:latest:
-  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete:latest
+# test mapchete_hub package in built images
+test_mhub:
+  stage: test
+  variables:
+    IMAGE_NAME: mhub
+    BASE_IMAGE_NAME: mapchete
   script:
-    - pytest -v --cov=mapchete_hub tests/
+    - docker run ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} /bin/bash -c "pip install -e .[test] && pytest -v --cov=mapchete_hub"
+
+test_mhub-s1:
+  stage: test
+  variables:
+    IMAGE_NAME: mhub-s1
+    BASE_IMAGE_NAME: snap-mapchete
+  script:
+    - docker run ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} /bin/bash -c "pip install -e .[test] && pytest -v --cov=mapchete_hub"
+
+# push images to registry
+push_mhub:
+  stage: push
+  variables:
+    IMAGE_NAME: mhub
+    BASE_IMAGE_NAME: mapchete
+  script:
+    - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG}
+
+push_mhub-s1:
+  stage: push
+  variables:
+    IMAGE_NAME: mhub-s1
+    BASE_IMAGE_NAME: snap-mapchete
+  script:
+    - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG}
+
+
+# also tag and push a tagged commit, i.e. a new version
+push_tag:
+  stage: push
+  variables:
+    # we don't need the source code here
+    GIT_STRATEGY: none
+  only:
+    - tags
+  script:
+    # mhub
+    - docker tag ${CI_REGISTRY_IMAGE}/mhub:${IMAGE_TAG} ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
+    - docker push ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
+    # mhub-s1
+    - docker tag ${CI_REGISTRY_IMAGE}/mhub-s1:${IMAGE_TAG} ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}
+    - docker push ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}

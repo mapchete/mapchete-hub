@@ -22,5 +22,4 @@ if [ "$TAG" == "master" ]; then
 fi
 
 echo "build mhub:$TAG"
-docker build -t $REGISTRY_BASEURL/mhub:$TAG . && \
-docker push $REGISTRY_BASEURL/mhub:$TAG
+docker build -t $REGISTRY_BASEURL/mhub:$TAG .
