@@ -1,5 +1,4 @@
 .git
-tests/*
 *.coverage
 *.egg-info
 .eggs
@@ -9,5 +8,4 @@ __pycache__
 *.gpkg
 htmlcov
 .env
-tests/
 scripts/
