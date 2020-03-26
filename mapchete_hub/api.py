@@ -5,6 +5,7 @@ This module wraps around the requests module for real-life usage and Flask's tes
 in order to be able to test mhub CLI.
 """
 
+import base64
 from collections import namedtuple, OrderedDict
 import geojson
 import json
@@ -396,7 +397,11 @@ def load_mapchete_config(mapchete_config):
             process_code = open(custom_process_path).read()
             if not process_code:
                 raise ValueError("process file is empty")
-            conf.update(process=process_code)
+            conf.update(
+                process=base64.standard_b64encode(
+                    process_code.encode("utf-8")
+                ).decode("utf-8")
+            )
 
         return conf
 
