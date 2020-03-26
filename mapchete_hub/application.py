@@ -441,6 +441,7 @@ def _jobs_params(raw, init_job_id, dst_crs):
                     job_name, type(config["mapchete_config"])
                 )
             )
+
         # verify process code
         # by calling this context manager, a syntax check and import will be conducted
         # TODO maby a bad idea to run this on the server

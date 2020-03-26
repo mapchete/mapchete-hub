@@ -1,3 +1,4 @@
+import base64
 import geojson
 import mapchete
 from mapchete.config import raw_conf_process_pyramid, get_zoom_levels
@@ -105,12 +106,14 @@ def test_process_area_from_config(example_mapchete):
 
 
 def test_custom_process_tempfile(example_mapchete):
-    custom_process = dict(
-        example_mapchete.dict,
-        process="""
+    process = base64.standard_b64encode("""
 def execute(mp):
     return "empty"
-        """
+        """.encode("utf-8")
+    ).decode("utf-8")
+    custom_process = dict(
+        example_mapchete.dict,
+        process=process
     )
     with custom_process_tempfile(custom_process) as config:
         assert config.get("process").endswith(".py")

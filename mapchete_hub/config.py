@@ -1,6 +1,6 @@
 """Default Flask and Celery configuration and related functions."""
 
-
+import base64
 from collections import OrderedDict
 from contextlib import contextmanager
 import datetime
@@ -154,7 +154,7 @@ def custom_process_tempfile(mapchete_config):
         with NamedTemporaryFile(suffix=".py") as temp_process_file:
             with open(temp_process_file.name, "w") as dst:
                 logger.debug("dump custom process to %s" % temp_process_file.name)
-                dst.write(process)
+                dst.write(base64.standard_b64decode(process).decode("utf-8"))
             # verify syntax is correct
             logger.debug("verifying syntax")
             py_compile.compile(temp_process_file.name, doraise=True)
