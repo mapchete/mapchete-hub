@@ -18,7 +18,7 @@ services:
 
   monitor:
     build: .
-    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub:testing
+    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
     command: ./manage.py monitor --loglevel=DEBUG
     networks:
       - backend
@@ -42,7 +42,7 @@ services:
 
   server:
     build: .
-    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub:testing
+    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
     command: gunicorn --bind 0.0.0.0:5000 --log-level DEBUG --workers 4 --threads 4 --worker-class=gthread --worker-tmp-dir /dev/shm "mapchete_hub.application:flask_app()"
     networks:
       - backend
@@ -69,7 +69,7 @@ services:
 
   execute_worker:
     build: .
-    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub:testing
+    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
     command: ./manage.py worker -n execute_worker -q overview_queue,execute_queue --loglevel=DEBUG
     networks:
       - backend
@@ -94,7 +94,7 @@ services:
 
   index_worker:
     build: .
-    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub:testing
+    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
     command: ./manage.py worker -n index_worker -q index_queue --loglevel=DEBUG
     networks:
       - backend
