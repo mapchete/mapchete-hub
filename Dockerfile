@@ -1,12 +1,11 @@
 # use builder to build python wheels #
 ######################################
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=0.6
+ARG BASE_IMAGE_TAG=0.7
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
 MAINTAINER Joachim Ungar
 
-ENV GODALE_VERSION 0.2
-ENV MAPCHETE_SATELLITE_VERSION 0.5
+ENV MAPCHETE_SATELLITE_VERSION 0.8
 ENV ORGONITE_VERSION 0.5
 
 ENV BUILD_DIR /usr/local
@@ -14,29 +13,40 @@ ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
 ENV WHEEL_DIR /usr/local/wheels
 
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends build-essential gcc git \
+    && apt-get install --yes --no-install-recommends build-essential gcc g++ git \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p $MHUB_DIR
+RUN pip install cython \
+    && pip wheel \
+        git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@${MAPCHETE_SATELLITE_VERSION} \
+        git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@${ORGONITE_VERSION} \
+        --wheel-dir $WHEEL_DIR \
+        --no-deps
+
+RUN pip wheel \
+        boto3>=1.13.4 \
+        botocore>=1.16.4 \
+        godale \
+        gunicorn==19.9.0 \
+        jenkspy \
+        mapchete_xarray \
+        numcodecs==0.6.4 \
+        psutil \
+        xarray \
+        --wheel-dir $WHEEL_DIR \
+        --no-deps
 
 # get dependencies before checking out source code to speed up container build
 COPY requirements.txt $MHUB_DIR/
-RUN pip install cython numpy \
-    && pip wheel \
-        git+http://gitlab+deploy-token-7:3AFUNqdLiKayR9Ang9Gx@gitlab.eox.at/maps/godale.git@${GODALE_VERSION} \
-        gunicorn==19.9.0 \
-        jenkspy \
-        git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@${MAPCHETE_SATELLITE_VERSION} \
-        git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@${ORGONITE_VERSION} \
-        psutil \
-        xarray \
-        -r $MHUB_DIR/requirements.txt --wheel-dir $WHEEL_DIR --no-deps \
-    && pip wheel GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal" --wheel-dir $WHEEL_DIR \
-    && pip uninstall --yes cython
+RUN pip wheel \
+        -r $MHUB_DIR/requirements.txt \
+        --wheel-dir $WHEEL_DIR \
+        --no-deps
 
 # build image using pre-built libraries and wheels #
 ####################################################
-FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as final
+FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as runner
 MAINTAINER Joachim Ungar
 
 ENV AWS_REQUEST_PAYER requester
@@ -51,7 +61,6 @@ COPY --from=builder $WHEEL_DIR $WHEEL_DIR
 RUN pip install \
         $WHEEL_DIR/jenkspy*.whl \
         $WHEEL_DIR/orgonite*.whl \
-        $WHEEL_DIR/godale*.whl \
         $WHEEL_DIR/psutil*.whl \
         $WHEEL_DIR/mapchete_satellite*.whl \
         $WHEEL_DIR/*.whl \
