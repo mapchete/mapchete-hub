@@ -2,9 +2,23 @@
 Changelog
 #########
 
----
-0.8
----
+----------------
+0.9 - 2020-05-20
+----------------
+* repository
+    * removed deprecated Mapfiles
+* Docker
+    * use base image 0.7
+    * automate docker builds
+    * add full zarr support in builds
+* API
+    * require to encode custom process code as base64 string
+    * fix passing on query parameters to `/jobs/` endpoint (#89)
+
+
+----------------
+0.8 - 2020-02-27
+----------------
 * CLI
     * add ``--timeout`` parameter
     * increase verbose output
@@ -23,15 +37,15 @@ Changelog
     * fixed compression setting in mapfiles
 
 
----
-0.7
----
+----------------
+0.7 - 2020-02-07
+----------------
 * increased ``eox_preprocessing`` dependency to ``0.9``
 * mhub handles jobs with other CRSes than EPSG:4326 (fixes #59)
 
----
-0.6
----
+----------------
+0.6 - 2020-01-12
+----------------
 * fix query error when filtering by queues or commands (#73)
 * enable posting of custom process file (#52)
 * fix rendering artefacts by changing mapserver scaling
@@ -41,9 +55,9 @@ Changelog
 * added AWS management scripts
 * use multistage docker builds to reduce image size
 
----
-0.5
----
+----------------
+0.5 - 2019-11-23
+----------------
 * enable filters to better query jobs (#53)
 * print more details using ``mhub jobs`` and ``mhub status <job_id>``
 * rename ``mapchete_hub.worker`` module to ``mapchete_hub.commands``
@@ -54,14 +68,14 @@ Changelog
 * serialize Cerlery messages as ``JSON`` instead of pickling
 * fix ``announce_on_slack`` setting (#66 #25)
 
----
-0.4
----
+----------------
+0.4 - 2019-11-15
+----------------
 * fixed preprocessing dependency from version 0.4 to 0.5
 
----
-0.3
----
+----------------
+0.3 - 2019-11-15
+----------------
 * Docker image registry.gitlab.eox.at/maps/mapchete_hub/mhub:0.3
     * bases on registry.gitlab.eox.at/maps/docker-base/mapchete:0.2
 * add ``mhub execute`` and ``mhub index`` commands (#54)
@@ -69,9 +83,9 @@ Changelog
 * automatically assign job ID (#64)
 * only use one docker image for all mhub services: registry.gitlab.eox.at/maps/mapchete_hub/mhub
 
----
-0.2
----
+----------------
+0.2 - 2019-11-07
+----------------
 * Docker image registry.gitlab.eox.at/maps/mapchete_hub/mhub:0.2
     * bases on registry.gitlab.eox.at/maps/docker-base/mapchete:0.1
 * celery worker now capture logs again (#62)
@@ -95,8 +109,8 @@ Changelog
 * Sentinel-1 integration and images
 * mhub, broker, etc. s1processor for mundi
 
----
-0.1
----
+----------------
+0.1 - 2018-06-25
+----------------
 
 * first build
