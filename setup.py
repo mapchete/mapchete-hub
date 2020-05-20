@@ -14,12 +14,15 @@ with open('mapchete_hub/__init__.py') as f:
             continue
 
 
-def parse_requirements(file):
+def _parse_requirements(file):
     return sorted(set(
         line.partition('#')[0].strip()
         for line in open(os.path.join(os.path.dirname(__file__), file))
     ) - set(''))
 
+install_requires = _parse_requirements('requirements.txt')
+mundi_requires = _parse_requirements('requirements_mundi.txt')
+test_requires = _parse_requirements('requirements_test.txt')
 
 setup(
     name='mapchete_hub',
@@ -34,10 +37,11 @@ setup(
         'console_scripts': ['mhub=mapchete_hub.cli:mhub'],
         'mapchete.cli.commands': ["mhub=mapchete_hub.cli:mhub"],
     },
-    install_requires=parse_requirements('requirements.txt'),
+    install_requires=install_requires,
     extras_require={
-        'mundi': parse_requirements('requirements_mundi.txt'),
-        'test': parse_requirements('requirements_test.txt')
+        'complete': mundi_requires,
+        'mundi': mundi_requires,
+        'test': test_requires
     },
     classifiers=[
         'Development Status :: 3 - Alpha',
