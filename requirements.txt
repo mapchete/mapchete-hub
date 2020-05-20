@@ -3,7 +3,6 @@ celery-flower
 celery-slack
 click
 click-spinner
-eox_preprocessing @ git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.9
 Flask-Celery-py3
 flask_restful
 geojson
@@ -11,5 +10,5 @@ mapchete>=0.28
 slacker
 spatialite
 tornado>=4.2.0,<6.0.0
-webargs
+webargs>=6.0.0,<7.0.0
 xarray

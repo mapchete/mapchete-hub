@@ -7,6 +7,7 @@ MAINTAINER Joachim Ungar
 
 ENV MAPCHETE_SATELLITE_VERSION 0.8
 ENV ORGONITE_VERSION 0.5
+ENV EOX_PREPROCESSING_VERSION 0.10
 
 ENV BUILD_DIR /usr/local
 ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
@@ -21,6 +22,7 @@ RUN pip install cython \
     && pip wheel \
         git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@${MAPCHETE_SATELLITE_VERSION} \
         git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@${ORGONITE_VERSION} \
+        git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@${EOX_PREPROCESSING_VERSION} \
         --wheel-dir $WHEEL_DIR \
         --no-deps
 
@@ -37,12 +39,6 @@ RUN pip wheel \
         --wheel-dir $WHEEL_DIR \
         --no-deps
 
-# get dependencies before checking out source code to speed up container build
-COPY requirements.txt $MHUB_DIR/
-RUN pip wheel \
-        -r $MHUB_DIR/requirements.txt \
-        --wheel-dir $WHEEL_DIR \
-        --no-deps
 
 # build image using pre-built libraries and wheels #
 ####################################################
@@ -66,8 +62,12 @@ RUN pip install \
         $WHEEL_DIR/*.whl \
     && rm $WHEEL_DIR/*
 
+# get dependencies before checking out source code to speed up container build
+COPY requirements.txt $MHUB_DIR/
+RUN pip install -r $MHUB_DIR/requirements.txt
+
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR
-RUN pip install -e $MHUB_DIR
+RUN pip install -e $MHUB_DIR[complete]
 
 WORKDIR $MHUB_DIR

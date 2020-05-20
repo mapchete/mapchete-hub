@@ -54,9 +54,8 @@ Show detailed information on queue.
 from amqp.exceptions import NotFound as QueueNotFound
 import celery
 from collections import defaultdict
-import eox_preprocessing
 import fiona
-from flask import Flask, jsonify, request, abort, make_response
+from flask import Flask, request, abort, make_response
 from flask_restful import Api, Resource
 import json
 import logging
@@ -134,7 +133,6 @@ class Capabilities(Resource):
         self._capabilities = {}
         self._capabilities["version"] = __version__
         self._capabilities["packages"] = {
-            "eox_preprocessing": eox_preprocessing.__version__,
             "fiona": fiona.__version__,
             "gdal": rasterio.__gdal_version__,
             "mapchete": mapchete.__version__,
@@ -142,6 +140,15 @@ class Capabilities(Resource):
             "orgonite": orgonite.__version__,
             "rasterio": rasterio.__version__,
         }
+        try:
+            import eox_preprocessing
+            self._capabilities["packages"].update(
+                eox_preprocessing=eox_preprocessing.__version__
+            )
+        except ImportError:
+            self._capabilities["packages"].update(
+                eox_preprocessing="not installed"
+            )
 
         self._capabilities["processes"] = {}
         for v in processes:
@@ -153,7 +160,7 @@ class Capabilities(Resource):
 
     def get(self):
         """Return /capabilities.json."""
-        return jsonify(self._capabilities)
+        return self._capabilities
 
 
 class QueuesOverview(Resource):
@@ -178,10 +185,10 @@ class QueuesOverview(Resource):
                         worker_count=queue_info.consumer_count,
                         job_count=queue_info.message_count
                     )
-            return jsonify(out_queues)
+            return out_queues
         except Exception as e:
             logger.error(e)
-            return make_response(jsonify(dict(message=str(e))), 500)
+            return abort(500, str(e))
 
 
 class Queues(Resource):
@@ -215,32 +222,27 @@ class Queues(Resource):
                     queue=queue_name,
                     passive=True
                 )
-                return make_response(
-                    jsonify(
-                        dict(
-                            workers=queue_workers[queue_name],
-                            worker_count=queue_info.consumer_count,
-                            job_count=queue_info.message_count,
-                            jobs=dict(
-                                active=_extract_jobs(inspect.active().values()),
-                                reserved=_extract_jobs(inspect.reserved().values()),
-                                scheduled=_extract_jobs(inspect.scheduled().values()),
-                            )
-                        )
-                    ),
-                    200
+                return dict(
+                    workers=queue_workers[queue_name],
+                    worker_count=queue_info.consumer_count,
+                    job_count=queue_info.message_count,
+                    jobs=dict(
+                        active=_extract_jobs(inspect.active().values()),
+                        reserved=_extract_jobs(inspect.reserved().values()),
+                        scheduled=_extract_jobs(inspect.scheduled().values()),
+                    )
                 )
         except QueueNotFound:
             abort(404)
         except Exception as e:
             logger.error(e)
-            return make_response(jsonify(dict(message=str(e))), 500)
+            return abort(500, str(e))
 
 
 class JobsOverview(Resource):
     """Resource for /jobs."""
 
-    args = {
+    get_kwargs = {
         "output_path": fields.Str(required=False),
         "state": fields.Str(required=False),
         "command": fields.Str(required=False),
@@ -250,7 +252,7 @@ class JobsOverview(Resource):
         "to_date": fields.DateTime(required=False),
     }
 
-    @use_kwargs(args)
+    @use_kwargs(get_kwargs, location="query")
     def get(self, **kwargs):
         """
         Return jobs as list of GeoJSON features.
@@ -278,7 +280,7 @@ class JobsOverview(Resource):
         -------
         GeoJSON features : list of dict
         """
-        return jsonify(states.jobs(**kwargs))
+        return states.jobs(**kwargs)
 
 
 class Jobs(Resource):
@@ -300,7 +302,7 @@ class Jobs(Resource):
         res = states.job(job_id)
         logger.debug("return get(): %s", res)
         if res:
-            return make_response(jsonify(res), 200)
+            return res
         else:
             abort(404)
 
@@ -369,14 +371,13 @@ class Jobs(Resource):
             )
         except Exception as e:
             logger.error(e)
-            return make_response(jsonify(dict(message=str(e))), 400)
+            return abort(400, str(e))
 
         try:
             res = states.job(job_id)
             # job exists
             if res:
-                logger.debug("job already exists: %s", job_id)
-                return make_response(jsonify(res), 409)
+                return abort(409, "job already exists: {}".format(job_id))
 
             # job is new
             else:
@@ -394,18 +395,17 @@ class Jobs(Resource):
                 ).apply_async()
 
                 return make_response(
-                    jsonify(
-                        dict(
-                            bounds=wkt.loads(process_area).bounds,
-                            geometry=process_area,
-                            id=job_id,
-                            properties=dict(state="PENDING")
-                        )
-                    ), 202
+                    dict(
+                        bounds=wkt.loads(process_area).bounds,
+                        geometry=process_area,
+                        id=job_id,
+                        properties=dict(state="PENDING")
+                    ),
+                    202
                 )
         except Exception as e:
             logger.error(e)
-            return make_response(jsonify(dict(message=str(e))), 500)
+            return abort(500, str(e))
 
 
 def _jobs_params(raw, init_job_id, dst_crs):

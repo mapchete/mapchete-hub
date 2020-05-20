@@ -413,6 +413,7 @@ def jobs(
     since=None,
     until=None,
     verbose=False,
+    debug=False,
     **kwargs
 ):
     """Show current jobs."""
