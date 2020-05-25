@@ -1,12 +1,12 @@
 # use builder to build python wheels #
 ######################################
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=0.7
+ARG BASE_IMAGE_TAG=0.8
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
 MAINTAINER Joachim Ungar
 
 ENV MAPCHETE_SATELLITE_VERSION 0.8
-ENV ORGONITE_VERSION 0.5
+ENV ORGONITE_VERSION 0.6
 ENV EOX_PREPROCESSING_VERSION 0.10
 
 ENV BUILD_DIR /usr/local
@@ -18,8 +18,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p $MHUB_DIR
-RUN pip install cython \
-    && pip wheel \
+RUN pip wheel \
         git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@${MAPCHETE_SATELLITE_VERSION} \
         git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@${ORGONITE_VERSION} \
         git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@${EOX_PREPROCESSING_VERSION} \
@@ -27,8 +26,6 @@ RUN pip install cython \
         --no-deps
 
 RUN pip wheel \
-        boto3>=1.13.4 \
-        botocore>=1.16.4 \
         godale \
         gunicorn==19.9.0 \
         jenkspy \
