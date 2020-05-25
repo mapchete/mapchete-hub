@@ -2,6 +2,14 @@
 Changelog
 #########
 
+-----------------
+0.10 - 2020-05-25
+-----------------
+* Docker
+    * use orgonite 0.6 and don't extra install Cython
+    * use base image 0.8 which fixes ost version mismatch for `mhub_s1` image (#91)
+
+
 ----------------
 0.9 - 2020-05-20
 ----------------
