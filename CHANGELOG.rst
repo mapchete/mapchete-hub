@@ -12,6 +12,14 @@ Changelog
 
 
 -----------------
+0.11 - 2020-06-02
+-----------------
+* Docker
+    * use mapchete_satellite 0.9
+    * use base image 0.9 which updates OpenSAR toolkit to 0.9.7
+
+
+-----------------
 0.10 - 2020-05-25
 -----------------
 * Docker
