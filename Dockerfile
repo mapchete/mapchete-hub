@@ -1,11 +1,11 @@
 # use builder to build python wheels #
 ######################################
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=0.8
+ARG BASE_IMAGE_TAG=0.9
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
 MAINTAINER Joachim Ungar
 
-ENV MAPCHETE_SATELLITE_VERSION 0.8
+ENV MAPCHETE_SATELLITE_VERSION 0.9
 ENV ORGONITE_VERSION 0.6
 ENV EOX_PREPROCESSING_VERSION 0.10
 
