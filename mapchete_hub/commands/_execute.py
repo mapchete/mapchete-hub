@@ -5,7 +5,8 @@ import logging
 import mapchete
 from mapchete.config import get_zoom_levels
 
-from mapchete_hub.config import custom_process_tempfile, main_options
+from mapchete_hub.config import get_mhub_config
+from mapchete_hub.utils import custom_process_tempfile
 
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ def mapchete_execute(
             with mapchete.open(
                 OrderedDict(
                     tmpfile_config,
-                    config_dir=main_options['config_dir']
+                    config_dir=get_mhub_config().CONFIG_DIR
                 ),
                 mode=mode or "continue",
                 zoom=zoom,

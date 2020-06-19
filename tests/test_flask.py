@@ -1,55 +1,40 @@
-from mapchete_hub.config import cleanup_datetime
+import uuid
 
 
-# TODO: this test hangs because of celery_app.control.inspect().active_queues()
-# def test_get_capabilities(client):
-#     url = "/capabilities.json"
-#     response = client.get(url)
-#     assert response.status_code == 200
-#     assert len(response.json)
-
-
-def test_get_all_jobs(client):
-    url = "/jobs/"
+def test_get_capabilities(client):
+    url = "/capabilities.json"
     response = client.get(url)
     assert response.status_code == 200
-    assert len(response.json) == 0
+    assert len(response.json)
 
 
-def test_get_one_job(client):
-    job_id = "test"
-    url = "/jobs/%s" % job_id
-    response = client.get(url)
+def test_get_jobs(client):
+    response = client.get("jobs")
+    assert response.status_code == 200
+
+
+def test_create_job(client, new_job_metadata):
+    job_id = uuid.uuid4().hex
+    job_data = {
+        k: v for k, v in new_job_metadata.items()
+        if k in ["config", "params", "command"]
+    }
+
+    # assert we get a 404
+    response = client.get("jobs/{}".format(job_id))
     assert response.status_code == 404
 
-
-def test_start_job(client, example_mapchete):
-    job_id = "test"
-    url = "/jobs/%s" % job_id
-    config = dict(example_mapchete.dict)
-    # config.pop("mhub_next_process")
-
-    data = cleanup_datetime(
-        dict(
-            mapchete_config=config,
-            zoom=11,
-            point=None,
-            wkt_geometry=None,
-            tile=(11, 244, 517),
-            mode="continue",
-            command="execute"
-        )
-    )
-    response = client.post(url, json=data)
+    # post a new job
+    response = client.post("jobs/{}".format(job_id), json=job_data)
     assert response.status_code == 202
-    assert "geometry" in response.json
-    assert "properties" in response.json
-    assert response.json["properties"]["state"] == "PENDING"
+
+    # assert we get a 200
+    response = client.get("jobs/{}".format(job_id))
+    assert response.status_code == 200
+    assert response.json["id"] == job_id
 
     # TODO this doesn't work in test mode because there is no monitor available
     # submit again and get error
-    # response = client.post(url, json=data)
-    # assert response.status_code == 406
-    # assert "geometry" in response.json
-    # assert "properties" in response.json
-    # assert response.json["properties"]["state"] == "EXISTS"
+    response = client.post("jobs/{}".format(job_id), json=job_data)
+    assert response.status_code == 409
+    assert "job already exists" in response.json["message"]

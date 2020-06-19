@@ -1,0 +1,17 @@
+version: "3.6"
+
+services:
+
+  mhub_tester:
+    environment:
+      - MHUB_HOST=http://server:${MHUB_PORT:-5000}/
+    build:
+      context: .
+      args:
+        BASE_IMAGE_NAME: "${BASE_IMAGE_NAME:-mapchete}"
+    command: /bin/bash -c "pip install -e .[test] && pytest -v --cov=mapchete_hub"
+    networks:
+      - backend
+
+networks:
+  backend:

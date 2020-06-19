@@ -1,10 +1,12 @@
+from collections import OrderedDict
 import logging
 import mapchete
 from mapchete.config import _map_to_new_config, get_zoom_levels
 from mapchete.index import zoom_index_gen
 from mapchete.tile import BufferedTilePyramid
 
-from mapchete_hub.config import main_options
+from mapchete_hub.config import get_mhub_config
+from mapchete_hub.utils import custom_process_tempfile
 
 
 logger = logging.getLogger(__name__)
@@ -71,68 +73,77 @@ def mapchete_index(
     if not out_dir:
         raise ValueError('no out_dir given')
 
-    # process single tile
-    if tile:
-        tile = BufferedTilePyramid.from_dict(
-            _map_to_new_config(mapchete_config)["pyramid"]
-        ).tile(*tile)
-        with mapchete.open(
-            dict(mapchete_config, config_dir=main_options['config_dir']),
-            mode="readonly",
-            bounds=tile.bounds,
-            zoom=tile.zoom
-        ) as mp:
-            num_processed = 0
-            total_tiles = mp.count_tiles(tile.zoom, tile.zoom)
-            yield total_tiles
-            for tile in zoom_index_gen(
-                mp=mp,
-                zoom=tile.zoom,
-                out_dir=out_dir,
-                geojson=geojson,
-                gpkg=gpkg,
-                shapefile=shapefile,
-                txt=txt,
-                fieldname=fieldname,
-                basepath=basepath,
-                for_gdal=for_gdal
-            ):
-                num_processed += 1
-                logger.debug("tile %s/%s finished", num_processed, total_tiles)
-                yield dict(process_tile=tile)
+    with custom_process_tempfile(mapchete_config) as tmpfile_config:
+        # process single tile
+        if tile:
+            tile = BufferedTilePyramid.from_dict(
+                _map_to_new_config(mapchete_config)["pyramid"]
+            ).tile(*tile)
+            with mapchete.open(
+                OrderedDict(
+                    tmpfile_config,
+                    config_dir=get_mhub_config().CONFIG_DIR
+                ),
+                mode="readonly",
+                bounds=tile.bounds,
+                zoom=tile.zoom
+            ) as mp:
+                num_processed = 0
+                total_tiles = mp.count_tiles(tile.zoom, tile.zoom)
+                yield total_tiles
+                for tile in zoom_index_gen(
+                    mp=mp,
+                    zoom=tile.zoom,
+                    out_dir=out_dir,
+                    geojson=geojson,
+                    gpkg=gpkg,
+                    shapefile=shapefile,
+                    txt=txt,
+                    fieldname=fieldname,
+                    basepath=basepath,
+                    for_gdal=for_gdal
+                ):
+                    num_processed += 1
+                    logger.debug("tile %s/%s finished", num_processed, total_tiles)
+                    yield dict(process_tile=tile)
 
-    else:
-        with mapchete.open(
-            dict(mapchete_config, config_dir=main_options['config_dir']),
-            mode="readonly",
-            zoom=zoom,
-            bounds=process_area.bounds if process_area else bounds
-        ) as mp:
-            num_processed = 0
-            logger.debug("process bounds: %s", mp.config.init_bounds)
-            logger.debug("process zooms: %s", mp.config.init_zoom_levels)
-            logger.debug("fieldname: %s", fieldname)
-            zoom_levels = get_zoom_levels(
-                process_zoom_levels=mp.config.zoom_levels,
-                init_zoom_levels=zoom
-            )
-            total_tiles = mp.count_tiles(min(zoom_levels), max(zoom_levels))
-            yield total_tiles
-            if total_tiles:
-                for z in mp.config.init_zoom_levels:
-                    logger.debug("zoom %s", z)
-                    for tile in zoom_index_gen(
-                        mp=mp,
-                        zoom=z,
-                        out_dir=out_dir,
-                        geojson=geojson,
-                        gpkg=gpkg,
-                        shapefile=shapefile,
-                        txt=txt,
-                        fieldname=fieldname,
-                        basepath=basepath,
-                        for_gdal=for_gdal
-                    ):
-                        num_processed += 1
-                        logger.debug("tile %s/%s finished", num_processed, total_tiles)
-                        yield dict(process_tile=tile)
+        else:
+            with mapchete.open(
+                OrderedDict(
+                    tmpfile_config,
+                    config_dir=get_mhub_config().CONFIG_DIR
+                ),
+                mode="readonly",
+                zoom=zoom,
+                bounds=process_area.bounds if process_area else bounds
+            ) as mp:
+                num_processed = 0
+                logger.debug("process bounds: %s", mp.config.init_bounds)
+                logger.debug("process zooms: %s", mp.config.init_zoom_levels)
+                logger.debug("fieldname: %s", fieldname)
+                zoom_levels = get_zoom_levels(
+                    process_zoom_levels=mp.config.zoom_levels,
+                    init_zoom_levels=zoom
+                )
+                total_tiles = mp.count_tiles(min(zoom_levels), max(zoom_levels))
+                yield total_tiles
+                if total_tiles:
+                    for z in mp.config.init_zoom_levels:
+                        logger.debug("zoom %s", z)
+                        for tile in zoom_index_gen(
+                            mp=mp,
+                            zoom=z,
+                            out_dir=out_dir,
+                            geojson=geojson,
+                            gpkg=gpkg,
+                            shapefile=shapefile,
+                            txt=txt,
+                            fieldname=fieldname,
+                            basepath=basepath,
+                            for_gdal=for_gdal
+                        ):
+                            num_processed += 1
+                            logger.debug(
+                                "tile %s/%s finished", num_processed, total_tiles
+                            )
+                            yield dict(process_tile=tile)
