@@ -12,14 +12,17 @@ https://github.com/Robpol86/Flask-Large-Application-Example/blob/master/manage.p
 """
 from celery.bin.celery import main as celery_main
 import click
+import logging
 from mapchete_hub import log
 import os
 
 import mapchete_hub
-from mapchete_hub.application import flask_app
 from mapchete_hub.celery_app import celery_app
-from mapchete_hub.config import host_options, flask_options
+from mapchete_hub.flask_app import flask_app
 from mapchete_hub.monitor import status_monitor
+
+
+logger = logging.getLogger(__name__)
 
 
 def _set_log_level(ctx, param, loglevel):
@@ -55,19 +58,12 @@ def cli(ctx, **kwargs):
 
 
 @cli.command(short_help='Launches Flask Development Server.')
-@click.option(
-    "--monitor",
-    is_flag=True,
-    help="Launch monitor in separate thread."
-)
 @opt_loglevel
 @opt_logfile
 @click.pass_context
-def devserver(ctx, monitor, **kwargs):
+def devserver(ctx, **kwargs):
     click.echo("launch devserver")
-    flask_app(launch_monitor=monitor).run(
-        host=host_options['host_ip'], port=host_options['port']
-    )
+    flask_app().run(host="127.0.0.1", port="5000")
 
 
 @cli.command(short_help='Launch job status monitor.')
@@ -76,8 +72,10 @@ def devserver(ctx, monitor, **kwargs):
 @click.pass_context
 def monitor(ctx, **kwargs):
     click.echo("launch monitor")
-    celery_app.conf.update(flask_options)
-    celery_app.init_app(flask_app())
+    logger.debug("init app and start monitor")
+    app = flask_app()
+    celery_app.conf.update(app.config)
+    celery_app.init_app(app)
     status_monitor(celery_app)
 
 
@@ -99,7 +97,7 @@ def monitor(ctx, **kwargs):
 @click.pass_context
 def worker(ctx, worker_name, queues, **kwargs):
     click.echo("launch %s attatched to queue(s) %s" % (worker_name, queues))
-    app = flask_app()
+    app = flask_app(full=False)
     with app.app_context():
         return celery_main(
             [

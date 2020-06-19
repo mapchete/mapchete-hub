@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 def send_slack_message(x, y):
     """Post preview link on slack."""
-    if os.environ.get("SLACK_WEBHOOK_URL"):
+    if os.environ.get("SLACK_WEBHOOK_URL"):    # pragma: no cover
         logger.info("announce on slack")
         Slacker(
             None,
@@ -22,5 +22,5 @@ def send_slack_message(x, y):
                 )
             }
         )
-    else:
+    else:    # pragma: no cover
         logger.error("no SLACK_WEBHOOK_URL env variable set!")
