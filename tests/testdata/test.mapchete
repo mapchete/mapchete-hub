@@ -1,0 +1,23 @@
+process: example_process.py
+bounds: [0, 0, 10, 10]
+zoom_levels:
+    min: 7
+    max: 11
+pyramid:
+    grid: geodetic
+    metatiling: 4
+input:
+output:
+    path: tmp
+    format: GTiff
+    dtype: float32
+    bands: 3
+
+# free parameters
+some_integer_parameter: 12
+some_float_parameter: 5.3
+some_string_parameter:
+    zoom<=7: string1
+    zoom>7: string2
+some_bool_parameter: true
+some_date_obj: 2018-05-01

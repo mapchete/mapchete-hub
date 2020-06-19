@@ -1,123 +1,362 @@
 from click import BadParameter
 from click.testing import CliRunner
 import pytest
+import time
+import uuid
 
 from mapchete_hub.cli import main
-from mapchete_hub.config import host_options
 
 
-def test_remote_versions():
+JOB_ID = uuid.uuid4().hex
+
+
+def test_remote_versions(wait_for_api, mhub_test_instance_uri):
     """mhub remote-versions"""
     result = CliRunner().invoke(
         main.mhub,
         [
-            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
+            "-h", mhub_test_instance_uri,
             "remote-versions",
         ]
     )
     assert result.exit_code == 0
-    assert "no mhub server found" in result.output
+    for p in ["mapchete_hub", "fiona", "rasterio", "gdal"]:
+        assert p in result.output
 
 
-def test_status():
-    """mhub status"""
-    result = CliRunner().invoke(
-        main.mhub,
-        [
-            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
-            "status",
-            "test_job"
-        ]
-    )
-    assert result.exit_code == 0
-    assert "no mhub server found" in result.output
-
-
-def test_progress():
-    """mhub progress"""
-    result = CliRunner().invoke(
-        main.mhub,
-        [
-            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
-            "progress",
-            "test_job"
-        ]
-    )
-    assert result.exit_code == 0
-    assert "no mhub server found" in result.output
-
-
-def test_jobs():
-    """mhub jobs"""
-    result = CliRunner().invoke(
-        main.mhub,
-        [
-            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
-            "jobs"
-        ]
-    )
-    assert result.exit_code == 0
-    assert "no mhub server found" in result.output
-
-
-def test_processes():
-    """mhub processes"""
-    result = CliRunner().invoke(main.mhub, "processes")
-    assert result.exit_code == 0
-    assert "no mhub server found" in result.output
-    result = CliRunner().invoke(main.mhub, "processes", "--docstrings")
-    assert result.exit_code == 0
-    assert "no mhub server found" in result.output
-
-
-def test_queues():
+def test_queues(wait_for_api, mhub_test_instance_uri):
     """mhub queues"""
-    result = CliRunner().invoke(main.mhub, "queues")
-    assert result.exit_code == 0
-    assert "no mhub server found" in result.output
-
-
-def test_execute(example_mapchete):
-    """mhub execute"""
     result = CliRunner().invoke(
         main.mhub,
         [
-            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
+            "-h", mhub_test_instance_uri,
+            "queues"
+        ]
+    )
+    assert result.exit_code == 0
+    for queue in ["execute_queue", "index_queue", "overview_queue"]:
+        assert queue in result.output
+
+
+def test_queue(wait_for_api, mhub_test_instance_uri):
+    """mhub queues -n execute_queue"""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "queues",
+            "-n", "execute_queue"
+        ]
+    )
+    assert result.exit_code == 0
+    assert "execute_worker@" in result.output
+
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "queues",
+            "-n", "invalid_queue"
+        ]
+    )
+    assert result.exit_code == 0
+    assert "no queue" in result.output
+
+
+def test_processes(wait_for_api, mhub_test_instance_uri):
+    """mhub processes"""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "processes"
+        ]
+    )
+    assert result.exit_code == 0
+    assert "mapchete.processes.examples.example_process" in result.output
+
+
+def test_processes_docstrings(wait_for_api, mhub_test_instance_uri):
+    """mhub processes"""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "processes",
+            "--docstrings"
+        ]
+    )
+    assert result.exit_code == 0
+    assert "Example process for testing." in result.output
+
+
+def test_process(wait_for_api, mhub_test_instance_uri):
+    """mhub processes"""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "processes",
+            "-n", "mapchete.processes.examples.example_process"
+        ]
+    )
+    assert result.exit_code == 0
+    assert "Example process for testing." in result.output
+
+
+def test_job_not_found(wait_for_api, mhub_test_instance_uri):
+    """mhub status <job_id>"""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "status", JOB_ID
+        ]
+    )
+    assert result.exit_code == 1
+    assert "does not exist" in result.output
+
+
+def test_start_new_job(wait_for_api, mhub_test_instance_uri, test_mapchete):
+    """Start job and get job state."""
+    # let's create a new job
+    # mhub execute testdata/test.mapchete -b -1 0 0 1
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
             "execute",
-            example_mapchete.path,
+            test_mapchete.path,
+            "--bounds", "-1", "0", "0", "1"
         ]
     )
     assert result.exit_code == 0
-    assert "no mhub server found" in result.output
+    job_id = result.output.strip()
 
-
-def test_index(example_mapchete):
-    """mhub index"""
+    time.sleep(2)
+    # voilá, a new job with this ID is there
     result = CliRunner().invoke(
         main.mhub,
         [
-            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
+            "-h", mhub_test_instance_uri,
+            "status", job_id
+        ]
+    )
+    assert result.exit_code == 0
+    assert "command: execute" in result.output
+
+    # let's get the job state until it is finished
+    # don't do it more than 10 times
+    max_requests = 60
+    request_count = 0
+    while True:
+        request_count += 1
+        if request_count > max_requests:
+            raise RuntimeError("mhub did not process job")
+        result = CliRunner().invoke(
+            main.mhub,
+            [
+                "-h", mhub_test_instance_uri,
+                "status", job_id
+            ]
+        )
+        if "SUCCESS" in result.output:
+            break
+        elif "FAILURE" in result.output:
+            raise ValueError("job failed")
+        time.sleep(1)
+
+
+def test_start_cancel_jobs(wait_for_api, mhub_test_instance_uri, test_mapchete):
+    """Start jobs and cancel."""
+    # let's create two new jobs
+    job_ids = []
+    for i in range(2):
+        result = CliRunner().invoke(
+            main.mhub,
+            [
+                "-h", mhub_test_instance_uri,
+                "execute",
+                test_mapchete.path,
+                "--bounds", "-1", "0", "0", "1"
+            ]
+        )
+        assert result.exit_code == 0
+        job_ids.append(result.output.strip())
+
+    # wait a couple of seconds
+    time.sleep(1)
+
+    # send revoke signals
+    for job_id in job_ids:
+        result = CliRunner().invoke(
+            main.mhub,
+            [
+                "-h", mhub_test_instance_uri,
+                "cancel", job_id
+            ]
+        )
+        assert "revoke signal" in result.output
+        assert job_id in result.output
+
+    # wait until job state is changed to TERMINATED
+    for job_id in job_ids:
+        max_requests = 100
+        request_count = 0
+        while True:
+            request_count += 1
+            if request_count > max_requests:
+                raise RuntimeError("mhub did not process job")
+            result = CliRunner().invoke(
+                main.mhub,
+                [
+                    "-h", mhub_test_instance_uri,
+                    "status", job_id
+                ]
+            )
+            if "TERMINATED" in result.output or "REVOKED" in result.output:
+                break
+            elif "SUCCESS" in result.output:
+                raise ValueError("job not terminated")
+            elif "FAILURE" in result.output:
+                raise ValueError("job failed")
+            time.sleep(1)
+
+
+def test_start_new_index_job(wait_for_api, mhub_test_instance_uri, test_mapchete):
+    """Start index job and get job state."""
+    # let's create a new job
+    # mhub execute testdata/test.mapchete -b -1 0 0 1
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
             "index",
-            example_mapchete.path,
+            test_mapchete.path,
+            "--bounds", "-1", "0", "0", "1"
         ]
     )
     assert result.exit_code == 0
-    assert "no mhub server found" in result.output
+    job_id = result.output.strip()
 
-
-def test_batch(batch_example):
-    """mhub batch"""
+    time.sleep(2)
+    # voilá, a new job with this ID is there
     result = CliRunner().invoke(
         main.mhub,
         [
-            "-h", "%s:%s" % (host_options["host_ip"], host_options["port"]),
+            "-h", mhub_test_instance_uri,
+            "status", job_id
+        ]
+    )
+    assert result.exit_code == 0
+    assert "command: index" in result.output
+
+    # let's get the job state until it is finished
+    # don't do it more than 10 times
+    max_requests = 60
+    request_count = 0
+    while True:
+        request_count += 1
+        if request_count > max_requests:
+            raise RuntimeError("mhub did not process job")
+        result = CliRunner().invoke(
+            main.mhub,
+            [
+                "-h", mhub_test_instance_uri,
+                "status", job_id
+            ]
+        )
+        if "SUCCESS" in result.output:
+            break
+        elif "FAILURE" in result.output:
+            raise ValueError("job failed")
+        time.sleep(1)
+
+
+def test_start_cancel_batch(wait_for_api, mhub_test_instance_uri, batch_example):
+    """Start a new batch process."""
+    # start
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
             "batch",
             batch_example.path,
+            "--bounds", "1", "2", "3", "4"
         ]
     )
-    print(result)
     assert result.exit_code == 0
-    assert "no mhub server found" in result.output
+    job_id = result.output.strip()
+
+    # cancel
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "cancel", job_id
+        ]
+    )
+    assert "revoke signal for jobs" in result.output
+    assert job_id in result.output
+
+
+def test_job_progress(wait_for_api, mhub_test_instance_uri, test_mapchete):
+    """Start job and get job state."""
+    # let's create a new job
+    # mhub execute testdata/test.mapchete -b -1 0 0 1
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "execute",
+            test_mapchete.path,
+            "--bounds", "-0.5", "0", "0", "0.5"
+        ]
+    )
+    assert result.exit_code == 0
+    job_id = result.output.strip()
+
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "progress",
+            job_id,
+        ]
+    )
+    assert result.exit_code == 0
+
+
+def test_jobs(wait_for_api, mhub_test_instance_uri):
+    """Start job and get job state."""
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "jobs",
+        ]
+    )
+    assert result.exit_code == 0
+
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "jobs",
+            "-v"
+        ]
+    )
+    assert result.exit_code == 0
+
+    result = CliRunner().invoke(
+        main.mhub,
+        [
+            "-h", mhub_test_instance_uri,
+            "jobs",
+            "--geojson"
+        ]
+    )
+    assert result.exit_code == 0
 
 
 def test_get_timestamp():

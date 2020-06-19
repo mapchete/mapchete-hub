@@ -2,125 +2,111 @@ version: "3.6"
 
 services:
 
-  rabbitmq:
-    image: rabbitmq:3
-    ports:
-      - 5672
+  mongodb:
+    image: mongo:4.2.7-bionic
     networks:
       - backend
-    deploy:
-      mode: global
-      restart_policy:
-        condition: on-failure
     environment:
-      - RABBITMQ_DEFAULT_USER=s2processor
-      - RABBITMQ_DEFAULT_PASS=REDACTED_API_KEY
+      - MONGO_INITDB_ROOT_USERNAME=mhub
+      - MONGO_INITDB_ROOT_PASSWORD=REDACTED_API_KEY
+      # https://github.com/docker-library/mongo/issues/329
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    command: ["--bind_ip_all"]
 
   monitor:
-    build: .
-    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
+    build:
+      context: .
+      args:
+        BASE_IMAGE_NAME: "${BASE_IMAGE_NAME:-mapchete}"
     command: ./manage.py monitor --loglevel=DEBUG
     networks:
       - backend
     depends_on:
-      - rabbitmq
+      - mongodb
     deploy:
       mode: global
       restart_policy:
         condition: on-failure
-    env_file: .env
     environment:
+      - MONGODB_PORT
       - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
-      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
       - MHUB_CONFIG_DIR=/mnt/data/
-      - MHUB_STATUS_GPKG=/mnt/data/status.gpkg
-    volumes:
-      - type: volume
-        source: status_data
-        target: /mnt/data/
+      - MHUB_ENV=debug
+      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_STATUS_DB_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
 
   server:
-    build: .
-    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
-    command: gunicorn --bind 0.0.0.0:5000 --log-level DEBUG --workers 4 --threads 4 --worker-class=gthread --worker-tmp-dir /dev/shm "mapchete_hub.application:flask_app()"
+    build:
+      context: .
+      args:
+        BASE_IMAGE_NAME: "${BASE_IMAGE_NAME:-mapchete}"
+    command: gunicorn --bind 0.0.0.0:${MHUB_PORT:-5000} --log-level DEBUG --workers 4 --threads 4 --worker-class=gthread --worker-tmp-dir /dev/shm "mapchete_hub.flask_app:flask_app()"
     networks:
       - backend
     depends_on:
-      - rabbitmq
+      - mongodb
       - monitor
     ports:
-      - 5000:5000
+      - ${MHUB_PORT:-5000}:${MHUB_PORT:-5000}
     deploy:
       mode: global
       restart_policy:
         condition: on-failure
-    env_file: .env
     environment:
       - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
-      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
       - MHUB_CONFIG_DIR=/mnt/data/
-      - MHUB_STATUS_GPKG=/mnt/data/status.gpkg
-    volumes:
-      - type: volume
-        source: status_data
-        target: /mnt/data/
+      - MHUB_ENV=debug
+      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_STATUS_DB_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
 
   execute_worker:
-    build: .
-    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
+    build:
+      context: .
+      args:
+        BASE_IMAGE_NAME: "${BASE_IMAGE_NAME:-mapchete}"
     command: ./manage.py worker -n execute_worker -q overview_queue,execute_queue --loglevel=DEBUG
     networks:
       - backend
     depends_on:
-      - rabbitmq
+      - mongodb
       - server
     deploy:
       mode: global
       restart_policy:
         condition: on-failure
-    env_file: .env
     environment:
       - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
-      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
       - MHUB_CONFIG_DIR=/mnt/data
+      - MHUB_ENV=debug
+      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
       - MP_SATELLITE_CACHE_PATH=/mnt/data/cache
-    volumes:
-      - type: volume
-        source: worker_data
-        target: /mnt/data/
 
   index_worker:
-    build: .
-    image: registry.gitlab.eox.at/maps/mapchete_hub/mhub
+    build:
+      context: .
+      args:
+        BASE_IMAGE_NAME: "${BASE_IMAGE_NAME:-mapchete}"
     command: ./manage.py worker -n index_worker -q index_queue --loglevel=DEBUG
     networks:
       - backend
     depends_on:
-      - rabbitmq
+      - mongodb
       - server
     deploy:
       mode: global
       restart_policy:
         condition: on-failure
-    env_file: .env
     environment:
       - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-      - MHUB_BROKER_URL=amqp://s2processor:REDACTED_API_KEY@rabbitmq:5672//
-      - MHUB_RESULT_BACKEND=rpc://s2processor:REDACTED_API_KEY@rabbitmq:5672//
+      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
       - MHUB_CONFIG_DIR=/mnt/data
+      - MHUB_ENV=debug
       - MHUB_INDEX_OUTPUT_DIR=/mnt/data/indexes
+      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
       - MP_SATELLITE_CACHE_PATH=/mnt/data/cache
-    volumes:
-      - type: volume
-        source: worker_data
-        target: /mnt/data/
 
 networks:
   backend:
-
-volumes:
-  status_data:
-  worker_data:

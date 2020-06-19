@@ -8,18 +8,23 @@ from shapely.geometry import shape
 from tqdm import tqdm
 
 from mapchete_hub import __version__
-from mapchete_hub.api import API, job_states
-from mapchete_hub.config import default_timeout, host_options
+from mapchete_hub.api import API, default_timeout, job_states
 from mapchete_hub.exceptions import JobFailed
 from mapchete_hub.log import set_log_level
 from mapchete_hub._utils import str_to_date, date_to_str
+
+
+logger = logging.getLogger(__name__)
 
 # https://github.com/tqdm/tqdm/issues/481
 tqdm.monitor_interval = 0
 
 
+host_options = dict(host_ip="0.0.0.0", port=5000)
+
+
 def _set_debug_log_level(ctx, param, debug):
-    if debug:
+    if debug:  # pragma: no cover
         set_log_level(logging.DEBUG)
     return debug
 
@@ -74,7 +79,7 @@ opt_geojson = click.option(
     "--host", "-h",
     type=click.STRING,
     nargs=1,
-    default="%s:%s" % (host_options["host_ip"], host_options["port"]),
+    default="{}:{}".format(host_options["host_ip"], host_options["port"]),
     help="Address and port of mhub endpoint (default: %s:%s)." % (
         host_options["host_ip"], host_options["port"]
     )
@@ -86,9 +91,11 @@ opt_geojson = click.option(
     help="Time in seconds to wait for server response. (default: %s)" % default_timeout,
 )
 @click.pass_context
-def mhub(ctx, **kwargs):
+def mhub(ctx, host, **kwargs):
     """Main command group."""
-    ctx.obj = dict(**kwargs)
+    host = host if host.startswith("http") else "http://{}".format(host)
+    host = host if host.endswith("/") else "{}/".format(host)
+    ctx.obj = dict(host=host, **kwargs)
 
 
 @mhub.command(short_help="Show remote package versions.")
@@ -104,8 +111,8 @@ def remote_versions(ctx, **kwargs):
         click.echo("")
         for package, version in sorted(res.json["packages"].items()):
             click.echo("%s: %s" % (package, version))
-    except Exception as e:
-        click.echo("Error: %s" % e)
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
     ctx.exit()
 
 
@@ -148,8 +155,8 @@ def processes(ctx, process_name=None, docstrings=False, **kwargs):
             click.echo("%s processes found" % len(processes))
             for process_name in sorted(processes.keys()):
                 _print_process_info(processes[process_name], docstrings=docstrings)
-    except Exception as e:
-        click.echo("Error: %s" % e)
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
 
 
 @mhub.command(short_help="Show available queues and workers.")
@@ -165,7 +172,7 @@ def queues(ctx, queue_name=None, **kwargs):
             res = API(**ctx.obj).get("queues/%s" % queue_name)
             if res.status_code == 404:
                 click.echo("no queue '%s' found" % queue_name)
-            elif res.status_code != 200:
+            elif res.status_code != 200:  # pragma: no cover
                 raise ConnectionError(res.json)
             else:
                 click.echo("workers (%s)" % res.json["worker_count"])
@@ -174,21 +181,21 @@ def queues(ctx, queue_name=None, **kwargs):
                 click.echo("jobs (%s in queue):" % res.json["job_count"])
                 for status, jobs in res.json["jobs"].items():
                     click.echo("    %s:" % status)
-                    for job in jobs:
+                    for job in jobs:  # pragma: no cover
                         click.echo("        %s" % job)
         else:
             res = API(**ctx.obj).get("queues")
-            if res.status_code != 200:
+            if res.status_code != 200:  # pragma: no cover
                 raise ConnectionError(res.json)
             if res.json.items():
                 for queue, properties in res.json.items():
                     click.echo("%s:" % queue)
                     click.echo("    workers: %s" % properties["worker_count"])
                     click.echo("    pending jobs: %s" % properties["job_count"])
-            else:
+            else:  # pragma: no cover
                 click.echo("no queues nor workers currently registered")
-    except Exception as e:
-        click.echo("Error: %s" % e)
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
 
 
 @mhub.command(help="Execute a process.")
@@ -225,13 +232,13 @@ def execute(
                 command="execute",
                 **kwargs
             )
-            if verbose:
+            if verbose:  # pragma: no cover
                 click.echo("job %s state: %s" % (job.job_id, job.state))
                 _show_progress(ctx, job.job_id, disable=debug)
             else:
                 click.echo(job.job_id)
-        except Exception as e:
-            click.echo("Error: %s" % e)
+        except Exception as e:  # pragma: no cover
+            raise click.ClickException(e)
 
 
 @mhub.command(help="Create index of output tiles.")
@@ -266,13 +273,13 @@ def index(
                 command="index",
                 **kwargs
             )
-            if verbose:
+            if verbose:  # pragma: no cover
                 click.echo("job %s state: %s" % (job.job_id, job.state))
                 _show_progress(ctx, job.job_id, disable=debug)
             else:
                 click.echo(job.job_id)
-        except Exception as e:
-            click.echo("Error: %s" % e)
+        except Exception as e:  # pragma: no cover
+            raise click.ClickException(e)
 
 
 @mhub.command(help="Execute a batch of processes.")
@@ -305,13 +312,13 @@ def batch(
             mode="overwrite" if overwrite else "continue",
             **kwargs
         )
-        if verbose:
+        if verbose:  # pragma: no cover
             click.echo("job %s state: %s" % (job.job_id, job.state))
             _show_progress(ctx, job.job_id, disable=debug)
         else:
             click.echo(job.job_id)
-    except Exception as e:
-        click.echo("Error: %s" % e)
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
 
 
 @mhub.command(short_help="Show job status.")
@@ -332,14 +339,28 @@ def status(ctx, job_id, geojson=False, traceback=False, **kwargs):
             if geojson
             else API(**ctx.obj).job(job_id)
         )
-        if geojson:
+        if geojson:  # pragma: no cover
             click.echo(response)
-        elif traceback:
-            click.echo(response.json["properties"]["traceback"])
+        elif traceback:  # pragma: no cover
+            click.echo(response.json["properties"].get("traceback"))
         else:
             _print_job_details(response, verbose=True)
-    except Exception as e:
-        click.echo("Error: %s" % e)
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
+
+
+@mhub.command(short_help="Cancel job.")
+@click.argument("job_id", type=click.STRING)
+@opt_debug
+@click.pass_context
+def cancel(ctx, job_id, **kwargs):
+    """Cancel job."""
+    try:
+        job = API(**ctx.obj).cancel_job(job_id)
+        logger.debug(job.json)
+        click.echo(job.json["message"])
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
 
 
 @mhub.command(short_help="Show job progress.")
@@ -350,8 +371,8 @@ def progress(ctx, job_id, debug=False):
     """Show job progress."""
     try:
         _show_progress(ctx, job_id, disable=debug)
-    except Exception as e:
-        click.echo("Error: %s" % e)
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
 
 
 @mhub.command(short_help="Show current jobs.")
@@ -434,12 +455,13 @@ def jobs(
                     )
                 )
             )
+            logger.debug(jobs)
             if verbose:
                 click.echo("%s jobs found. \n" % len(jobs))
             for i in jobs:
                 _print_job_details(i, verbose=verbose)
-    except Exception as e:
-        click.echo("Error: %s" % e)
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
 
 
 def _print_job_details(job, verbose=False):
@@ -454,8 +476,10 @@ def _print_job_details(job, verbose=False):
                     color = "green"
                 elif state == "FAILURE":
                     color = "red"
+                elif state in ["TERMINATED", "REVOKED"]:
+                    color = "magenta"
     properties = job.json["properties"]
-    properties["config"] = properties["config"] or {}
+    properties["mapchete"]["config"] = properties["mapchete"]["config"] or {}
     mapchete_config = properties.get("config", {}).get("mapchete_config", {})
 
     # job ID and job state
@@ -484,11 +508,11 @@ def _print_job_details(job, verbose=False):
             bounds = None
         click.echo("bounds: %s" % bounds)
 
-        # parent ID
-        click.echo("parent_job_id: %s" % properties.get("parent_job_id"))
+        # previous job ID
+        click.echo("previous_job_id: %s" % properties.get("previous_job_id"))
 
-        # child ID
-        click.echo("child_job_id: %s" % properties.get("child_job_id"))
+        # next job ID
+        click.echo("next_job_id: %s" % properties.get("next_job_id"))
 
         # start time
         click.echo(
@@ -506,9 +530,11 @@ def _print_job_details(job, verbose=False):
 
         # last received update
         click.echo(
-            "last received update: %s" % date_to_str(
-                datetime.utcfromtimestamp(properties.get("timestamp")),
-                microseconds=False
+            "last received update: {}".format(
+                date_to_str(
+                    datetime.utcfromtimestamp(properties.get("timestamp")),
+                    microseconds=False
+                ) if properties.get("timestamp") else "unknown"
             )
         )
 
@@ -542,10 +568,10 @@ def _show_progress(ctx, job_id, disable=False):
                         i["progress_data"]["current"] > pbar.last_print_n
                     ):
                         pbar.update(i["progress_data"]["current"] - pbar.last_print_n)
-    except JobFailed as e:
+    except JobFailed as e:  # pragma: no cover
         click.echo("Job %s failed" % job_id)
         click.echo(e)
         return
-    except Exception as e:
-        click.echo("Error: %s" % e)
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
         return

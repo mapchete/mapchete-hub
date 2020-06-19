@@ -10,11 +10,7 @@ from collections import namedtuple, OrderedDict
 import geojson
 import json
 import logging
-try:
-    from mapchete.validate import validate_zooms
-except ImportError:
-    # fix for mapchete<=0.30
-    from mapchete._validate import validate_zooms
+from mapchete.validate import validate_zooms
 import os
 import py_compile
 import requests
@@ -23,17 +19,18 @@ import time
 import uuid
 import oyaml as yaml
 
-from mapchete_hub.config import cleanup_datetime, default_timeout
 from mapchete_hub.exceptions import JobFailed, JobNotFound, JobRejected
+from mapchete_hub.utils import cleanup_datetime
 
 
 logger = logging.getLogger(__name__)
 
 
+default_timeout = 5
 job_states = {
     "todo": ["PENDING"],
     "doing": ["PROGRESS", "RECEIVED", "STARTED"],
-    "done": ["SUCCESS", "FAILURE"]
+    "done": ["SUCCESS", "FAILURE", "TERMINATED", "REVOKED"]
 }
 
 
@@ -50,9 +47,9 @@ class Job():
         self.exists = True if status_code == 409 else False
         self.json = json
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         """Print Job."""
-        return "Job(status_code=%s, state=%s, job_id=%s, json=%s" % (
+        return "Job(status_code={}, state={}, job_id={}, json={}".format(
             self.status_code, self.state, self.job_id, self.json
         )
 
@@ -63,41 +60,57 @@ Response = namedtuple("Response", "status_code json")
 class API():
     """API class which abstracts REST interface."""
 
-    def __init__(self, host=None, timeout=None, _test_client=None, **kwargs):
+    def __init__(self, host="localhost:5000", timeout=None, _test_client=None, **kwargs):
         """Initialize."""
-        self.host = host
+        host = host if host.startswith("http") else "http://{}".format(host)
+        host = host if host.endswith("/") else "{}/".format(host)
+        self.host = host if host.endswith("/") else "{}/".format(host)
         self.timeout = timeout or default_timeout
         self._test_client = _test_client
         self._api = _test_client if _test_client else requests
-        self._baseurl = "" if _test_client else "http://%s/" % host
+        self._baseurl = "" if _test_client else host
 
     def get(self, url, **kwargs):
         """Make a GET request to _test_client or host."""
         try:
             get_url = self._baseurl + url
             get_kwargs = self._get_kwargs(kwargs)
-            logger.debug("GET: %s, %s", get_url, get_kwargs)
+            logger.debug("GET: {}, {}".format(get_url, get_kwargs))
             res = self._api.get(get_url, **get_kwargs)
             return Response(
                 status_code=res.status_code,
                 json=res.json if self._test_client else json.loads(res.text)
             )
-        except ConnectionError:
-            raise ConnectionError("no mhub server found at %s" % self.host)
+        except ConnectionError:  # pragma: no cover
+            raise ConnectionError("no mhub server found at {}".format(self.host))
 
     def post(self, url, **kwargs):
         """Make a POST request to _test_client or host."""
         try:
             post_url = self._baseurl + url
             post_kwargs = self._get_kwargs(kwargs)
-            logger.debug("POST: %s, %s", post_url, post_kwargs)
+            logger.debug("POST: {}, {}".format(post_url, post_kwargs))
             res = self._api.post(post_url, **post_kwargs)
             return Response(
                 status_code=res.status_code,
                 json=res.json if self._test_client else json.loads(res.text)
             )
-        except ConnectionError:
-            raise ConnectionError("no mhub server found at %s" % self.host)
+        except ConnectionError:  # pragma: no cover
+            raise ConnectionError("no mhub server found at {}".format(self.host))
+
+    def put(self, url, **kwargs):
+        """Make a PUT request to _test_client or host."""
+        try:
+            put_url = self._baseurl + url
+            put_kwargs = self._get_kwargs(kwargs)
+            logger.debug("PUT: {}, {}".format(put_url, put_kwargs))
+            res = self._api.put(put_url, **put_kwargs)
+            return Response(
+                status_code=res.status_code,
+                json=res.json if self._test_client else json.loads(res.text)
+            )
+        except ConnectionError:  # pragma: no cover
+            raise ConnectionError("no mhub server found at {}".format(self.host))
 
     def start_job(
         self,
@@ -127,8 +140,8 @@ class API():
             X and y coordinate of point over process tile.
         tile : list
             Zoom, row and column of process tile.
-        wkt_geometry : str
-            WKT representaion of process area.
+        geometry : str
+            GeoJSON representaion of process area.
         zoom : list or int
             Minimum and maximum zoom level or single zoom level.
 
@@ -137,33 +150,35 @@ class API():
         mapchete_hub.api.Job
         """
         job_id = job_id or uuid.uuid4().hex
-        job = dict(mapchete_config=load_mapchete_config(mapchete_config), **kwargs)
+        job = dict(
+            command=command,
+            config=load_mapchete_config(mapchete_config),
+            params=kwargs
+        )
 
         # make sure correct command is provided
-        command = command or job.get("command")
         if command not in ["execute", "index"]:
-            raise ValueError("invalid command given: %s" % command)
+            raise ValueError("invalid command given: {}".format(command))
 
-        logger.debug("send job %s to API", job_id)
+        # add queue if necessary
+        job["params"]["queue"] = (
+            queue or job["params"].get("queue", "{}_queue".format(command))
+        )
+
+        logger.debug("send job {} to API".format(job_id))
         res = self.post(
-            "jobs/%s" % job_id,
-            json=json.dumps(
-                dict(
-                    job,
-                    command=command,
-                    queue=queue or job.get("queue", "%s_queue" % command)
-                )
-            ),
+            "jobs/{}".format(job_id),
+            json=json.dumps(job),
             timeout=self.timeout
         )
 
         if res.status_code != 202:
             raise JobRejected(res.json)
         else:
-            logger.debug("job %s sent", job_id)
+            logger.debug("job {} sent".format(job_id))
             return Job(
                 status_code=res.status_code,
-                state=res.json["properties"]["state"],
+                state="PENDING",
                 job_id=job_id,
                 json=res.json
             )
@@ -192,8 +207,8 @@ class API():
             X and y coordinate of point over process tile.
         tile : list
             Zoom, row and column of process tile.
-        wkt_geometry : str
-            WKT representaion of process area.
+        geometry : str
+            GeoJSON representaion of process area.
 
         Returns
         -------
@@ -202,9 +217,9 @@ class API():
         job_id = job_id or uuid.uuid4().hex
         jobs = list(load_batch_config(batch, **kwargs)["jobs"].values())
 
-        logger.debug("send batch job %s to API", job_id)
+        logger.debug("send batch job {} to API".format(job_id))
         res = self.post(
-            "jobs/%s" % job_id,
+            "jobs/{}".format(job_id),
             json=json.dumps(jobs),
             timeout=self.timeout
         )
@@ -212,19 +227,35 @@ class API():
         if res.status_code != 202:
             raise JobRejected(res.json)
         else:
-            logger.debug("job %s sent", job_id)
+            logger.debug("job {} sent".format(job_id))
             return Job(
                 status_code=res.status_code,
-                state=res.json["properties"]["state"],
+                state="PENDING",
                 job_id=job_id,
                 json=res.json
             )
 
+    def cancel_job(self, job_id):
+        """Cancel existing job."""
+        res = self.put(
+            "jobs/{}".format(job_id),
+            json={"command": "cancel"},
+            timeout=self.timeout
+        )
+        if res.status_code == 404:
+            raise JobNotFound("job {} does not exist".format(job_id))
+        return Job(
+            status_code=res.status_code,
+            state=self.job_state(job_id),
+            job_id=job_id,
+            json=res.json
+        )
+
     def job(self, job_id, geojson=False):
         """Return job metadata."""
-        res = self.get("jobs/%s" % job_id, timeout=self.timeout)
+        res = self.get("jobs/{}".format(job_id), timeout=self.timeout)
         if res.status_code == 404:
-            raise JobNotFound("job %s does not exist" % job_id)
+            raise JobNotFound("job {} does not exist".format(job_id))
         else:
             return (
                 format_as_geojson(res.json)
@@ -244,13 +275,15 @@ class API():
     def jobs(self, geojson=False, bounds=None, **kwargs):
         """Return jobs metadata."""
         res = self.get(
-            "jobs/",
+            "jobs",
             timeout=self.timeout,
             params=dict(
                 kwargs,
                 bounds=",".join(map(str, bounds)) if bounds else None
             )
         )
+        if res.status_code != 200:
+            raise Exception(res.json)
         return (
             format_as_geojson(res.json)
             if geojson
@@ -270,7 +303,7 @@ class API():
         return {
             job["properties"]["job_id"]: job["properties"]["state"]
             for job in self.get(
-                "jobs/",
+                "jobs",
                 timeout=self.timeout,
                 params=dict(output_path=output_path)
             ).json
@@ -307,7 +340,7 @@ class API():
                     raise JobFailed(job.json["properties"]["traceback"])
 
             if time.time() - updated > timeout:
-                raise TimeoutError("no update since %s seconds" % timeout)
+                raise TimeoutError("no update since {} seconds".format(timeout))
             time.sleep(interval)
 
     def _get_kwargs(self, kwargs):
@@ -318,7 +351,7 @@ class API():
             - remove timeout kwarg
             - rename params kwarg to query_string
         """
-        if self._test_client:
+        if self._test_client:  # pragma: no cover
             kwargs.pop("timeout", None)
             kwargs.update(query_string=kwargs.pop("params", {}))
         return kwargs
@@ -328,10 +361,10 @@ def format_as_geojson(inp, indent=4):
     """Return a pretty GeoJSON."""
     space = " " * indent
     out_gj = (
-        '{\n'
-        '%s"type": "FeatureCollection",\n'
-        '%s"features": [\n'
-    ) % (space, space)
+        '{{\n'
+        '{}"type": "FeatureCollection",\n'
+        '{}"features": [\n'
+    ).format(space, space)
     features = (i for i in ([inp] if isinstance(inp, dict) else inp))
     try:
         feature = next(features)
@@ -339,20 +372,20 @@ def format_as_geojson(inp, indent=4):
         while True:
             feature_gj = (space * level).join(
                 json.dumps(
-                    json.loads('%s' % geojson.Feature(**feature)),
+                    json.loads('{}'.format(geojson.Feature(**feature))),
                     indent=indent,
                     sort_keys=True
                 ).splitlines(True)
             )
             try:
                 feature = next(features)
-                out_gj += "%s%s,\n" % (space * level, feature_gj)
+                out_gj += "{}{},\n".format(space * level, feature_gj)
             except StopIteration:
-                out_gj += "%s%s\n" % (space * level, feature_gj)
+                out_gj += "{}{}\n".format(space * level, feature_gj)
                 break
-    except StopIteration:
+    except StopIteration:  # pragma: no cover
         pass
-    out_gj += '%s]\n}' % space
+    out_gj += '{}]\n}}'.format(space)
     return out_gj
 
 
@@ -382,7 +415,7 @@ def load_mapchete_config(mapchete_config):
     elif isinstance(mapchete_config, str):
         conf = cleanup_datetime(yaml.safe_load(open(mapchete_config, "r").read()))
 
-        if not conf.get("process"):
+        if not conf.get("process"):  # pragma: no cover
             raise KeyError("no or empty process in configuration")
 
         # local python file
@@ -395,7 +428,7 @@ def load_mapchete_config(mapchete_config):
             py_compile.compile(custom_process_path, doraise=True)
             # assert file is not empty
             process_code = open(custom_process_path).read()
-            if not process_code:
+            if not process_code:  # pragma: no cover
                 raise ValueError("process file is empty")
             conf.update(
                 process=base64.standard_b64encode(
@@ -448,13 +481,13 @@ def load_batch_config(batch_config, **kwargs):
             parent_zoom = None
             for job_name, params in raw.get("jobs", {}).items():
                 if "command" not in params:
-                    raise ValueError("no command provided for job %s" % job_name)
+                    raise ValueError("no command provided for job {}".format(job_name))
                 if "mapchete" in params:
                     mapchete = _get_mapchete_config(params["mapchete"])
                 elif "job" in params:
                     if params["job"] not in raw["jobs"]:
                         raise ValueError(
-                            "job %s points to invalid other job %s" % (
+                            "job {} points to invalid other job {}".format(
                                 job_name, params["job"]
                             )
                         )
@@ -464,7 +497,8 @@ def load_batch_config(batch_config, **kwargs):
                         )
                 else:
                     raise ValueError(
-                        "job %s must either provide a mapchete file or point other job"
+                        "job {} must either provide a mapchete file or point other "
+                        "job".format(job_name)
                     )
                 if "zoom" in params:
                     zoom = validate_zooms(params["zoom"], expand=False)
@@ -474,16 +508,18 @@ def load_batch_config(batch_config, **kwargs):
                     job_name,
                     dict(
                         command=params["command"],
-                        job_name=job_name,
-                        mapchete_config=mapchete,
-                        mode=params.get("mode", "continue"),
-                        queue=params.get("queue", None),
-                        zoom=zoom,
-                        bounds=kwargs.get("bounds"),
-                        point=kwargs.get("point"),
-                        tile=kwargs.get("tile"),
-                        wkt_geometry=kwargs.get("wkt_geometry"),
-                        announce_on_slack=params.get("announce_on_slack", False)
+                        config=mapchete,
+                        params=dict(
+                            job_name=job_name,
+                            mode=params.get("mode", "continue"),
+                            queue=params.get("queue", None),
+                            zoom=zoom,
+                            bounds=kwargs.get("bounds"),
+                            point=kwargs.get("point"),
+                            tile=kwargs.get("tile"),
+                            geometry=kwargs.get("geometry"),
+                            announce_on_slack=params.get("announce_on_slack", False)
+                        )
                     )
                 )
         else:
