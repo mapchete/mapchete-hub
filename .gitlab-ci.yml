@@ -32,7 +32,7 @@ build_mhub-s1:
 # test mapchete_hub package in built images
 test_mhub:
   stage: test
-  retry: 3
+  retry: 2
   variables:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
@@ -52,7 +52,7 @@ test_mhub:
 
 test_mhub-s1:
   stage: test
-  retry: 3
+  retry: 2
   variables:
     IMAGE_NAME: mhub-s1
     BASE_IMAGE_NAME: snap-mapchete
