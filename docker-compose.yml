@@ -2,7 +2,7 @@ version: "3.6"
 
 services:
 
-  mongodb:
+  broker:
     image: mongo:4.2.7-bionic
     networks:
       - backend
@@ -11,6 +11,19 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=REDACTED_API_KEY
       # https://github.com/docker-library/mongo/issues/329
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    command: ["--bind_ip_all"]
+
+  db:
+    image: mongo:4.2.7-bionic
+    networks:
+      - backend
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mhub
+      - MONGO_INITDB_ROOT_PASSWORD=REDACTED_API_KEY
+      # https://github.com/docker-library/mongo/issues/329
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    volumes:
+      - db-data:/data/db
     command: ["--bind_ip_all"]
 
   monitor:
@@ -22,7 +35,8 @@ services:
     networks:
       - backend
     depends_on:
-      - mongodb
+      - broker
+      - db
     deploy:
       mode: global
       restart_policy:
@@ -30,11 +44,11 @@ services:
     environment:
       - MONGODB_PORT
       - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@broker:27017
       - MHUB_CONFIG_DIR=/mnt/data/
       - MHUB_ENV=debug
-      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
-      - MHUB_STATUS_DB_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@broker:27017
+      - MHUB_STATUS_DB_URI=mongodb://mhub:REDACTED_API_KEY@db:27017
 
   server:
     build:
@@ -45,7 +59,8 @@ services:
     networks:
       - backend
     depends_on:
-      - mongodb
+      - broker
+      - db
       - monitor
     ports:
       - ${MHUB_PORT:-5000}:${MHUB_PORT:-5000}
@@ -55,11 +70,11 @@ services:
         condition: on-failure
     environment:
       - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@broker:27017
       - MHUB_CONFIG_DIR=/mnt/data/
       - MHUB_ENV=debug
-      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
-      - MHUB_STATUS_DB_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@broker:27017
+      - MHUB_STATUS_DB_URI=mongodb://mhub:REDACTED_API_KEY@db:27017
 
   execute_worker:
     build:
@@ -70,7 +85,7 @@ services:
     networks:
       - backend
     depends_on:
-      - mongodb
+      - broker
       - server
     deploy:
       mode: global
@@ -78,10 +93,10 @@ services:
         condition: on-failure
     environment:
       - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@broker:27017
       - MHUB_CONFIG_DIR=/mnt/data
       - MHUB_ENV=debug
-      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@broker:27017
       - MP_SATELLITE_CACHE_PATH=/mnt/data/cache
 
   index_worker:
@@ -93,7 +108,7 @@ services:
     networks:
       - backend
     depends_on:
-      - mongodb
+      - broker
       - server
     deploy:
       mode: global
@@ -101,12 +116,15 @@ services:
         condition: on-failure
     environment:
       - CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_BROKER_URI=mongodb://mhub:REDACTED_API_KEY@broker:27017
       - MHUB_CONFIG_DIR=/mnt/data
       - MHUB_ENV=debug
       - MHUB_INDEX_OUTPUT_DIR=/mnt/data/indexes
-      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@mongodb:27017
+      - MHUB_RESULT_BACKEND_URI=mongodb://mhub:REDACTED_API_KEY@broker:27017
       - MP_SATELLITE_CACHE_PATH=/mnt/data/cache
+
+volumes:
+  db-data:
 
 networks:
   backend:
