@@ -18,7 +18,6 @@ def run(
     config=None,
     process_area=None,
     process_area_process_crs=None,
-    announce_on_slack=False,
     **kwargs
 ):
     """Celery task for mapchete_execute."""
@@ -36,7 +35,11 @@ def run(
     # first, the inputs get parsed, i.e. all metadata queried from catalogue
     # this may take a while
     executor = mapchete_execute(
-        mapchete_config=config, process_area=process_area_process_crs, **kwargs
+        mapchete_config=config,
+        process_area=process_area_process_crs,
+        mode=params.get("mode"),
+        zoom=params.get("zoom"),
+        **kwargs
     )
     # first item of executor is the number of total tiles; send them to task-progress
     total_tiles = next(executor)
@@ -50,7 +53,7 @@ def run(
         self.send_event("task-progress", progress_data=dict(current=i, total=total_tiles))
 
     logger.info("processing successful.")
-    if announce_on_slack:  # pragma: no cover
+    if params.get("announce_on_slack", False):  # pragma: no cover
         send_slack_message(
             process_area_process_crs.centroid.x, process_area_process_crs.centroid.y
         )
