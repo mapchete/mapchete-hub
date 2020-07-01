@@ -267,6 +267,8 @@ class Jobs(Resource):
                 and can be used as an alternative to mapchete_config.
             - mode : str
                 One of "continue" or "overwrite". (default: "continue")
+            - announce_on_slack : bool
+                Send message to Slack when job finished.
 
         - config : dict
             A valid mapchete configuration. In batch jobs either this or job has to be
