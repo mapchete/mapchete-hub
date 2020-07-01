@@ -20,7 +20,6 @@ def run(
     config=None,
     process_area=None,
     process_area_process_crs=None,
-    announce_on_slack=False,
     **kwargs
 ):
     """Celery task for mapchete_index."""
@@ -53,6 +52,8 @@ def run(
     executor = mapchete_index(
         mapchete_config=config,
         process_area=process_area_process_crs,
+        mode=params.get("mode"),
+        zoom=params.get("zoom"),
         shapefile=True,
         out_dir=index_output_path,
         **kwargs
@@ -70,7 +71,7 @@ def run(
         self.send_event('task-progress', progress_data=dict(current=i, total=total_tiles))
 
     logger.info("processing successful.")
-    if announce_on_slack:  # pragma: no cover
+    if params.get("announce_on_slack", False):  # pragma: no cover
         send_slack_message(
             process_area_process_crs.centroid.x, process_area_process_crs.centroid.y
         )
