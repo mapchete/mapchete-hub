@@ -371,4 +371,3 @@ class Jobs(Resource):
                 return
 
         return [job_meta, *list(_next_jobs(job_meta))]
-

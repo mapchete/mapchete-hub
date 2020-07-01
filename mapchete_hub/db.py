@@ -4,6 +4,7 @@ import mongomock.collection
 import mongomock.database
 import pymongo
 from shapely.geometry import Polygon
+import time
 
 from mapchete_hub.api import job_states
 
@@ -234,6 +235,7 @@ class MongoDBStatusHandler():
             "command": metadata.get("command"),
             "queue": metadata.get("params").get("queue"),
             "job_name": metadata.get("params").get("job_name"),
+            "timestamp": time.time()
         }
         self._jobs.insert_one(entry)
         return self._entry_to_geojson(entry)
