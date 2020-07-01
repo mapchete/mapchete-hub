@@ -48,6 +48,7 @@ ENV GML_SKIP_CORRUPTED_FEATURES YES
 ENV BUILD_DIR /usr/local
 ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
 ENV WHEEL_DIR /usr/local/wheels
+ENV MP_SATELLITE_REMOTE_TIMEOUT=30
 
 # get and install wheels from builder
 COPY --from=builder $WHEEL_DIR $WHEEL_DIR
