@@ -25,20 +25,19 @@ class DefaultConfig():
 
     # celery
     CELERY_ACCEPT_CONTENT = ["json"]
+    CELERY_ACKS_LATE = True
     CELERY_EVENT_QUEUE_EXPIRES = 60 * 60 * 24  # 1 day
     CELERY_EVENT_SERIALIZER = "json"
     CELERY_IGNORE_RESULT = True
     CELERY_RESULT_BACKEND = "mongodb"
     CELERY_RESULT_SERIALIZER = "json"
-    CELERY_TASK_ACKS_LATE = True
-    CELERY_TASK_ROUTES = {
+    CELERY_ROUTES = {
         "mapchete_hub.commands.execute.*": {"queue": "execute_queue"},
         "mapchete_hub.commands.index.*": {"queue": "index_queue"},
     }
-    CELERY_TASK_SEND_SENT_EVENT = True
-    CELERY_TASK_SERIALIZER = "json"
-    CELERY_WORKER_SEND_TASK_EVENTS = True
-    CELERY_WORKER_HIJACK_ROOT_LOGGER = False
+    CELERY_SERIALIZER = "json"
+    CELERY_SEND_SENT_EVENT = True
+    CELERYD_HIJACK_ROOT_LOGGER = False
 
     # flask
     DEBUG = False
@@ -63,12 +62,12 @@ class DevelopmentConfig(DefaultConfig):
 class TestingConfig(DefaultConfig):
     """Testing configuraion."""
 
-    CELERY_BACKEND_URL = "rpc://"
     CELERY_BROKER_URL = "memory://"
     # tasks won't re-raise exceptions if ignore_result remains True
     CELERY_IGNORE_RESULT = False
     CELERY_RESULT_BACKEND = "cache+memory://"
-    CELERY_TASK_ALWAYS_EAGER = False
+    CELERY_ALWAYS_EAGER = True
+    CELERY_EAGER_PROPAGATES = True
     ENV = "testing"
     TESTING = True
 
@@ -87,7 +86,7 @@ def get_flask_config():
     _env = EnvConfig().from_environ()
     if env != "testing":  # pragma: no cover
         config.CELERY_BROKER_URL = _env.BROKER_URI
-        config.CELERY_RESULT_BACKEND_URL = _env.RESULT_BACKEND_URI
+        config.CELERY_RESULT_BACKEND = _env.RESULT_BACKEND_URI
         config.MONGO_URI = _env.STATUS_DB_URI
     return config
 
