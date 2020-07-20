@@ -4,11 +4,28 @@ Changelog
 
 
 -----------------
-0.11 - 2020-06-02
+0.12 - 2020-07-20
 -----------------
+* main package
+    * use a MongoDB instance as message broker (!69)
+    * use a MongoDB instance as backend database for jobs (!69, !70)
+    * cancel jobs (!69, #4)
+    * monitor does not have to run on same machine than server anymore (!69)
+    * mapchete_satellite: increase remote timeout to 30s (!74, #88)
+* testing
+    * run integration tests using docker-compose (!69, #44)
+    * retry test stage (!72)
 * Docker
-    * use mapchete_satellite 0.9
-    * use base image 0.9 which updates OpenSAR toolkit to 0.9.7
+    * use mapchete_satellite 0.10
+    * use base image 0.10 which updates
+        * GDAL `3.1.2`
+        * Fiona `1.8.13`
+        * GEOS `3.8.1`
+        * mapchete `0.34`
+        * proj `6.3.2`
+        * rasterio `1.1.4`
+        * spatialite `5.0.0-beta0`
+        * SQLite `3310100`
 
 
 -----------------
