@@ -1,11 +1,11 @@
 # use builder to build python wheels #
 ######################################
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=0.9
+ARG BASE_IMAGE_TAG=0.10
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
 MAINTAINER Joachim Ungar
 
-ENV MAPCHETE_SATELLITE_VERSION 0.9
+ENV MAPCHETE_SATELLITE_VERSION 0.10
 ENV ORGONITE_VERSION 0.6
 ENV EOX_PREPROCESSING_VERSION 0.10
 
@@ -29,9 +29,12 @@ RUN pip wheel \
         godale \
         gunicorn==19.9.0 \
         jenkspy \
+        lxml \
         mapchete_xarray \
         numcodecs==0.6.4 \
         psutil \
+        pystac \
+        pytz \
         xarray \
         --wheel-dir $WHEEL_DIR \
         --no-deps
