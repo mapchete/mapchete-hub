@@ -38,6 +38,7 @@ class DefaultConfig():
     CELERY_SERIALIZER = "json"
     CELERY_SEND_SENT_EVENT = True
     CELERYD_HIJACK_ROOT_LOGGER = False
+    CELERYD_MAX_TASKS_PER_CHILD = 1
 
     # flask
     DEBUG = False

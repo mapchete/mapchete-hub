@@ -27,6 +27,16 @@ def status_monitor(celery_app):  # pragma: no cover
 
         if task.uuid:
             logger.debug("task {} status: {}".format(task.uuid, event.get("state")))
+            # Special case to handle workaround for celery error.
+            # https://github.com/celery/celery/issues/2727#issuecomment-571990240
+            # see https://gitlab.eox.at/maps/mapchete_hub/-/issues/108
+            if "SoftTimeLimitExceeded()" in event.get("traceback", ""):
+                event.update(
+                    exception=None,
+                    traceback=None,
+                    type="task-revoked",
+                    state="TERMINATED"
+                )
             status_handler.update(job_id=task.uuid, metadata=event)
 
     with BackendDB(src=config.MONGO_URI) as status_handler:
@@ -35,7 +45,6 @@ def status_monitor(celery_app):  # pragma: no cover
                 logger.debug("try to establish connection for events...")
                 logger.debug('broker: {}'.format(celery_app.pool.connection.as_uri()))
                 logger.debug('backend: {}'.format(celery_app.backend.as_uri()))
-                # config.CELERY_BROKER_URL
                 with celery_app.connection() as connection:
                     logger.debug("connection: %s", connection)
                     celery_app.events.Receiver(connection)
