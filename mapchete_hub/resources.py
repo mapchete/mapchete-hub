@@ -339,7 +339,7 @@ class Jobs(Resource):
                 self.app.logger.debug("got command to cancel job {}".format(job_id))
                 if job["properties"]["state"] not in job_states["done"]:
                     # send signal to celery worker to terminate running job
-                    celery_app.control.revoke(job_id, terminate=True)
+                    celery_app.control.revoke(job_id, terminate=True, signal="SIGUSR1")
                     revoked.append(job_id)
                     # update database
                     self._backend.update(job_id=job_id, metadata={"state": "REVOKED"})
