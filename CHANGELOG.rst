@@ -4,6 +4,18 @@ Changelog
 
 
 -----------------
+0.13 - 2020-08-04
+-----------------
+* main package
+    * fix job termination (#108)
+* Docker
+    * use base image 0.11 which updates
+        * GDAL `3.0.4`
+        * Fiona `1.8.13.post1`
+        * mapchete `0.35`
+
+
+-----------------
 0.12 - 2020-07-20
 -----------------
 * main package
