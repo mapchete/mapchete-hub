@@ -479,8 +479,7 @@ def _print_job_details(job, verbose=False):
                 elif state in ["TERMINATED", "REVOKED"]:
                     color = "magenta"
     properties = job.json["properties"]
-    properties["mapchete"]["config"] = properties["mapchete"]["config"] or {}
-    mapchete_config = properties.get("config", {}).get("mapchete_config", {})
+    mapchete_config = properties.get("mapchete", {}).get("config", {})
 
     # job ID and job state
     click.echo(click.style("%s" % job.job_id, fg=color, bold=True))
