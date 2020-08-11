@@ -1,7 +1,7 @@
 #!/bin/bash
 REQUIRED=( AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY BROKER_USER BROKER_PW BROKER_IP GITLAB_REGISTRY_TOKEN SLACK_WEBHOOK_URL )
 
-USAGE="Usage: $(basename "$0") [-h] TAG
+USAGE="Usage: $(basename "$0") [-h]
 
 Run mhub index worker and mapserver containers.
 
@@ -14,14 +14,43 @@ $(for var in "${REQUIRED[@]}"; do echo " - ${var}"; done)
 These variables are also attempted to be read from an .env file from this directory.
 
 Parameters:
-    -h      Show this help text and exit.
-    TAG     Tag used for mhub image. (default: stable)
+    -h, --help              Show this help text and exit.
+    -i, --image             Image to be used. (either mhub or mhub-s1) (default: mhub)
+    -t, --tag               Tag used for mhub image. (default: stable)
+    --mapserver-tag         Tag used for mapserver image. (default: 0.11)
 "
 
-if [ "$1" == "-h" ]; then
-    echo "$USAGE"
-    exit 0
-fi
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --image*|-i*)
+      if [[ "$1" != *=* ]]; then shift; fi
+      IMAGE="${1#*=}"
+      ;;
+    --tag*|-t*)
+      if [[ "$1" != *=* ]]; then shift; fi
+      TAG="${1#*=}"
+      ;;
+    --mapserver-tag*)
+      if [[ "$1" != *=* ]]; then shift; fi
+      MAPSERVER_IMAGE_TAG="${1#*=}"
+      ;;
+    --help|-h)
+      printf "$USAGE" # Flag argument
+      exit 0
+      ;;
+    *)
+      >&2 printf "Error: Invalid argument\n"
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+AVAILABILITY_ZONE=${AVAILABILITY_ZONE:-"eu-central-1a"}
+INSTANCE_TYPE=${INSTANCE_TYPE:-"m5dn.2xlarge"}
+INSTANCES=${INSTANCES:-1}
+IMAGE=${IMAGE:-"mhub"}
+TAG=${TAG:-"stable"}
 
 # load variables from .env file if possible
 if [ -f ".env" ]; then
@@ -37,17 +66,15 @@ for var in "${REQUIRED[@]}"; do
 done;
 
 # set mhub variables
-HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
 LOCAL_VOLUME_DIR=${LOCAL_VOLUME_DIR:-"/mnt/data"}
-MAPSERVER_IMAGE_TAG="0.2"
-MHUB_BROKER_URL=$"amqp://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
+MAPSERVER_IMAGE_TAG="0.11"
 MHUB_CELERY_SLACK=${MHUB_CELERY_SLACK:-"TRUE"}
-MHUB_DOCKER_IMAGE_TAG=${1:-"stable"}
+MHUB_DOCKER_IMAGE=${IMAGE:-"mhub"}
+MHUB_DOCKER_IMAGE_TAG=${TAG:-"stable"}
 MHUB_INDEX_OUTPUT_DIR=${MHUB_INDEX_OUTPUT_DIR:-"/mnt/data/indexes"}
 MHUB_LOGLEVEL=${MHUB_LOGLEVEL:-"INFO"}
-MHUB_RESULT_BACKEND=$"rpc://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
-MHUB_QUEUE=${MHUB_QUEUE:-"index_queue"}
-MHUB_WORKER="index_worker"
+MHUB_QUEUE=${MHUB_QUEUE:-"execute_queue"}
+MHUB_WORKER="execute_worker"
 MP_SATELLITE_CACHE_PATH=${MP_SATELLITE_CACHE_PATH:-"/mnt/data/cache"}
 PREVIEW_PERMALINK=${PREVIEW_PERMALINK:-"http://"$HOST_IP"/geodetic.html"}
 
@@ -112,31 +139,31 @@ docker run \
   --rm \
   --name=mapserver \
   -p 80:80 \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
   -v ${LOCAL_VOLUME_DIR}/html:/html \
   -v ${LOCAL_VOLUME_DIR}/map:/map \
   -v ${LOCAL_VOLUME_DIR}/indexes:/indexes \
   -v ${LOCAL_VOLUME_DIR}/mapdata:/mapdata \
-  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -d \
   registry.gitlab.eox.at/maps/docker-base/mapserver:$MAPSERVER_IMAGE_TAG
 docker run \
   --rm \
   --name $MHUB_WORKER \
-  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-  -e CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
-  -e HOST_IP=$HOST_IP \
-  -e LOGFILE=$LOGFILE \
-  -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
-  -e MHUB_CELERY_SLACK=$MHUB_CELERY_SLACK \
-  -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
-  -e MHUB_INDEX_OUTPUT_DIR=$MHUB_INDEX_OUTPUT_DIR \
-  -e MHUB_QUEUE=$MHUB_QUEUE \
-  -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
-  -e MHUB_WORKER=$MHUB_WORKER \
-  -e PREVIEW_PERMALINK=$PREVIEW_PERMALINK \
-  -e SLACK_WEBHOOK_URL=$SLACK_WEBHOOK_URL \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
+  -e MHUB_BROKER_URI \
+  -e MHUB_CELERY_SLACK \
+  -e MHUB_CONFIG_DIR \
+  -e MHUB_INDEX_OUTPUT_DIR \
+  -e MHUB_RESULT_BACKEND_URI \
+  -e MHUB_STATUS_DB_URI \
+  -e MHUB_QUEUE \
+  -e MHUB_WORKER \
+  -e MP_SATELLITE_CACHE_PATH \
+  -e PREVIEW_PERMALINK \
+  -e SLACK_WEBHOOK_URL \
   -v ${LOCAL_VOLUME_DIR}:/mnt/data \
   -d \
   registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG \

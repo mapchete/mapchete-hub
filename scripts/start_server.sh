@@ -1,7 +1,7 @@
 #!/bin/bash
-REQUIRED=( AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY BROKER_USER BROKER_PW BROKER_IP GITLAB_REGISTRY_TOKEN SLACK_WEBHOOK_URL )
+REQUIRED=( AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY MHUB_BROKER_URI MHUB_RESULT_BACKEND_URI MHUB_STATUS_DB_URI GITLAB_REGISTRY_TOKEN MHUB_SLACK_WEBHOOK_URL )
 
-USAGE="Usage: $(basename "$0") [-h] TAG
+USAGE="Usage: $(basename "$0") [-h]
 
 Run mhub server and monitor containers.
 
@@ -14,14 +14,35 @@ $(for var in "${REQUIRED[@]}"; do echo " - ${var}"; done)
 These variables are also attempted to be read from an .env file from this directory.
 
 Parameters:
-    -h      Show this help text and exit.
-    TAG     Tag used for mhub image. (default: stable)
+    -h, --help              Show this help text and exit.
+    -i, --image             Image to be used. (either mhub or mhub-s1) (default: mhub)
+    -t, --tag               Tag used for mhub image. (default: stable)
 "
 
-if [ "$1" == "-h" ]; then
-    echo "$USAGE"
-    exit 0
-fi
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --image*|-i*)
+      if [[ "$1" != *=* ]]; then shift; fi
+      IMAGE="${1#*=}"
+      ;;
+    --tag*|-t*)
+      if [[ "$1" != *=* ]]; then shift; fi
+      TAG="${1#*=}"
+      ;;
+    --help|-h)
+      printf "$USAGE" # Flag argument
+      exit 0
+      ;;
+    *)
+      >&2 printf "Error: Invalid argument\n"
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+IMAGE=${IMAGE:-"mhub"}
+TAG=${TAG:-"stable"}
 
 # load variables from .env file if possible
 if [ -f ".env" ]; then
@@ -40,15 +61,10 @@ done;
 GUNICORN_THREADS=${GUNICORN_THREADS:-"4"}
 GUNICORN_WORKERS=${GUNICORN_WORKERS:-"4"}
 LOCAL_VOLUME_DIR=/mnt/data
-MHUB_DOCKER_IMAGE_TAG=${1:-"stable"}
-MHUB_BROKER_URL=$"amqp://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
-MHUB_CONFIG_DIR="/mnt/data/"
+MHUB_DOCKER_IMAGE=${IMAGE:-"mhub"}
+MHUB_DOCKER_IMAGE_TAG=${TAG:-"stable"}
 MHUB_LOGLEVEL=${MHUB_LOGLEVEL:-"INFO"}
-MHUB_RESULT_BACKEND=$"rpc://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
 MHUB_QUEUE=${MHUB_QUEUE:-"execute_queue"}
-MHUB_STATUS_GPKG="/mnt/data/status.gpkg"
-MHUB_WORKER="execute_worker"
-MP_SATELLITE_CACHE_PATH=${MP_SATELLITE_CACHE_PATH:-"/mnt/data/cache"}
 PORT=${PORT:-"5000"}
 
 GUNICORN_CMD_ARGS="--bind 0.0.0.0:${PORT} --log-level ${MHUB_LOGLEVEL} --workers ${GUNICORN_WORKERS} --threads ${GUNICORN_THREADS} --worker-class=gthread --worker-tmp-dir /dev/shm"
@@ -94,41 +110,44 @@ fi
 
 # get rgb_worker docker container
 retry 10 docker login -u gitlab-ci-token -p $GITLAB_REGISTRY_TOKEN registry.gitlab.eox.at
-retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG
+retry 10 docker pull registry.gitlab.eox.at/maps/mapchete_hub/$MHUB_DOCKER_IMAGE:$MHUB_DOCKER_IMAGE_TAG
 
 # try to stop container if they are running
 docker container stop monitor server || true
 
 # run docker containers
+echo "launch monitor"
 docker run \
   --rm \
   --name=monitor \
   -d \
-  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-  -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
-  -e MHUB_CELERY_SLACK=$MHUB_CELERY_SLACK \
-  -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
-  -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
-  -e MHUB_STATUS_GPKG=$MHUB_STATUS_GPKG \
-  -e SLACK_WEBHOOK_URL=$SLACK_WEBHOOK_URL \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e MHUB_BROKER_URI \
+  -e MHUB_RESULT_BACKEND_URI \
+  -e MHUB_STATUS_DB_URI \
+  -e MHUB_CELERY_SLACK \
+  -e MHUB_CONFIG_DIR \
+  -e MHUB_SLACK_WEBHOOK_URL \
   -v ${LOCAL_VOLUME_DIR}:/mnt/data \
-  registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG \
+  registry.gitlab.eox.at/maps/mapchete_hub/$MHUB_DOCKER_IMAGE:$MHUB_DOCKER_IMAGE_TAG \
   ./manage.py monitor --loglevel=$MHUB_LOGLEVEL
+
+echo "launch server"
 docker run \
   --rm \
   --name=server \
   -d \
-  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
   -e GUNICORN_CMD_ARGS="$GUNICORN_CMD_ARGS" \
-  -e MHUB_BROKER_URL=$MHUB_BROKER_URL \
-  -e MHUB_CELERY_SLACK=$MHUB_CELERY_SLACK \
-  -e MHUB_RESULT_BACKEND=$MHUB_RESULT_BACKEND \
-  -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
-  -e MHUB_STATUS_GPKG=$MHUB_STATUS_GPKG \
-  -e SLACK_WEBHOOK_URL=$SLACK_WEBHOOK_URL \
+  -e MHUB_BROKER_URI \
+  -e MHUB_RESULT_BACKEND_URI \
+  -e MHUB_STATUS_DB_URI \
+  -e MHUB_CELERY_SLACK \
+  -e MHUB_CONFIG_DIR \
+  -e SLACK_WEBHOOK_URL \
   -p ${PORT}:${PORT} \
   -v ${LOCAL_VOLUME_DIR}:/mnt/data \
-  registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG \
-  gunicorn "mapchete_hub.application:flask_app()"
+  registry.gitlab.eox.at/maps/mapchete_hub/$MHUB_DOCKER_IMAGE:$MHUB_DOCKER_IMAGE_TAG \
+  gunicorn "mapchete_hub.flask_app:flask_app()"

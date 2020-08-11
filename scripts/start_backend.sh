@@ -1,9 +1,9 @@
 #!/bin/bash
 REQUIRED=( MONGO_INITDB_ROOT_USERNAME MONGO_INITDB_ROOT_PASSWORD )
 
-USAGE="Usage: $(basename "$0") [-h] TAG
+USAGE="Usage: $(basename "$0") [-h]
 
-Run mongodb.
+Start two MongoDB instances. One as a broker, the other one as job storage database.
 
 NOTE:
 This script needs further environmental variables in order to start the docker container
@@ -14,14 +14,22 @@ $(for var in "${REQUIRED[@]}"; do echo " - ${var}"; done)
 These variables are also attempted to be read from an .env file from this directory.
 
 Parameters:
-    -h      Show this help text and exit.
-    TAG     Tag used for mhub image. (default: stable)
+    -h, --help              Show this help text and exit.
 "
 
-if [ "$1" == "-h" ]; then
-    echo "$USAGE"
-    exit 0
-fi
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --help|-h)
+      printf "$USAGE" # Flag argument
+      exit 0
+      ;;
+    *)
+      >&2 printf "Error: Invalid argument\n"
+      exit 1
+      ;;
+  esac
+  shift
+done
 
 # load variables from .env file if possible
 if [ -f ".env" ]; then
