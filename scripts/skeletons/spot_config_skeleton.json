@@ -22,7 +22,7 @@
         "Ebs": {
           "DeleteOnTermination": true,
           "VolumeType": "gp2",
-          "VolumeSize": 350,
+          "VolumeSize": VOLUME_SIZE,
           "Encrypted": false
         }
       }
@@ -35,6 +35,5 @@
       "AvailabilityZone": "AVAILABILITY_ZONE"
     }
   },
-  "BlockDurationMinutes": BLOCK_DURATION,
   "InstanceCount": 1
 }

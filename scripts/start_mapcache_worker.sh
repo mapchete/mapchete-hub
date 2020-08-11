@@ -1,9 +1,9 @@
 #!/bin/bash
-REQUIRED=( AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY BROKER_USER BROKER_PW BROKER_IP GITLAB_REGISTRY_TOKEN SLACK_WEBHOOK_URL )
+REQUIRED=( AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY GITLAB_REGISTRY_TOKEN )
 
-USAGE="Usage: $(basename "$0") [-h] TAG
+USAGE="Usage: $(basename "$0") [-h]
 
-Run mhub index worker and mapcache containers.
+Run mapcache instance hosting the WMTS preview.
 
 NOTE:
 This script needs further environmental variables in order to start the docker container
@@ -14,14 +14,29 @@ $(for var in "${REQUIRED[@]}"; do echo " - ${var}"; done)
 These variables are also attempted to be read from an .env file from this directory.
 
 Parameters:
-    -h      Show this help text and exit.
-    TAG     Tag used for mhub image. (default: stable)
+    -h, --help              Show this help text and exit.
+    -t, --tag               Tag used for mhub image. (default: stable)
 "
 
-if [ "$1" == "-h" ]; then
-    echo "$USAGE"
-    exit 0
-fi
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --tag*|-t*)
+      if [[ "$1" != *=* ]]; then shift; fi
+      TAG="${1#*=}"
+      ;;
+    --help|-h)
+      printf "$USAGE" # Flag argument
+      exit 0
+      ;;
+    *)
+      >&2 printf "Error: Invalid argument\n"
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+TAG=${TAG:-"stable"}
 
 # load variables from .env file if possible
 if [ -f ".env" ]; then
@@ -40,17 +55,9 @@ done;
 CACHE_VERSION="v1.0.0"
 HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
 LOCAL_VOLUME_DIR=${LOCAL_VOLUME_DIR:-"/mnt/data"}
-MAPCACHE_IMAGE_TAG="latest"
-MHUB_BROKER_URL=$"amqp://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
-MHUB_CELERY_SLACK=${MHUB_CELERY_SLACK:-"TRUE"}
-MHUB_DOCKER_IMAGE_TAG=${1:-"stable"}
-MHUB_LOGLEVEL=${MHUB_LOGLEVEL:-"INFO"}
-MHUB_RESULT_BACKEND=$"rpc://${BROKER_USER}:${BROKER_PW}@${BROKER_IP}//"
-MHUB_QUEUE=${MHUB_QUEUE:-"cache_queue"}
-MHUB_WORKER="mapcache_worker"
-MP_SATELLITE_CACHE_PATH=${MP_SATELLITE_CACHE_PATH:-"/mnt/data/cache"}
+MAPCACHE_IMAGE_TAG=${TAG}
 
-echo "use mapchete_hub ${MHUB_DOCKER_IMAGE_TAG}"
+echo "use registry.gitlab.eox.at/maps/docker-base/mapcache:$MAPCACHE_IMAGE_TAG"
 
 # from https://gist.github.com/sj26/88e1c6584397bb7c13bd11108a579746
 function retry {
