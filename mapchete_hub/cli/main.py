@@ -175,7 +175,7 @@ def queues(ctx, queue_name=None, **kwargs):
             elif res.status_code != 200:  # pragma: no cover
                 raise ConnectionError(res.json)
             else:
-                click.echo("workers (%s)" % res.json["worker_count"])
+                click.echo("workers (%s)" % len(res.json["workers"]))
                 for worker in res.json["workers"]:
                     click.echo("    %s" % worker)
                 click.echo("jobs (%s in queue):" % res.json["job_count"])

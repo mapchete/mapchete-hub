@@ -21,7 +21,7 @@ while [ $# -gt 0 ]; do
       ;;
     --instances*|-n*)
       if [[ "$1" != *=* ]]; then shift; fi
-      INSTANCE_TYPE="${1#*=}"
+      INSTANCES="${1#*=}"
       ;;
     --availability-zone*)
       if [[ "$1" != *=* ]]; then shift; fi
