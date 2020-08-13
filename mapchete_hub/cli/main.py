@@ -80,21 +80,20 @@ opt_geojson = click.option(
     type=click.STRING,
     nargs=1,
     default="{}:{}".format(host_options["host_ip"], host_options["port"]),
-    help="Address and port of mhub endpoint (default: %s:%s)." % (
-        host_options["host_ip"], host_options["port"]
-    )
+    help="""Address and port of mhub endpoint (default: """
+        f"""{host_options["host_ip"]}:{host_options["port"]})."""
 )
 @click.option(
     "--timeout",
     type=click.INT,
     default=default_timeout,
-    help="Time in seconds to wait for server response. (default: %s)" % default_timeout,
+    help=f"Time in seconds to wait for server response. (default: {default_timeout})"
 )
 @click.pass_context
 def mhub(ctx, host, **kwargs):
     """Main command group."""
-    host = host if host.startswith("http") else "http://{}".format(host)
-    host = host if host.endswith("/") else "{}/".format(host)
+    host = host if host.startswith("http") else f"http://{host}"
+    host = host if host.endswith("/") else f"{host}/"
     ctx.obj = dict(host=host, **kwargs)
 
 
@@ -107,10 +106,10 @@ def remote_versions(ctx, **kwargs):
         res = API(**ctx.obj).get("capabilities.json")
         if res.status_code != 200:
             raise ConnectionError(res.json)
-        click.echo("mapchete_hub: %s" % res.json["version"])
+        click.echo(f"mapchete_hub: {res.json['version']}")
         click.echo("")
         for package, version in sorted(res.json["packages"].items()):
-            click.echo("%s: %s" % (package, version))
+            click.echo(f"{package}: {version}")
     except Exception as e:  # pragma: no cover
         raise click.ClickException(e)
     ctx.exit()
@@ -152,7 +151,7 @@ def processes(ctx, process_name=None, docstrings=False, **kwargs):
             _print_process_info(processes[process_name], docstrings=True)
         else:
             # print all processes
-            click.echo("%s processes found" % len(processes))
+            click.echo(f"{len(processes)} processes found")
             for process_name in sorted(processes.keys()):
                 _print_process_info(processes[process_name], docstrings=docstrings)
     except Exception as e:  # pragma: no cover
@@ -167,33 +166,64 @@ def processes(ctx, process_name=None, docstrings=False, **kwargs):
 @click.pass_context
 def queues(ctx, queue_name=None, **kwargs):
     """Show available queues."""
+    def _print_queue_info(queue_name, verbose=True):
+        res = API(**ctx.obj).get(f"queues/{queue_name}")
+        if res.status_code == 404:
+            click.echo(f"no queue '{queue_name}' found")
+        elif res.status_code != 200:  # pragma: no cover
+            raise ConnectionError(res.json)
+        else:
+            if verbose:
+                click.echo(f"workers ({len(res.json['workers'])})")
+                for worker in res.json["workers"]:
+                    click.echo(f"    {worker}")
+                click.echo(f"jobs ({res.json['job_count']} in queue):")
+                for status, jobs in res.json["jobs"].items():
+                    click.echo(f"    {status}:")
+                    for job in jobs:  # pragma: no cover
+                        click.echo(f"        {job}")
+            else:
+                click.echo(f"{queue_name}:")
+                click.echo(f"    workers: {len(res.json['workers'])}")
+                click.echo(f"    pending jobs: {properties['job_count']}")
+
     try:
         if queue_name:
-            res = API(**ctx.obj).get("queues/%s" % queue_name)
-            if res.status_code == 404:
-                click.echo("no queue '%s' found" % queue_name)
-            elif res.status_code != 200:  # pragma: no cover
-                raise ConnectionError(res.json)
-            else:
-                click.echo("workers (%s)" % len(res.json["workers"]))
-                for worker in res.json["workers"]:
-                    click.echo("    %s" % worker)
-                click.echo("jobs (%s in queue):" % res.json["job_count"])
-                for status, jobs in res.json["jobs"].items():
-                    click.echo("    %s:" % status)
-                    for job in jobs:  # pragma: no cover
-                        click.echo("        %s" % job)
+            _print_queue_info(queue_name, verbose=True)
         else:
             res = API(**ctx.obj).get("queues")
             if res.status_code != 200:  # pragma: no cover
                 raise ConnectionError(res.json)
             if res.json.items():
-                for queue, properties in res.json.items():
-                    click.echo("%s:" % queue)
-                    click.echo("    workers: %s" % properties["worker_count"])
-                    click.echo("    pending jobs: %s" % properties["job_count"])
+                for queue_name in res.json.keys():
+                    for queue, properties in res.json.items():
+                        _print_queue_info(queue_name, verbose=False)
             else:  # pragma: no cover
                 click.echo("no queues nor workers currently registered")
+    except Exception as e:  # pragma: no cover
+        raise click.ClickException(e)
+
+
+@mhub.command(short_help="Show available workers.")
+@opt_debug
+@click.pass_context
+def workers(ctx, queue_name=None, **kwargs):
+    """Show available queues."""
+    try:
+        res = API(**ctx.obj).get("queues")
+        if res.status_code != 200:  # pragma: no cover
+            raise ConnectionError(res.json)
+        if res.json.items():
+            workers = set()
+            for queue_name in res.json.keys():
+                res = API(**ctx.obj).get(f"queues/{queue_name}")
+                if res.status_code != 200:  # pragma: no cover
+                    raise ConnectionError(res.json)
+                workers.update(res.json['workers'])
+            for worker in workers:
+                click.echo(worker)
+        else:  # pragma: no cover
+            click.echo("no queues nor workers currently registered")
     except Exception as e:  # pragma: no cover
         raise click.ClickException(e)
 
@@ -233,7 +263,7 @@ def execute(
                 **kwargs
             )
             if verbose:  # pragma: no cover
-                click.echo("job %s state: %s" % (job.job_id, job.state))
+                click.echo(f"job {job.job_id} state: {job.state}")
                 _show_progress(ctx, job.job_id, disable=debug)
             else:
                 click.echo(job.job_id)
@@ -274,7 +304,7 @@ def index(
                 **kwargs
             )
             if verbose:  # pragma: no cover
-                click.echo("job %s state: %s" % (job.job_id, job.state))
+                click.echo(f"job {job.job_id} state: {job.state}")
                 _show_progress(ctx, job.job_id, disable=debug)
             else:
                 click.echo(job.job_id)
@@ -313,7 +343,7 @@ def batch(
             **kwargs
         )
         if verbose:  # pragma: no cover
-            click.echo("job %s state: %s" % (job.job_id, job.state))
+            click.echo(f"job {job.job_id} state: {job.state}")
             _show_progress(ctx, job.job_id, disable=debug)
         else:
             click.echo(job.job_id)
@@ -426,6 +456,12 @@ def progress(ctx, job_id, debug=False):
     is_flag=True,
     help="Print job details. (Does not work with --geojson.)"
 )
+@click.option(
+    "--sort-by",
+    type=click.Choice(["started", "runtime", "state", "progress"]),
+    default="state",
+    help="Sort jobs. (default: state)"
+)
 @opt_debug
 @click.pass_context
 def jobs(
@@ -434,11 +470,39 @@ def jobs(
     since=None,
     until=None,
     verbose=False,
+    sort_by=None,
     debug=False,
     **kwargs
 ):
     """Show current jobs."""
     kwargs.update(from_date=since, to_date=until)
+    def _sort_jobs(jobs, sort_by=None):
+        if sort_by == "state":
+            return list(
+                sorted(
+                    jobs,
+                    key=lambda x: (
+                        x.json["properties"]["state"],
+                        x.json["properties"]["timestamp"]
+                    )
+                )
+            )
+        elif sort_by in ["started", "runtime"]:
+            return list(
+                sorted(jobs, key=lambda x: x.json["properties"][sort_by] or 0.)
+            )
+        elif sort_by == "progress":
+            def _get_progress(job):
+                progress_data = (
+                    job.json.get("properties", {}).get("progress_data", {}) or {}
+                )
+                current = progress_data.get("current")
+                total = progress_data.get("total")
+                return 100 * current / total if total else 0.
+            return list(
+                sorted(jobs, key=lambda x: _get_progress(x))
+            )
+
     try:
         if geojson:
             click.echo(
@@ -446,18 +510,10 @@ def jobs(
             )
         else:
             # sort by state and then by timestamp
-            jobs = list(
-                sorted(
-                    API(**ctx.obj).jobs(**kwargs).values(),
-                    key=lambda x: (
-                        x.json["properties"]["state"],
-                        x.json["properties"]["timestamp"]
-                    )
-                )
-            )
+            jobs = _sort_jobs(API(**ctx.obj).jobs(**kwargs).values(), sort_by=sort_by)
             logger.debug(jobs)
             if verbose:
-                click.echo("%s jobs found. \n" % len(jobs))
+                click.echo(f"{len(jobs)} jobs found. \n")
             for i in jobs:
                 _print_job_details(i, verbose=verbose)
     except Exception as e:  # pragma: no cover
@@ -482,60 +538,64 @@ def _print_job_details(job, verbose=False):
     mapchete_config = properties.get("mapchete", {}).get("config", {})
 
     # job ID and job state
-    click.echo(click.style("%s" % job.job_id, fg=color, bold=True))
+    click.echo(click.style(f"{job.job_id}", fg=color, bold=True))
 
     if verbose:
         # job name
-        click.echo("job name: %s" % properties.get("job_name"))
+        click.echo(f"job name: {properties.get('job_name')}")
 
         # state
-        click.echo(click.style("state: %s" % job.state))
+        click.echo(click.style(f"state: {job.state}"))
+
+        # progress
+        progress_data = properties.get("progress_data", {}) or {}
+        current = progress_data.get("current")
+        total = progress_data.get("total")
+        progress = round(100 * current / total, 2) if total else 0.
+        click.echo(f"progress: {progress}%")
 
         # command
-        click.echo("command: %s" % properties.get("command"))
+        click.echo(f"command: {properties.get('command')}")
 
         # queue
-        click.echo("queue: %s" % properties.get("queue"))
+        click.echo(f"queue: {properties.get('queue')}")
+
+        # worker
+        click.echo(f"worker: {properties.get('hostname')}")
 
         # output path
-        click.echo("output path: %s" % mapchete_config.get("output", {}).get("path"))
+        click.echo(f"output path: {mapchete_config.get('output', {}).get('path')}")
 
         # bounds
         try:
             bounds = ", ".join(map(str, shape(job.json["geometry"]).bounds))
         except:
             bounds = None
-        click.echo("bounds: %s" % bounds)
+        click.echo(f"bounds: {bounds}")
 
         # previous job ID
-        click.echo("previous_job_id: %s" % properties.get("previous_job_id"))
+        click.echo(f"previous_job_id: {properties.get('previous_job_id')}")
 
         # next job ID
-        click.echo("next_job_id: %s" % properties.get("next_job_id"))
+        click.echo(f"next_job_id: {properties.get('next_job_id')}")
 
         # start time
-        click.echo(
-            "started: %s" % (
-                date_to_str(
-                    datetime.utcfromtimestamp(properties.get("started")),
-                    microseconds=False
-                ) if properties.get("started") else None
-            )
-        )
+        started = date_to_str(
+            datetime.utcfromtimestamp(properties.get("started")),
+            microseconds=False
+        ) if properties.get("started") else None
+        click.echo(f"started: {started}")
 
         # runtime
         runtime = properties.get("runtime")
-        click.echo("runtime: %s" % (Timer(runtime) if runtime else None))
+        click.echo(f"runtime: {Timer(runtime) if runtime else None}")
 
         # last received update
-        click.echo(
-            "last received update: {}".format(
-                date_to_str(
-                    datetime.utcfromtimestamp(properties.get("timestamp")),
-                    microseconds=False
-                ) if properties.get("timestamp") else "unknown"
-            )
-        )
+        last_update = date_to_str(
+            datetime.utcfromtimestamp(properties.get("timestamp")),
+            microseconds=False
+        ) if properties.get("timestamp") else "unknown"
+        click.echo(f"last received update: {last_update}")
 
         # append newline
         click.echo("")
@@ -548,9 +608,7 @@ def _show_progress(ctx, job_id, disable=False):
             i = next(states)
         if i["state"] == "SUCCESS":
             click.echo(
-                "job %s successfully finished in %s" % (
-                    job_id, Timer(elapsed=i["runtime"])
-                )
+                f"job {job_id} successfully finished in {Timer(elapsed=i['runtime'])}"
             )
             return
 
@@ -568,7 +626,7 @@ def _show_progress(ctx, job_id, disable=False):
                     ):
                         pbar.update(i["progress_data"]["current"] - pbar.last_print_n)
     except JobFailed as e:  # pragma: no cover
-        click.echo("Job %s failed" % job_id)
+        click.echo(f"Job {job_id} failed")
         click.echo(e)
         return
     except Exception as e:  # pragma: no cover
