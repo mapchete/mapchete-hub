@@ -2,6 +2,7 @@ import logging
 from mapchete.io import makedirs
 import os
 from shapely.geometry import shape
+import time
 
 from mapchete_hub.commands._misc import send_slack_message
 from mapchete_hub.celery_app import celery_app
@@ -9,6 +10,8 @@ from mapchete_hub.commands._index import mapchete_index
 
 
 logger = logging.getLogger(__name__)
+
+MHUB_WORKER_EVENT_RATE_LIMIT = os.environ.get("MHUB_WORKER_EVENT_RATE_LIMIT", 1)
 
 
 # bind=True enables getting the job ID and sending status updates (with send_events())
@@ -31,7 +34,7 @@ def run(
     logger.debug("process_area_process_crs: %s", process_area_process_crs)
 
     # send first event in order to have an empty progress_data dictionary
-    self.send_event('task-progress', progress_data=dict(current=None, total=None))
+    self.send_event("task-progress", progress_data=dict(current=None, total=None))
 
     # first, the inputs get parsed, i.e. all metadat queried from catalogue
     # this may take a while
@@ -61,14 +64,20 @@ def run(
 
     # get total tiles
     total_tiles = next(executor)
-    self.send_event('task-progress', progress_data=dict(current=0, total=total_tiles))
-    logger.info("indexing from %s process tiles", total_tiles)
+    self.send_event("task-progress", progress_data=dict(current=0, total=total_tiles))
 
+    logger.info("indexing from %s process tiles", total_tiles)
     # iterate over finished process tiles and update task state
+    last_event = 0.
     for i, _ in enumerate(executor):
         i += 1
         logger.debug("tile %s/%s finished", i, total_tiles)
-        self.send_event('task-progress', progress_data=dict(current=i, total=total_tiles))
+        event_time_passed = time.time() - last_event
+        if event_time_passed > MHUB_WORKER_EVENT_RATE_LIMIT or i == total_tiles:
+            last_event = time.time()
+            self.send_event(
+                "task-progress", progress_data=dict(current=i, total=total_tiles)
+            )
 
     logger.info("processing successful.")
     if params.get("announce_on_slack", False):  # pragma: no cover
