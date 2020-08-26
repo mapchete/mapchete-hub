@@ -70,4 +70,4 @@ ssh \
     -q \
     -i $IDENTITY_FILE \
     ubuntu@${WORKER_IP} \
-    -t $COMMAND
+    -t "$COMMAND"
