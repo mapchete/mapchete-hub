@@ -61,7 +61,8 @@ RUN pip install \
         $WHEEL_DIR/psutil*.whl \
         $WHEEL_DIR/mapchete_satellite*.whl \
         $WHEEL_DIR/*.whl \
-    && rm $WHEEL_DIR/*
+    && rm $WHEEL_DIR/* \
+    && pip install --upgrade boto3
 
 # get dependencies before checking out source code to speed up container build
 COPY requirements.txt $MHUB_DIR/
