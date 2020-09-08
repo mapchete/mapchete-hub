@@ -4,6 +4,30 @@ Changelog
 
 
 -----------------
+0.14 - 2020-09-08
+-----------------
+* main package
+    * add worker event rate limit (!85, #67)
+    * CLI
+        * fix missing output_path in verbose mode (!81)
+        * fix worker count (!83)
+        * add `mhub workers` subcommand (!84)
+* starter scripts (#106)
+    * restructured directories
+    * added
+        * `idle_workers.sh`
+        * `live_worker_info.sh`
+* Docker
+    * use base image 0.12 which updates
+        * GDAL `2.4.4` (downgraded from `3.0.4`)
+        * proj `5.2.0` (downgraded from `6.3.2`)
+    * install latest boto3 version
+* testing
+    * use random ports and use unique name for docker-compose project (!88)
+
+
+
+-----------------
 0.13 - 2020-08-04
 -----------------
 * main package
