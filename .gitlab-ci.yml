@@ -19,7 +19,7 @@ build_mhub:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
   script:
-    - docker build --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
+    - docker build --no-cache --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
 
 build_mhub-s1:
   stage: build
@@ -27,11 +27,12 @@ build_mhub-s1:
     IMAGE_NAME: mhub-s1
     BASE_IMAGE_NAME: snap-mapchete
   script:
-    - docker build --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
+    - docker build --no-cache --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
 
 # test mapchete_hub package in built images
 test_mhub:
   stage: test
+  needs: ["build_mhub"]
   retry: 2
   variables:
     IMAGE_NAME: mhub
@@ -42,19 +43,19 @@ test_mhub:
     - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
     # tag as "latest" if current branch is master, else use branch name
     - export IMAGE_TAG=`if [ "$CI_COMMIT_REF_NAME" == "master" ]; then echo "latest"; else echo $CI_COMMIT_REF_NAME; fi`
-    - export PROJECT_HASH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-    - docker-compose -p $PROJECT_HASH -f docker-compose.yml -f docker-compose.test.yml build
+    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml build --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN}
     - export MHUB_PORT=$(( 5000 + $RANDOM % 1000 ))
   script:
     # run tests
     - echo "run mhub on port ${MHUB_PORT}"
-    - docker-compose -p $PROJECT_HASH -f docker-compose.yml -f docker-compose.test.yml up --exit-code-from mhub_tester
+    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml up --exit-code-from mhub_tester
   after_script:
-    - docker-compose -p $PROJECT_HASH -f docker-compose.yml -f docker-compose.test.yml rm -fv
-    - docker-compose -p $PROJECT_HASH -f docker-compose.yml -f docker-compose.test.yml down
+    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml down -v --rmi all --remove-orphans || true
+    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml rm -fv || true
 
 test_mhub-s1:
   stage: test
+  needs: ["build_mhub-s1"]
   retry: 2
   variables:
     IMAGE_NAME: mhub-s1
@@ -65,20 +66,20 @@ test_mhub-s1:
     - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
     # tag as "latest" if current branch is master, else use branch name
     - export IMAGE_TAG=`if [ "$CI_COMMIT_REF_NAME" == "master" ]; then echo "latest"; else echo $CI_COMMIT_REF_NAME; fi`
-    - export PROJECT_HASH=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-    - docker-compose -p $PROJECT_HASH -f docker-compose.yml -f docker-compose.test.yml build
+    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml build --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN}
     - export MHUB_PORT=$(( 5001 + $RANDOM % 1000 ))
   script:
     # run tests
     - echo "run mhub on port ${MHUB_PORT}"
-    - docker-compose -p $PROJECT_HASH -f docker-compose.yml -f docker-compose.test.yml up --exit-code-from mhub_tester
+    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml up --exit-code-from mhub_tester
   after_script:
-    - docker-compose -p $PROJECT_HASH -f docker-compose.yml -f docker-compose.test.yml rm -fv
-    - docker-compose -p $PROJECT_HASH -f docker-compose.yml -f docker-compose.test.yml down
+    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml down -v --rmi all --remove-orphans || true
+    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml rm -fv || true
 
 # push images to registry
 push_mhub:
   stage: push
+  needs: ["test_mhub"]
   variables:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
@@ -87,6 +88,7 @@ push_mhub:
 
 push_mhub-s1:
   stage: push
+  needs: ["test_mhub-s1"]
   variables:
     IMAGE_NAME: mhub-s1
     BASE_IMAGE_NAME: snap-mapchete
