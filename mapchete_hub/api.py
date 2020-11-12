@@ -309,7 +309,7 @@ class API():
             ).json
         }
 
-    def job_progress(self, job_id, interval=1, timeout=60):
+    def job_progress(self, job_id, interval=1, timeout=None):
         """Yield job progress information."""
         last = -1
         updated = time.time()
@@ -339,8 +339,9 @@ class API():
                 if job.state == "FAILURE":
                     raise JobFailed(job.json["properties"]["traceback"])
 
-            if time.time() - updated > timeout:
+            if timeout is not None and time.time() - updated > timeout:
                 raise TimeoutError("no update since {} seconds".format(timeout))
+
             time.sleep(interval)
 
     def _get_kwargs(self, kwargs):
