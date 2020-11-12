@@ -35,6 +35,7 @@ RUN pip wheel --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.a
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as runner
 MAINTAINER Joachim Ungar
 
+ARG EOX_PYPI_TOKEN
 ENV AWS_REQUEST_PAYER requester
 ENV C_FORCE_ROOT "yes"
 ENV GML_SKIP_CORRUPTED_FEATURES YES
@@ -47,10 +48,13 @@ ENV WHEEL_DIR /usr/local/wheels
 
 # get wheels from builder
 COPY --from=builder $WHEEL_DIR $WHEEL_DIR
+COPY requirements.txt $MHUB_DIR/
 RUN pip install --upgrade pip && \
     pip install $WHEEL_DIR/*.whl && \
     rm $WHEEL_DIR/* && \
-    pip install boto3 botocore pystac pytz --upgrade --use-feature=2020-resolver
+    pip install --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+        -r $MHUB_DIR/requirements.txt && \
+    pip install boto3 botocore urllib3 --use-feature=2020-resolver
 
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR

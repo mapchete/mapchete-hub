@@ -2,6 +2,32 @@
 Changelog
 #########
 
+-----------------
+0.15 - 2020-11-12
+-----------------
+* main package
+    * pin Celery dependency to <5.0.0 because of breaking changes in API
+    * API
+        * remove default progress timeout
+    * CLI
+        * better make use of tqdm api
+* Docker
+    * update to 0.13 base image
+        * version updates
+            * Fiona 1.8.17
+            * GDAL 3.1.3
+            * GEOS 3.7.1 (downgraded from 3.8.1)
+            * OpenSAR Toolkit 0.9.8
+            * proj 7.1.1
+            * pyproj 2.6.1
+    * dependencies
+        * updated `mapchete_satellite` to 0.11
+            * enable S2AWS_COG archive
+            * enable BRDF correction
+    * use new internal PyPi instance from EOX GitLab to install internal packages
+* testing
+    * use CI_JOB_ID instead of random hash for docker-compose project in order to clean up running containers & volumes properly after test run
+
 
 -----------------
 0.14 - 2020-09-08

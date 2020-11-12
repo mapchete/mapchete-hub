@@ -619,16 +619,13 @@ def _show_progress(ctx, job_id, disable=False):
                 disable=disable
             ) as pbar:
                 for i in states:
-                    if (
-                        i["progress_data"]["current"] and
-                        pbar.last_print_n and
-                        i["progress_data"]["current"] > pbar.last_print_n
-                    ):
-                        pbar.update(i["progress_data"]["current"] - pbar.last_print_n)
+                    pbar.n = i["progress_data"]["current"]
+                    pbar.last_print_n = i["progress_data"]["current"]
+                    pbar.refresh()
+                    pbar.update()
     except JobFailed as e:  # pragma: no cover
         click.echo(f"Job {job_id} failed")
         click.echo(e)
         return
     except Exception as e:  # pragma: no cover
         raise click.ClickException(e)
-        return
