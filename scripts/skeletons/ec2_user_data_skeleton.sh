@@ -92,6 +92,7 @@ docker run \
   --rm \
   --name=${MHUB_WORKER} \
   -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+  -e AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
   -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
   -e MHUB_BROKER_URI=$MHUB_BROKER_URI \
