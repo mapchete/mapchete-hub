@@ -1,5 +1,5 @@
 #!/bin/bash
-REQUIRED=( AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY BROKER_USER BROKER_PW BROKER_IP GITLAB_REGISTRY_TOKEN SLACK_WEBHOOK_URL )
+REQUIRED=( AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY MHUB_BROKER_URI MHUB_RESULT_BACKEND_URI GITLAB_REGISTRY_TOKEN MHUB_SLACK_WEBHOOK_URL )
 
 USAGE="Usage: $(basename "$0") [-h]
 
@@ -17,7 +17,7 @@ Parameters:
     -h, --help              Show this help text and exit.
     -i, --image             Image to be used. (either mhub or mhub-s1) (default: mhub)
     -t, --tag               Tag used for mhub image. (default: stable)
-    --mapserver-tag         Tag used for mapserver image. (default: 0.11)
+    --mapserver-tag         Tag used for mapserver image. (default: 0.13)
 "
 
 while [ $# -gt 0 ]; do
@@ -67,7 +67,7 @@ done;
 
 # set mhub variables
 LOCAL_VOLUME_DIR=${LOCAL_VOLUME_DIR:-"/mnt/data"}
-MAPSERVER_IMAGE_TAG="0.11"
+MAPSERVER_IMAGE_TAG=${MAPSERVER_IMAGE_TAG:-"0.13"}
 MHUB_CELERY_SLACK=${MHUB_CELERY_SLACK:-"TRUE"}
 MHUB_DOCKER_IMAGE=${IMAGE:-"mhub"}
 MHUB_DOCKER_IMAGE_TAG=${TAG:-"stable"}
@@ -129,7 +129,7 @@ cp -R map ${LOCAL_VOLUME_DIR}/
 # insert mapcache IP for WMTS layer
 sed "s/MHUB_MAPCACHE_IP/${MHUB_MAPCACHE_IP}/g" html/s2maps.js > ${LOCAL_VOLUME_DIR}/html/s2maps.js
 # insert AWS credentials so mapserver can access bucket
-printf "CONFIG \"AWS_ACCESS_KEY_ID\" \"${AWS_ACCESS_KEY_ID}\"\nCONFIG \"AWS_SECRET_ACCESS_KEY\" \"${AWS_SECRET_ACCESS_KEY}\"\n" > ${LOCAL_VOLUME_DIR}/map/.credentials.map
+printf "CONFIG \"AWS_ACCESS_KEY_ID\" \"${AWS_ACCESS_KEY_ID}\"\nCONFIG \"AWS_SECRET_ACCESS_KEY\" \"${AWS_SECRET_ACCESS_KEY}\"\nCONFIG \"AWS_DEFAULT_REGION\" \"${AWS_DEFAULT_REGION}\"\n" > ${LOCAL_VOLUME_DIR}/map/.credentials.map
 
 # try to stop container if they are running
 docker container stop mapserver ${MHUB_WORKER} || true
@@ -139,8 +139,9 @@ docker run \
   --rm \
   --name=mapserver \
   -p 80:80 \
-  -e AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+  -e AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
+  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -v ${LOCAL_VOLUME_DIR}/html:/html \
   -v ${LOCAL_VOLUME_DIR}/map:/map \
   -v ${LOCAL_VOLUME_DIR}/indexes:/indexes \
@@ -150,20 +151,21 @@ docker run \
 docker run \
   --rm \
   --name $MHUB_WORKER \
-  -e AWS_ACCESS_KEY_ID \
-  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+  -e AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
+  -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
   -e HOST_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4` \
-  -e MHUB_BROKER_URI \
-  -e MHUB_CELERY_SLACK \
-  -e MHUB_CONFIG_DIR \
-  -e MHUB_INDEX_OUTPUT_DIR \
-  -e MHUB_RESULT_BACKEND_URI \
-  -e MHUB_STATUS_DB_URI \
-  -e MHUB_QUEUE \
-  -e MHUB_WORKER \
-  -e MP_SATELLITE_CACHE_PATH \
-  -e PREVIEW_PERMALINK \
-  -e SLACK_WEBHOOK_URL \
+  -e MHUB_BROKER_URI=$MHUB_BROKER_URI \
+  -e MHUB_CELERY_SLACK=$MHUB_CELERY_SLACK \
+  -e MHUB_CONFIG_DIR=$MHUB_CONFIG_DIR \
+  -e MHUB_INDEX_OUTPUT_DIR=$MHUB_INDEX_OUTPUT_DIR \
+  -e MHUB_RESULT_BACKEND_URI=$MHUB_RESULT_BACKEND_URI \
+  -e MHUB_STATUS_DB_URI=$MHUB_STATUS_DB_URI \
+  -e MHUB_QUEUE=$MHUB_QUEUE \
+  -e MHUB_WORKER=$MHUB_WORKER \
+  -e MP_SATELLITE_CACHE_PATH=$MP_SATELLITE_CACHE_PATH \
+  -e PREVIEW_PERMALINK=$PREVIEW_PERMALINK \
+  -e SLACK_WEBHOOK_URL=$SLACK_WEBHOOK_URL \
   -v ${LOCAL_VOLUME_DIR}:/mnt/data \
   -d \
   registry.gitlab.eox.at/maps/mapchete_hub/mhub:$MHUB_DOCKER_IMAGE_TAG \
