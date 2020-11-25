@@ -3,6 +3,24 @@ Changelog
 #########
 
 -----------------
+0.16 - 2020-11-25
+-----------------
+* Docker
+    * update to 0.14 base image
+        * version updates
+            * GDAL `3.2.0`
+    * dependencies
+        * updated `mapchete_satellite` to `0.12`
+            * S2AWS_COG:
+                * switch off catalog concurency for S2 STAC search endpoint (#82)
+                * retry `rasterio.errors.CRSError` and `rasterio.errors.CRSError` (#83, #84)
+    * make Dockerfile more dev-friendly (!101)
+    * remove requester pays ENV setting as it should be provided on deployment (!101)
+* starter scripts
+    * added `AWS_DEFAULT_REGION` to starter scripts (#124)
+
+
+-----------------
 0.15 - 2020-11-12
 -----------------
 * main package
@@ -21,7 +39,7 @@ Changelog
             * proj 7.1.1
             * pyproj 2.6.1
     * dependencies
-        * updated `mapchete_satellite` to 0.11
+        * updated `mapchete_satellite` to `0.11`
             * enable S2AWS_COG archive
             * enable BRDF correction
     * use new internal PyPi instance from EOX GitLab to install internal packages
