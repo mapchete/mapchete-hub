@@ -3,6 +3,7 @@ celery-slack
 click
 click-spinner
 environ-config
+eox_preprocessing>=0.12
 Flask-Celery-py3
 flask_pymongo
 flask_restful
