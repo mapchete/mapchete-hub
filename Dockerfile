@@ -63,7 +63,7 @@ RUN pip install $WHEEL_DIR/*.whl && \
         --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
         -r $MHUB_DIR/requirements.txt && \
     # this is required to fix occasional dependency issues with boto related packages
-    pip install boto3 botocore urllib3 --use-feature=2020-resolver
+    pip install aiobotocore boto3 botocore urllib3 --use-feature=2020-resolver
 
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR
