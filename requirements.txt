@@ -3,6 +3,7 @@ celery-slack
 click
 click-spinner
 environ-config
+eox_preprocessing>=0.11
 Flask-Celery-py3
 flask_pymongo
 flask_restful
@@ -12,7 +13,7 @@ gunicorn==19.9.0
 lxml
 jenkspy
 mapchete[contours,s3,vrt]>=0.31
-mapchete_satellite[brdf,cli,stac,xarray]>=0.12
+mapchete_satellite[brdf,cli,stac,xarray]>=0.13
 numcodecs>=0.6.4
 orgonite>=0.6
 pystac
