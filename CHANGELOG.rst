@@ -3,6 +3,24 @@ Changelog
 #########
 
 -----------------
+0.17 - 2020-11-26
+-----------------
+* Docker
+    * update to 0.16 base image
+        * version updates
+            * mapchete `0.37`
+    * dependencies
+        * update `mapchete_satellite` to `0.13`
+            * replace catching all rasterio errors using ``mapchete.errors.MapcheteIOError`` class (!96)
+            * make retry decoration settings configurable via env (!96)
+                * ``MP_SATELLITE_IO_RETRY_TRIES`` (default: 3)
+                * ``MP_SATELLITE_RETRY_DELAY`` (default: 1)
+                * ``MP_SATELLITE_IO_RETRY_BACKOFF`` (default: 1)
+            * packaging:
+                * increase mapchete minimum dependency to 0.37 (!96)
+
+
+-----------------
 0.16 - 2020-11-25
 -----------------
 * Docker
@@ -10,7 +28,7 @@ Changelog
         * version updates
             * GDAL `3.2.0`
     * dependencies
-        * updated `mapchete_satellite` to `0.12`
+        * update `mapchete_satellite` to `0.12`
             * S2AWS_COG:
                 * switch off catalog concurency for S2 STAC search endpoint (#82)
                 * retry `rasterio.errors.CRSError` and `rasterio.errors.CRSError` (#83, #84)
