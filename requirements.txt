@@ -12,7 +12,7 @@ geojson
 gunicorn==19.9.0
 lxml
 jenkspy
-mapchete[contours,s3,vrt]>=0.31
+mapchete[contours,s3,vrt]==0.35
 mapchete_satellite[brdf,cli,stac,xarray]==0.12
 numcodecs>=0.6.4
 orgonite>=0.6
