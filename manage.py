@@ -82,7 +82,6 @@ def monitor(ctx, **kwargs):
 @cli.command(short_help='Launches Celery worker.')
 @click.option(
     "--worker-name", "-n",
-    type=click.Choice(["execute_worker", "index_worker"]),
     default="execute_worker",
     help="Worker type to be spawned."
 )
