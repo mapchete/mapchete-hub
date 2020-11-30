@@ -42,19 +42,21 @@ IDENTITY_FILE=${IDENTITY_FILE:-"~/.ssh/eox_specops.pem"}
 IDLE_THRESHOLD=${IDLE_THRESHOLD:-"5"}
 
 for WORKER in $(mhub workers); do
-  LOAD=$(./live_worker_info.sh -w $WORKER --identity-file=$IDENTITY_FILE --command "cat /proc/loadavg")
-  LOADS=( $LOAD )
-  # 15 minute average
-  # (1 minute would be [0], 5 minutes would be [1])
-  AVG_LOAD="${LOADS[2]}"
-  if (( $(echo "$AVG_LOAD < $IDLE_THRESHOLD" |bc -l) )); then
-      echo "$WORKER is dead ($LOAD)"
-      if [ "$COMMAND" ]; then
-        echo "run command $COMMAND..."
-        ./live_worker_info.sh -w $WORKER --identity-file=$IDENTITY_FILE --command "$COMMAND";
-      fi
-  else
-      echo "$WORKER is alive ($AVG_LOAD in past 15 minutes)"
+  if [[ $WORKER == execute_worker* ]]; then
+    LOAD=$(./live_worker_info.sh -w $WORKER --identity-file=$IDENTITY_FILE --command "cat /proc/loadavg")
+    LOADS=( $LOAD )
+    # 15 minute average
+    # (1 minute would be [0], 5 minutes would be [1])
+    AVG_LOAD="${LOADS[2]}"
+    if (( $(echo "$AVG_LOAD < $IDLE_THRESHOLD" |bc -l) )); then
+        echo "$WORKER is dead ($LOAD)"
+        if [ "$COMMAND" ]; then
+          echo "run command $COMMAND..."
+          ./live_worker_info.sh -w $WORKER --identity-file=$IDENTITY_FILE --command "$COMMAND";
+        fi
+    else
+        echo "$WORKER is alive ($AVG_LOAD in past 15 minutes)"
+    fi
   fi
 done;
 
