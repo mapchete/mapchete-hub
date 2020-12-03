@@ -2,6 +2,19 @@
 Changelog
 #########
 
+
+-----------------
+0.18 - 2020-12-03
+-----------------
+* Docker
+    * dependencies
+        * update `mapchete_satellite` to `0.14`
+            * pass ``AWS_REQUEST_PAYER`` to fiona cloudmask reading to enable reading of L1C masks
+            * read_cloudmasks functions now support `cloud_types` arg
+                * default: ['opaque', 'cirrus']
+                * this allows to choose which cloudmasks will be read in all read functions
+
+
 -----------------
 0.17 - 2020-11-26
 -----------------
