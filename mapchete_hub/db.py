@@ -3,7 +3,7 @@ import logging
 import mongomock.collection
 import mongomock.database
 import pymongo
-from shapely.geometry import Polygon
+from shapely.geometry import box, mapping, Polygon
 import time
 
 from mapchete_hub.api import job_states
@@ -109,23 +109,27 @@ class MongoDBStatusHandler():
         -------
         GeoJSON features : list of dict
         """
-        query = {
-            k: v for k, v in kwargs.items() if v is not None
-        }
+        query = {k: v for k, v in kwargs.items() if v is not None}
+        logger.debug(f"raw query: {query}")
+
         # enable job_states groups, e.g. "doing"
         if query.get("state") is not None:
             state = query.get("state")
             if state.lower() in job_states:
-                query.update(state={"$in": job_states[state]})
+                query.update(state={"$in": job_states[state.upper()]})
+            # make sure state is in uppercase if it is not a state group name
+            else:
+                query.update(state={"$in": [state.upper()]})
+
         # convert bounds query into a geo search query
         if query.get("bounds") is not None:
-            left, bottom, right, top = query.get("bounds")
             query.update(
                 geometry={
-                    "$geoIntersects": {"$box": [[bottom, left], [top, right]]}
+                    "$geoIntersects": {"$geometry": mapping(box(*query.get("bounds")))}
                 }
             )
             query.pop("bounds")
+
         # convert from_date and to_date kwargs to timestamp query
         if query.get("from_date") or query.get("to_date"):
             query.update(
