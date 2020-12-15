@@ -116,7 +116,7 @@ class MongoDBStatusHandler():
         if query.get("state") is not None:
             state = query.get("state")
             if state.lower() in job_states:
-                query.update(state={"$in": job_states[state.upper()]})
+                query.update(state={"$in": job_states[state.lower()]})
             # make sure state is in uppercase if it is not a state group name
             else:
                 query.update(state={"$in": [state.upper()]})
