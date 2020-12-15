@@ -61,6 +61,7 @@ class Capabilities(Resource):
 
     def get(self):
         """Return /capabilities.json."""
+        logger.debug(f"return {self._capabilities}")
         return self._capabilities
 
 
@@ -75,18 +76,19 @@ class QueuesOverview(Resource):
             for worker, queues in insp.items():  # pragma: no cover
                 for queue in queues:
                     queue_workers[queue["name"]].append(worker)
-            out_queues = {}
+            response = {}
             with celery_app.connection_or_acquire() as conn:
                 for queue_name, workers in queue_workers.items():  # pragma: no cover
                     queue_info = conn.default_channel.queue_declare(
                         queue=queue_name,
                         passive=True
                     )
-                    out_queues[queue_name] = dict(
+                    response[queue_name] = dict(
                         worker_count=queue_info.consumer_count,
                         job_count=queue_info.message_count
                     )
-            return out_queues
+            logger.debug(f"return {response}")
+            return response
         except Exception as e:  # pragma: no cover
             logger.error(e)
             return abort(500, str(e))
@@ -125,7 +127,7 @@ class Queues(Resource):
                     queue=queue_name,
                     passive=True
                 )
-                return dict(
+                response = dict(
                     workers=queue_workers[queue_name],
                     worker_count=queue_info.consumer_count,
                     job_count=queue_info.message_count,
@@ -135,8 +137,12 @@ class Queues(Resource):
                         scheduled=_extract_jobs(inspect.scheduled().values()),
                     )
                 )
+            logger.debug(f"return {response}")
+            return response
         except (ChannelError, NotFound):
-            abort(404, "no queue found with name {}".format(queue_name))
+            response = f"no queue found with name {queue_name}"
+            logger.debug(f"return {response}")
+            abort(404, response)
         except Exception as e:  # pragma: no cover
             logger.error(e)
             return abort(500, str(e))
@@ -188,7 +194,9 @@ class JobsOverview(Resource):
         GeoJSON features : list of dict
         """
         try:
-            return list(self._backend.jobs(**kwargs))
+            response = list(self._backend.jobs(**kwargs))
+            logger.debug(f"return {response}")
+            return response
         except Exception as e:  # pragma: no cover
             logger.error(e)
             return abort(500, str(e))
@@ -217,8 +225,12 @@ class Jobs(Resource):
         """
         result = self._backend.job(job_id)
         if result is None:
-            abort(404, "no job found with ID {}".format(job_id))
+            response = f"no job found with ID {job_id}"
+            logger.debug(f"return {response}")
+            abort(404, response)
         else:
+            response = result
+            logger.debug(f"return {response}")
             return result
 
     def post(self, job_id):
@@ -286,7 +298,9 @@ class Jobs(Resource):
         res = self._backend.job(job_id)
         # job exists
         if res:
-            return abort(409, "job already exists: {}".format(job_id))
+            message = f"job already exists: {job_id}"
+            logger.debug(f"return '{message}'")
+            return abort(409, message)
         try:
             jobs = list(
                 parse_jobs_for_backend(
@@ -297,6 +311,7 @@ class Jobs(Resource):
             )
         except Exception as e:  # pragma: no cover
             logger.error(e)
+            logger.debug(f"return '{e}'")
             return abort(400, str(e))
 
         try:
@@ -321,7 +336,9 @@ class Jobs(Resource):
                     metadata=j["kwargs"]
                 )
 
-            return dict(message="{} job(s) submitted".format(len(jobs))), 202
+            message = dict(message=f"{len(jobs)} job(s) submitted")
+            logger.debug(f"return '{message}'")
+            return message, 202
 
         except Exception as e:  # pragma: no cover
             logger.error(e)

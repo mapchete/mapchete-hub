@@ -44,3 +44,13 @@ def setup_logfile(logfile):
     for i in all_mapchete_packages:
         logging.getLogger(i).addHandler(file_handler)
         logging.getLogger(i).setLevel(logging.DEBUG)
+
+
+def update_logger(handlers=None, loglevel=None):
+    """Update mapchete Hub and mapchete loggers."""
+    all_mapchete_packages.add("mapchete_hub")
+    for i in all_mapchete_packages:
+        if handlers:
+            logging.getLogger(i).handlers = handlers
+        if loglevel:
+            logging.getLogger(i).setLevel(loglevel)
