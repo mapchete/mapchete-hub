@@ -59,6 +59,7 @@ from mapchete_hub.celery_app import celery_app
 from mapchete_hub.config import (
     get_flask_config,
 )
+from mapchete_hub.log import update_logger
 from mapchete_hub.resources import (
     Capabilities, Jobs, JobsOverview, Queues, QueuesOverview
 )
@@ -91,6 +92,20 @@ def flask_app(log_level="INFO", full=True):
         api.add_resource(
             Jobs, "/jobs/<string:job_id>", resource_class_kwargs=dict(app=app)
         )
+
+        # add logger to gunicorn logger
+        if __name__ != "__main__":
+            gunicorn_logger = logging.getLogger("gunicorn.error")
+
+            # flas app logger
+            app.logger.handlers = gunicorn_logger.handlers
+            app.logger.setLevel(gunicorn_logger.level)
+
+            # mapchete loggers
+            update_logger(
+                handlers=gunicorn_logger.handlers,
+                loglevel=gunicorn_logger.level
+            )
 
         # add MongoDB backend
         try:
