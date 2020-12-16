@@ -77,6 +77,7 @@ class API():
             get_kwargs = self._get_kwargs(kwargs)
             logger.debug("GET: {}, {}".format(get_url, get_kwargs))
             res = self._api.get(get_url, **get_kwargs)
+            logger.debug(f"response: {res}")
             return Response(
                 status_code=res.status_code,
                 json=res.json if self._test_client else json.loads(res.text)

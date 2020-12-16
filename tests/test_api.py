@@ -84,7 +84,7 @@ def test_cancel_job(mhub_api, example_mapchete):
     result = mhub_api.cancel_job(job_id)
     assert result.job_id == job_id
     assert result.status_code == 200
-    assert "revoke signal" in result.json["message"]
+    assert "Revoke signal" in result.json["message"]
 
     # make sure exception is raised if there is no job with this ID
     with pytest.raises(JobNotFound):

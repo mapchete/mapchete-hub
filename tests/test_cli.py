@@ -193,10 +193,12 @@ def test_start_cancel_jobs(wait_for_api, mhub_test_instance_uri, test_mapchete):
             main.mhub,
             [
                 "-h", mhub_test_instance_uri,
-                "cancel", job_id
+                "cancel",
+                "--force",
+                "--job-ids", job_id
             ]
         )
-        assert "revoke signal" in result.output
+        assert "Revoke signal" in result.output
         assert job_id in result.output
 
     # wait until job state is changed to TERMINATED
@@ -293,10 +295,12 @@ def test_start_cancel_batch(wait_for_api, mhub_test_instance_uri, batch_example)
         main.mhub,
         [
             "-h", mhub_test_instance_uri,
-            "cancel", job_id
+            "cancel",
+            "--force",
+            "--job-ids", job_id
         ]
     )
-    assert "revoke signal for jobs" in result.output
+    assert "Revoke signal for jobs" in result.output
     assert job_id in result.output
 
 
