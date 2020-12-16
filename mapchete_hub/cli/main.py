@@ -60,6 +60,12 @@ def _get_timestamp(ctx, param, timestamp):
         return date_to_str(timestamp)
 
 
+def _expand_job_ids(ctx, param, job_ids):
+    if job_ids:
+        job_ids = job_ids.split(",")
+    return job_ids
+
+
 opt_debug = click.option(
     "--debug", "-d",
     is_flag=True,
@@ -71,7 +77,77 @@ opt_geojson = click.option(
     is_flag=True,
     help="Print as GeoJSON."
 )
-
+opt_output_path = click.option(
+    "--output-path", "-p",
+    type=click.STRING,
+    help="Filter jobs by output_path."
+)
+opt_state = click.option(
+    "--state", "-s",
+    type=click.Choice(
+        [
+            "todo", "doing", "done", "pending", "progress", "received", "started",
+            "success", "failure"
+        ]
+    ),
+    help="Filter jobs by job state."
+)
+opt_command = click.option(
+    "--command", "-c",
+    type=click.Choice(["execute", "index"]),
+    help="Filter jobs by command."
+)
+opt_queue = click.option(
+    "--queue", "-q",
+    type=click.STRING,
+    help="Filter jobs by queue."
+)
+opt_since = click.option(
+    "--since",
+    type=click.STRING,
+    callback=_get_timestamp,
+    help="Filter jobs by timestamp since given time.",
+    default="7d"
+)
+opt_since_no_default = click.option(
+    "--since",
+    type=click.STRING,
+    callback=_get_timestamp,
+    help="Filter jobs by timestamp since given time."
+)
+opt_until = click.option(
+    "--until",
+    type=click.STRING,
+    callback=_get_timestamp,
+    help="Filter jobs by timestamp until given time.",
+)
+opt_job_name = click.option(
+    "--job-name", "-n",
+    type=click.STRING,
+    help="Filter jobs job name."
+)
+opt_job_ids = click.option(
+    "--job-ids", "-j",
+    type=click.STRING,
+    help="One or multiple job IDs separated by comma.",
+    callback=_expand_job_ids
+)
+opt_force = click.option(
+    "--force", "-f",
+    is_flag=True,
+    help="Don't ask, just do."
+)
+opt_verbose = click.option(
+    "--verbose", "-v",
+    is_flag=True,
+    help="Print job details. (Does not work with --geojson.)"
+)
+opt_sort_by = click.option(
+    "--sort-by",
+    type=click.Choice(["started", "runtime", "state", "progress"]),
+    default="state",
+    help="Sort jobs. (default: state)"
+)
 
 @click.version_option(version=__version__, message="%(version)s")
 @click.group(help="Process control on Mapchete Hub.")
@@ -379,18 +455,64 @@ def status(ctx, job_id, geojson=False, traceback=False, **kwargs):
         raise click.ClickException(e)
 
 
-@mhub.command(short_help="Cancel job.")
-@click.argument("job_id", type=click.STRING)
+@mhub.command(short_help="Cancel jobs.")
+@opt_job_ids
+@opt_output_path
+@opt_state
+@opt_command
+@opt_queue
+@opt_since_no_default
+@opt_until
+@opt_job_name
+@opt_sort_by
+@opt_force
 @opt_debug
 @click.pass_context
-def cancel(ctx, job_id, **kwargs):
-    """Cancel job."""
-    try:
-        job = API(**ctx.obj).cancel_job(job_id)
-        logger.debug(job.json)
-        click.echo(job.json["message"])
-    except Exception as e:  # pragma: no cover
-        raise click.ClickException(e)
+def cancel(ctx, job_ids, debug=False, sort_by=None, force=False, **kwargs):
+    """Cancel jobs and their follow-up jobs if batch was submitted."""
+    kwargs.update(
+        from_date=kwargs.pop("since"),
+        to_date=kwargs.pop("until")
+    )
+    def _yield_revokable_jobs(jobs):
+        for j in jobs:
+            if j.state in job_states["done"]:
+                click.echo(f"Job {j.job_id} already in state {j.state}.")
+            else:
+                yield j.job_id
+
+    if job_ids:
+        jobs = [API(**ctx.obj).job(job_id) for job_id in job_ids]
+
+    else:
+        for k, v in kwargs.items():
+            if k == "sort_by":
+                continue
+            elif v is not None:
+                break
+        else:
+            click.echo(
+                "Please either provide one or more job IDs or other search values."
+            )
+            raise click.Abort()
+        jobs = _sort_jobs(API(**ctx.obj).jobs(**kwargs).values(), sort_by=sort_by)
+
+    job_ids = [j for j in _yield_revokable_jobs(jobs)]
+
+    if not job_ids:
+        click.echo("No revokable jobs found.")
+        return
+
+    for job_id in job_ids:
+        click.echo(job_id)
+    if force or click.confirm(f"Do you really want to cancel {len(job_ids)} job(s)?", abort=True):
+        for job_id in job_ids:
+            try:
+                job = API(**ctx.obj).cancel_job(job_id)
+                logger.debug(job.json)
+                click.echo(job.json["message"])
+            except Exception as e:  # pragma: no cover
+                raise click.ClickException(e)
 
 
 @mhub.command(short_help="Show job progress.")
@@ -406,103 +528,32 @@ def progress(ctx, job_id, debug=False):
 
 
 @mhub.command(short_help="Show current jobs.")
-@opt_geojson
-@click.option(
-    "--output_path", "-p",
-    type=click.STRING,
-    help="Filter jobs by output_path."
-)
-@click.option(
-    "--state", "-s",
-    type=click.Choice(
-        [
-            "todo", "doing", "done", "pending", "progress", "received", "started",
-            "success", "failure"
-        ]
-    ),
-    help="Filter jobs by job state."
-)
-@click.option(
-    "--command", "-c",
-    type=click.Choice(["execute", "index"]),
-    help="Filter jobs by command."
-)
-@click.option(
-    "--queue", "-q",
-    type=click.STRING,
-    help="Filter jobs by queue."
-)
+@opt_output_path
+@opt_state
+@opt_command
+@opt_queue
+@opt_since
+@opt_until
+@opt_job_name
+@opt_sort_by
 @utils.opt_bounds
-@click.option(
-    "--since",
-    type=click.STRING,
-    callback=_get_timestamp,
-    help="Filter jobs by timestamp since given time.",
-    default="7d"
-)
-@click.option(
-    "--until",
-    type=click.STRING,
-    callback=_get_timestamp,
-    help="Filter jobs by timestamp until given time.",
-)
-@click.option(
-    "--job-name", "-n",
-    type=click.STRING,
-    help="Filter jobs job name."
-)
-@click.option(
-    "--verbose", "-v",
-    is_flag=True,
-    help="Print job details. (Does not work with --geojson.)"
-)
-@click.option(
-    "--sort-by",
-    type=click.Choice(["started", "runtime", "state", "progress"]),
-    default="state",
-    help="Sort jobs. (default: state)"
-)
+@opt_geojson
+@opt_verbose
 @opt_debug
 @click.pass_context
 def jobs(
     ctx,
     geojson=False,
-    since=None,
-    until=None,
     verbose=False,
     sort_by=None,
     debug=False,
     **kwargs
 ):
     """Show current jobs."""
-    kwargs.update(from_date=since, to_date=until)
-    def _sort_jobs(jobs, sort_by=None):
-        if sort_by == "state":
-            return list(
-                sorted(
-                    jobs,
-                    key=lambda x: (
-                        x.json["properties"]["state"],
-                        x.json["properties"]["timestamp"]
-                    )
-                )
-            )
-        elif sort_by in ["started", "runtime"]:
-            return list(
-                sorted(jobs, key=lambda x: x.json["properties"][sort_by] or 0.)
-            )
-        elif sort_by == "progress":
-            def _get_progress(job):
-                progress_data = (
-                    job.json.get("properties", {}).get("progress_data", {}) or {}
-                )
-                current = progress_data.get("current")
-                total = progress_data.get("total")
-                return 100 * current / total if total else 0.
-            return list(
-                sorted(jobs, key=lambda x: _get_progress(x))
-            )
-
+    kwargs.update(
+        from_date=kwargs.pop("since"),
+        to_date=kwargs.pop("until")
+    )
     try:
         if geojson:
             click.echo(
@@ -629,3 +680,29 @@ def _show_progress(ctx, job_id, disable=False):
         return
     except Exception as e:  # pragma: no cover
         raise click.ClickException(e)
+
+
+def _sort_jobs(jobs, sort_by=None):
+    if sort_by == "state":
+        return list(
+            sorted(
+                jobs,
+                key=lambda x: (
+                    x.json["properties"]["state"],
+                    x.json["properties"]["timestamp"]
+                )
+            )
+        )
+    elif sort_by in ["started", "runtime"]:
+        return list(
+            sorted(jobs, key=lambda x: x.json["properties"][sort_by] or 0.)
+        )
+    elif sort_by == "progress":
+        def _get_progress(job):
+            progress_data = (
+                job.json.get("properties", {}).get("progress_data", {}) or {}
+            )
+            current = progress_data.get("current")
+            total = progress_data.get("total")
+            return 100 * current / total if total else 0.
+        return list(sorted(jobs, key=lambda x: _get_progress(x)))

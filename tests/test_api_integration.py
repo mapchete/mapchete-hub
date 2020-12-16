@@ -64,7 +64,7 @@ def test_cancel_job(wait_for_api, example_mapchete, mhub_test_api):
     result = mhub_test_api.cancel_job(job_id)
     assert result.job_id == job_id
     assert result.status_code == 200
-    assert "revoke signal" in result.json["message"]
+    assert "Revoke signal" in result.json["message"]
 
 
 def test_start_batch(wait_for_api, batch_example, mhub_test_api):

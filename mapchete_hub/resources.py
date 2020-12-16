@@ -194,6 +194,7 @@ class JobsOverview(Resource):
         GeoJSON features : list of dict
         """
         try:
+            logger.debug(f"got search kwargs {kwargs}")
             response = list(self._backend.jobs(**kwargs))
             logger.debug(f"return {response}")
             return response
@@ -363,13 +364,15 @@ class Jobs(Resource):
                 else:
                     logger.debug("job {} already in 'done' state".format(job_id))
 
-            return dict(
-                message=(
-                    "revoke signal for job {} sent".format(job_id)
-                    if len(revoked) == 1 else
-                    "revoke signal for jobs {} sent".format(", ".join(revoked))
-                )
-            )
+            logger.debug(revoked)
+
+            if len(revoked) == 0:
+                message = f"No job needed to be revoked."
+            elif len(revoked) == 1:
+                message = f"Revoke signal for job {job_id} received."
+            else:
+                message = f"Revoke signal for jobs {', '.join(revoked)} received."
+            return dict(message=message)
 
         else:
             return abort(
