@@ -1,6 +1,7 @@
 import click
 import click_spinner
 from datetime import datetime, timedelta
+from itertools import chain
 import logging
 from mapchete import Timer
 from mapchete.cli import utils
@@ -85,10 +86,10 @@ opt_output_path = click.option(
 opt_state = click.option(
     "--state", "-s",
     type=click.Choice(
-        [
-            "todo", "doing", "done", "pending", "progress", "received", "started",
-            "success", "failure"
-        ]
+        (
+            [s.lower() for s in job_states.keys()] + 
+            [s.lower() for s in chain(*[g for g in job_states.values()])]
+        )
     ),
     help="Filter jobs by job state."
 )
@@ -180,7 +181,7 @@ def remote_versions(ctx, **kwargs):
     """Print package versions installed on remote mapchete Hub."""
     try:
         res = API(**ctx.obj).get("capabilities.json")
-        if res.status_code != 200:
+        if res.status_code != 200:  # pragma: no cover
             raise ConnectionError(res.json)
         click.echo(f"mapchete_hub: {res.json['version']}")
         click.echo("")
@@ -215,7 +216,7 @@ def processes(ctx, process_name=None, docstrings=False, **kwargs):
 
     try:
         res = API(**ctx.obj).get("capabilities.json")
-        if res.status_code != 200:
+        if res.status_code != 200:  # pragma: no cover
             raise ConnectionError(res.json)
         cap = res.json
 
@@ -464,55 +465,133 @@ def status(ctx, job_id, geojson=False, traceback=False, **kwargs):
 @opt_since_no_default
 @opt_until
 @opt_job_name
-@opt_sort_by
 @opt_force
 @opt_debug
 @click.pass_context
-def cancel(ctx, job_ids, debug=False, sort_by=None, force=False, **kwargs):
+def cancel(ctx, job_ids, debug=False, force=False, **kwargs):
     """Cancel jobs and their follow-up jobs if batch was submitted."""
+    try:
+
+        kwargs.update(
+            from_date=kwargs.pop("since"),
+            to_date=kwargs.pop("until")
+        )
+
+        if job_ids:
+            jobs = [API(**ctx.obj).job(job_id) for job_id in job_ids]
+
+        else:
+            if all([v is None for v in kwargs.values()]):  # pragma: no cover
+                click.echo(ctx.get_help())
+                raise click.UsageError(
+                    "Please either provide one or more job IDs or other search values."
+                )
+            jobs = API(**ctx.obj).jobs(**kwargs).values()
+
+        def _yield_revokable_jobs(jobs):
+            for j in jobs:
+                if j.state in job_states["done"]:  # pragma: no cover
+                    click.echo(f"Job {j.job_id} already in state {j.state}.")
+                else:
+                    yield j.job_id
+
+        job_ids = [j for j in _yield_revokable_jobs(jobs)]
+
+        if not job_ids:  # pragma: no cover
+            click.echo("No revokable jobs found.")
+            return
+
+        for job_id in job_ids:
+            click.echo(job_id)
+        if force or click.confirm(f"Do you really want to cancel {len(job_ids)} job(s)?", abort=True):
+            for job_id in job_ids:
+                    job = API(**ctx.obj).cancel_job(job_id)
+                    logger.debug(job.json)
+                    click.echo(job.json["message"])
+
+    except Exception as e:  # pragma: no cover
+        if debug:
+            raise
+        raise click.ClickException(e)
+
+
+@mhub.command(short_help="Retry jobs.")
+@click.option(
+    "--no-children",
+    is_flag=True,
+    help="Don't retry child jobs."
+)
+@opt_job_ids
+@opt_output_path
+@opt_state
+@opt_command
+@opt_queue
+@opt_since_no_default
+@opt_until
+@opt_job_name
+@opt_force
+@utils.opt_overwrite
+@opt_debug
+@utils.opt_verbose
+@opt_debug
+@click.pass_context
+def retry(
+    ctx,
+    job_ids=None,
+    overwrite=False,
+    verbose=False,
+    no_children=False,
+    force=False,
+    debug=False,
+    **kwargs
+):
+    """Retry jobs and their follow-up jobs if batch was submitted."""
     kwargs.update(
         from_date=kwargs.pop("since"),
         to_date=kwargs.pop("until")
     )
-    def _yield_revokable_jobs(jobs):
-        for j in jobs:
-            if j.state in job_states["done"]:
-                click.echo(f"Job {j.job_id} already in state {j.state}.")
-            else:
-                yield j.job_id
 
-    if job_ids:
-        jobs = [API(**ctx.obj).job(job_id) for job_id in job_ids]
+    try:
+        if job_ids:
+            jobs = [API(**ctx.obj).job(job_id) for job_id in job_ids]
 
-    else:
-        for k, v in kwargs.items():
-            if k == "sort_by":
-                continue
-            elif v is not None:
-                break
         else:
-            click.echo(
-                "Please either provide one or more job IDs or other search values."
-            )
-            raise click.Abort()
-        jobs = _sort_jobs(API(**ctx.obj).jobs(**kwargs).values(), sort_by=sort_by)
+            if all([v is None for v in kwargs.values()]):  # pragma: no cover
+                click.echo(ctx.get_help())
+                raise click.UsageError(
+                    "Please either provide one or more job IDs or other search values."
+                )
+            jobs = API(**ctx.obj).jobs(**kwargs).values()
 
-    job_ids = [j for j in _yield_revokable_jobs(jobs)]
+        def _yield_retryable_jobs(jobs):
+            for j in jobs:
+                if j.state not in job_states["done"]:
+                    click.echo(f"Job {j.job_id} still in state {j.state}.")
+                else:
+                    yield j.job_id
 
-    if not job_ids:
-        click.echo("No revokable jobs found.")
-        return
+        job_ids = [j for j in _yield_retryable_jobs(jobs)]
 
-    for job_id in job_ids:
-        click.echo(job_id)
-    if force or click.confirm(f"Do you really want to cancel {len(job_ids)} job(s)?", abort=True):
+        if not job_ids:  # pragma: no cover
+            click.echo("No retryable jobs found.")
+            return
+
         for job_id in job_ids:
-            try:
-                job = API(**ctx.obj).cancel_job(job_id)
-                logger.debug(job.json)
-                click.echo(job.json["message"])
-            except Exception as e:  # pragma: no cover
-                raise click.ClickException(e)
+            click.echo(job_id)
+        if force or click.confirm(f"Do you really want to retry {len(job_ids)} job(s)?", abort=True):
+            for job_id in job_ids:
+                    job = API(**ctx.obj).retry_job(
+                        job_id,
+                        mode="overwrite" if overwrite else "continue",
+                        no_children=no_children,
+                        **kwargs
+                    )
+                    logger.debug(job.json)
+                    click.echo(job.json["message"])
+    except Exception as e:  # pragma: no cover
+        if debug:
+            raise
+        raise click.ClickException(e)
 
 
 @mhub.command(short_help="Show job progress.")
@@ -572,7 +651,7 @@ def jobs(
 
 
 def _print_job_details(job, verbose=False):
-    for group, states in job_states.items():
+    for group, states in job_states.items():  # pragma: no cover
         for state in states:
             if job.state == state:
                 if group == "todo":
@@ -620,7 +699,7 @@ def _print_job_details(job, verbose=False):
         # bounds
         try:
             bounds = ", ".join(map(str, shape(job.json["geometry"]).bounds))
-        except:
+        except:  # pragma: no cover
             bounds = None
         click.echo(f"bounds: {bounds}")
 
@@ -657,13 +736,13 @@ def _show_progress(ctx, job_id, disable=False):
         with click_spinner.spinner(disable=disable):
             states = API(**ctx.obj).job_progress(job_id)
             i = next(states)
-        if i["state"] == "SUCCESS":
+        if i["state"] == "SUCCESS":  # pragma: no cover
             click.echo(
                 f"job {job_id} successfully finished in {Timer(elapsed=i['runtime'])}"
             )
             return
 
-        if i["state"] in job_states["doing"]:
+        if i["state"] in job_states["doing"]:  # pragma: no cover
             with tqdm(
                 initial=i["progress_data"]["current"],
                 total=i["progress_data"]["total"],
