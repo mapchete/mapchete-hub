@@ -45,7 +45,7 @@ class Job():
         self.state = state
         self.job_id = job_id
         self.exists = True if status_code == 409 else False
-        self.json = json
+        self.json = OrderedDict(json.items())
 
     def __repr__(self):  # pragma: no cover
         """Print Job."""
@@ -80,7 +80,10 @@ class API():
             logger.debug(f"response: {res}")
             return Response(
                 status_code=res.status_code,
-                json=res.json if self._test_client else json.loads(res.text)
+                json=(
+                    res.json if self._test_client else
+                    json.loads(res.text, object_pairs_hook=OrderedDict)
+                )
             )
         except ConnectionError:  # pragma: no cover
             raise ConnectionError("no mhub server found at {}".format(self.host))
@@ -94,7 +97,10 @@ class API():
             res = self._api.post(post_url, **post_kwargs)
             return Response(
                 status_code=res.status_code,
-                json=res.json if self._test_client else json.loads(res.text)
+                json=(
+                    res.json if self._test_client else
+                    json.loads(res.text, object_pairs_hook=OrderedDict)
+                )
             )
         except ConnectionError:  # pragma: no cover
             raise ConnectionError("no mhub server found at {}".format(self.host))
@@ -108,7 +114,10 @@ class API():
             res = self._api.put(put_url, **put_kwargs)
             return Response(
                 status_code=res.status_code,
-                json=res.json if self._test_client else json.loads(res.text)
+                json=(
+                    res.json if self._test_client else
+                    json.loads(res.text, object_pairs_hook=OrderedDict)
+                )
             )
         except ConnectionError:  # pragma: no cover
             raise ConnectionError("no mhub server found at {}".format(self.host))
@@ -151,7 +160,7 @@ class API():
         mapchete_hub.api.Job
         """
         job_id = job_id or uuid.uuid4().hex
-        job = dict(
+        job = OrderedDict(
             command=command,
             config=load_mapchete_config(mapchete_config),
             params=kwargs
@@ -252,6 +261,42 @@ class API():
             json=res.json
         )
 
+    def retry_job(
+        self,
+        job_id,
+        no_children=False,
+        **kwargs
+    ):
+        """
+        Retry a job and its children and return job state.
+
+        Sends HTTP POST to /jobs/<job_id> and appends mapchete configuration as well
+        as processing parameters as JSON.
+
+        Parameters
+        ----------
+        job_id : str (optional)
+            Unique job ID.
+        no_children : bool
+            Don't retry follow-up jobs.
+
+        Returns
+        -------
+        mapchete_hub.api.Job
+        """
+        existing_job = self.job(job_id)
+        if no_children:
+            return self.start_job(
+                mapchete_config=existing_job.json["properties"]["mapchete"]["config"],
+                command=existing_job.json["properties"]["command"],
+                **existing_job.json["properties"]["mapchete"]["params"]
+            )
+        else:
+            return self.start_batch(
+                self._batch_config_from_job(existing_job),
+                **existing_job.json["properties"]["mapchete"]["params"]
+            )
+
     def job(self, job_id, geojson=False):
         """Return job metadata."""
         res = self.get("jobs/{}".format(job_id), timeout=self.timeout)
@@ -283,7 +328,7 @@ class API():
                 bounds=",".join(map(str, bounds)) if bounds else None
             )
         )
-        if res.status_code != 200:
+        if res.status_code != 200:  # pragma: no cover
             raise Exception(res.json)
         return (
             format_as_geojson(res.json)
@@ -337,7 +382,7 @@ class API():
                 if job.state == "SUCCESS":
                     yield job.json["properties"]
                     return
-                if job.state == "FAILURE":
+                if job.state == "FAILURE":  # pragma: no cover
                     raise JobFailed(job.json["properties"]["traceback"])
 
             if timeout is not None and time.time() - updated > timeout:
@@ -358,6 +403,43 @@ class API():
             kwargs.update(query_string=kwargs.pop("params", {}))
         return kwargs
 
+    def _batch_config_from_job(self, job):
+        def _next_job(job):
+            yield job
+            next_job_id = job.json["properties"].get("next_job_id")
+            if next_job_id:
+                yield from _next_job(self.job(next_job_id))
+
+        def _param_not_empty(p):
+            if p is None:
+                return False
+            if isinstance(p, (list, tuple)) and not len(p):
+                return False
+            return True
+
+
+        def _job_to_batch(job):
+            """
+            properties/mapchete/config --> mapchete
+            properties/mapchete/params --> root
+            """
+            return OrderedDict(
+                mapchete=job.json["properties"]["mapchete"]["config"],
+                command=job.json["properties"]["mapchete"]["command"],
+                **{
+                    k: v
+                    for k, v in job.json["properties"]["mapchete"]["params"].items()
+                    if _param_not_empty(v)
+                }
+            )
+
+        return dict(
+            jobs=OrderedDict(
+                (job.json["properties"]["job_name"], _job_to_batch(job))
+                for job in _next_job(job)
+            )
+        )
+
 
 def format_as_geojson(inp, indent=4):
     """Return a pretty GeoJSON."""
@@ -374,7 +456,9 @@ def format_as_geojson(inp, indent=4):
         while True:
             feature_gj = (space * level).join(
                 json.dumps(
-                    json.loads('{}'.format(geojson.Feature(**feature))),
+                    json.loads(
+                        str(geojson.Feature(**feature)), object_pairs_hook=OrderedDict
+                    ),
                     indent=indent,
                     sort_keys=True
                 ).splitlines(True)
@@ -411,7 +495,7 @@ def load_mapchete_config(mapchete_config):
     OrderedDict
         Preprocessed mapchete configuration.
     """
-    if isinstance(mapchete_config, OrderedDict):
+    if isinstance(mapchete_config, (dict)):
         return cleanup_datetime(mapchete_config)
 
     elif isinstance(mapchete_config, str):
@@ -440,9 +524,9 @@ def load_mapchete_config(mapchete_config):
 
         return conf
 
-    else:
+    else:  # pragma: no cover
         raise TypeError(
-            "mapchete config must either be a path to an existing file or an OrderedDict"
+            "mapchete config must either be a path to an existing file or a dict"
         )
 
 
@@ -455,8 +539,8 @@ def load_batch_config(batch_config, **kwargs):
 
     Parameters
     ----------
-    batch_config : str
-        Path to .mhub batch configuration file.
+    batch_config : str or dict
+        Path to .mhub batch configuration file or dictionary.
 
     Returns
     -------
@@ -466,65 +550,71 @@ def load_batch_config(batch_config, **kwargs):
     loaded_mapchete_configs = {}
 
     def _get_mapchete_config(mapchete_config):
-        if mapchete_config not in loaded_mapchete_configs:
-            loaded_mapchete_configs[mapchete_config] = load_mapchete_config(
-                os.path.join(
-                    os.path.dirname(batch_config),
-                    mapchete_config
+        if isinstance(mapchete_config, str):
+            if mapchete_config not in loaded_mapchete_configs:
+                loaded_mapchete_configs[mapchete_config] = load_mapchete_config(
+                    os.path.join(
+                        os.path.dirname(batch_config),
+                        mapchete_config
+                    )
                 )
-            )
-        return loaded_mapchete_configs[mapchete_config]
+            return loaded_mapchete_configs[mapchete_config]
+        else:
+            return load_mapchete_config(mapchete_config)
 
     def _parse_and_verify(batch_config):
         if isinstance(batch_config, str) and batch_config.endswith(".mhub"):
             raw = yaml.safe_load(open(batch_config, "r").read())
-            if raw is None or not raw.get("jobs", {}):
-                raise ValueError("no jobs given")
-            parent_zoom = None
-            for job_name, params in raw.get("jobs", {}).items():
-                if "command" not in params:
-                    raise ValueError("no command provided for job {}".format(job_name))
-                if "mapchete" in params:
-                    mapchete = _get_mapchete_config(params["mapchete"])
-                elif "job" in params:
-                    if params["job"] not in raw["jobs"]:
-                        raise ValueError(
-                            "job {} points to invalid other job {}".format(
-                                job_name, params["job"]
-                            )
-                        )
-                    else:
-                        mapchete = _get_mapchete_config(
-                            raw["jobs"][params["job"]]["mapchete"]
-                        )
-                else:
-                    raise ValueError(
-                        "job {} must either provide a mapchete file or point other "
-                        "job".format(job_name)
-                    )
-                if "zoom" in params:
-                    zoom = validate_zooms(params["zoom"], expand=False)
-                else:
-                    zoom = parent_zoom
-                yield (
-                    job_name,
-                    dict(
-                        command=params["command"],
-                        config=mapchete,
-                        params=dict(
-                            job_name=job_name,
-                            mode=params.get("mode", "continue"),
-                            queue=params.get("queue", None),
-                            zoom=zoom,
-                            bounds=kwargs.get("bounds"),
-                            point=kwargs.get("point"),
-                            tile=kwargs.get("tile"),
-                            geometry=kwargs.get("geometry"),
-                            announce_on_slack=params.get("announce_on_slack", False)
-                        )
-                    )
-                )
+        elif isinstance(batch_config, dict):
+            raw = batch_config
         else:
             raise TypeError("batch_config must be a .mhub file")
+
+        if raw is None or not raw.get("jobs", {}):
+            raise ValueError("no jobs given")
+        parent_zoom = None
+        for job_name, params in raw.get("jobs", {}).items():
+            if "command" not in params:
+                raise ValueError("no command provided for job {}".format(job_name))
+            if "mapchete" in params:
+                mapchete = _get_mapchete_config(params["mapchete"])
+            elif "job" in params:
+                if params["job"] not in raw["jobs"]:
+                    raise ValueError(
+                        "job {} points to invalid other job {}".format(
+                            job_name, params["job"]
+                        )
+                    )
+                else:
+                    mapchete = _get_mapchete_config(
+                        raw["jobs"][params["job"]]["mapchete"]
+                    )
+            else:
+                raise ValueError(
+                    "job {} must either provide a mapchete file or point other "
+                    "job".format(job_name)
+                )
+            if "zoom" in params:
+                zoom = validate_zooms(params["zoom"], expand=False)
+            else:
+                zoom = parent_zoom
+            yield (
+                job_name,
+                dict(
+                    command=params["command"],
+                    config=mapchete,
+                    params=dict(
+                        job_name=job_name,
+                        mode=params.get("mode", "continue"),
+                        queue=params.get("queue", None),
+                        zoom=zoom,
+                        bounds=kwargs.get("bounds"),
+                        point=kwargs.get("point"),
+                        tile=kwargs.get("tile"),
+                        geometry=kwargs.get("geometry"),
+                        announce_on_slack=params.get("announce_on_slack", False)
+                    )
+                )
+            )
 
     return OrderedDict(jobs=OrderedDict(list(_parse_and_verify(batch_config))))

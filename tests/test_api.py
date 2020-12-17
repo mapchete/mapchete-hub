@@ -168,8 +168,6 @@ def test_load_mapchete_config(example_mapchete, example_custom_process_mapchete)
     # from_dict
     from_dict = load_mapchete_config(OrderedDict(example_mapchete.dict))
     assert isinstance(from_dict, OrderedDict)
-    with pytest.raises(TypeError):
-        load_mapchete_config(example_mapchete.dict)
     # custom process function
     with_custom_process = load_mapchete_config(example_custom_process_mapchete.path)
     assert isinstance(with_custom_process, OrderedDict)
@@ -215,3 +213,33 @@ def test_load_batch_config(
         load_batch_config(batch_example_no_job_mapchete_error.path)
     with pytest.raises(ValueError):
         load_batch_config(batch_example_no_command_error.path)
+
+
+def test_retry_single_job(mhub_api, example_mapchete):
+    # put job in queue
+    job = mhub_api.start_job(
+        example_mapchete.path,
+        bounds=example_mapchete.dict["bounds"],
+        command="execute"
+    )
+
+    # cancel job
+    canceled_job = mhub_api.cancel_job(job.job_id)
+    assert canceled_job.state == "REVOKED"
+
+    # retry jobs
+    retried_job = mhub_api.retry_job(job.job_id)
+    assert retried_job.state == "PENDING"
+
+
+def test_retry_batch(mhub_api, batch_example):
+    # put job in queue
+    job = mhub_api.start_batch(batch_example.path, bounds=[1, 2, 3, 4])
+
+    # cancel job
+    canceled_job = mhub_api.cancel_job(job.job_id)
+    assert canceled_job.state == "REVOKED"
+
+    # retry jobs
+    retried_job = mhub_api.retry_job(job.job_id)
+    assert retried_job.state == "PENDING"
