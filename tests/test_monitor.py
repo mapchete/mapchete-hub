@@ -72,9 +72,14 @@ def test_mongodb_backend(
 
             # filter by state
             assert len(status_r.jobs(state="SUCCESS")) == 0
+            assert len(status_r.jobs(state="success")) == 0
             assert len(status_r.jobs(state="FAILURE")) == 1
+            assert len(status_r.jobs(state="failure")) == 1
+            assert len(status_r.jobs(state="DONE")) == 1
             assert len(status_r.jobs(state="done")) == 1
             assert len(status_r.jobs(state="PENDING")) == 1
+            assert len(status_r.jobs(state="pending")) == 1
+            assert len(status_r.jobs(state="TODO")) == 1
             assert len(status_r.jobs(state="todo")) == 1
 
             # filter by output path

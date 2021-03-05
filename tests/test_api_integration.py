@@ -111,4 +111,4 @@ def test_job_progress(wait_for_api, example_mapchete, mhub_test_api):
     assert result.job_id == job_id
 
     with pytest.raises(TimeoutError):
-        next(mhub_test_api.job_progress(job_id, timeout=2))
+        next(mhub_test_api.job_progress(job_id, timeout=0.5))

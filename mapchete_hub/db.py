@@ -112,12 +112,14 @@ class MongoDBStatusHandler():
         query = {k: v for k, v in kwargs.items() if v is not None}
         logger.debug(f"raw query: {query}")
 
-        # enable job_states groups, e.g. "doing"
+        # parsing job state groups and job states
         if query.get("state") is not None:
             state = query.get("state")
+            # group states are lowercase!
             if state.lower() in job_states:
+                # for all group states (todo, doing, done) query full group
                 query.update(state={"$in": job_states[state.lower()]})
-            # make sure state is in uppercase if it is not a state group name
+            # celery task states are uppercase!
             else:
                 query.update(state={"$in": [state.upper()]})
 

@@ -34,7 +34,7 @@ build_mhub-s1:
       - pip/
   variables:
     IMAGE_NAME: mhub-s1
-    BASE_IMAGE_NAME: snap-mapchete
+    BASE_IMAGE_NAME: snap-mapchete-ost
   script:
     - docker build --no-cache --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
   after_script:
@@ -73,7 +73,7 @@ test_mhub-s1:
   retry: 2
   variables:
     IMAGE_NAME: mhub-s1
-    BASE_IMAGE_NAME: snap-mapchete
+    BASE_IMAGE_NAME: snap-mapchete-ost
     MHUB_ENV: testing
   before_script:
     - docker info
@@ -105,7 +105,7 @@ push_mhub-s1:
   needs: ["test_mhub-s1"]
   variables:
     IMAGE_NAME: mhub-s1
-    BASE_IMAGE_NAME: snap-mapchete
+    BASE_IMAGE_NAME: snap-mapchete-ost
   script:
     - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG}
 
