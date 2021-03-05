@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=0.16
+ARG BASE_IMAGE_TAG=0.17
 
 # use builder to build python wheels #
 ######################################
@@ -34,7 +34,7 @@ RUN pip wheel \
     # git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master \
     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
     # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
-    jenkspy \
+    jenkspy==0.2.0 \
     --wheel-dir $WHEEL_DIR \
     --no-deps
 
@@ -54,16 +54,24 @@ ENV WHEEL_DIR /usr/local/wheels
 # get wheels from builder
 COPY --from=builder $WHEEL_DIR $WHEEL_DIR
 # get requirements from mhub
-COPY requirements.txt $MHUB_DIR/
+COPY pypi_dont_update.sh $MHUB_DIR/
+COPY requirements.in $MHUB_DIR/
 
 # install wheels first and then everything else
 RUN pip install $WHEEL_DIR/*.whl && \
-    rm -r $WHEEL_DIR && \
+    # this is important so pip won't update our precious precompiled packages:
+    ./$MHUB_DIR/pypi_dont_update.sh fiona gdal jenkspy numcodecs numpy psutil rasterio shapely >> ${MHUB_DIR}/requirements.in && \
+    cat $MHUB_DIR/requirements.in && \
+    pip install pip-tools && \
+    pip-compile \
+        -v \
+        --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+        $MHUB_DIR/requirements.in -o $MHUB_DIR/requirements.txt && \
     pip install \
         --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
         -r $MHUB_DIR/requirements.txt && \
-    # this is required to fix occasional dependency issues with boto related packages
-    pip install aiobotocore boto3 botocore urllib3 --use-feature=2020-resolver
+    pip uninstall -y pip-tools && \
+    rm -r $WHEEL_DIR
 
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR

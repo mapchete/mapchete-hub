@@ -87,7 +87,7 @@ opt_state = click.option(
     "--state", "-s",
     type=click.Choice(
         (
-            [s.lower() for s in job_states.keys()] + 
+            [s.lower() for s in job_states.keys()] +
             [s.lower() for s in chain(*[g for g in job_states.values()])]
         )
     ),
