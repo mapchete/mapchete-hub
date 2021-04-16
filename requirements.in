@@ -12,6 +12,7 @@ eox_preprocessing==0.13
 Flask-Celery-py3
 flask_pymongo
 flask_restful
+fsspec==0.8.7
 future
 geojson
 gunicorn==19.9.0

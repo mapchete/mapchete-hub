@@ -22,6 +22,7 @@ install_requires = [
     "Flask-Celery-py3",
     "flask_pymongo",
     "flask_restful",
+    "fsspec==0.8.7",
     "future",
     "geojson",
     "mapchete>=0.31",
