@@ -56,15 +56,12 @@ POST /processes/{process_id}/execution
 Trigger a job using a given process_id. This returns a job ID.
 """
 
-import asyncio
 from dask.distributed import as_completed, Client
 import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks
 import logging
 from mapchete import commands
 import os
-from random import random
-import time
 from typing import Union
 from uuid import uuid4
 
@@ -85,6 +82,14 @@ else:
     sh.setLevel(logging.DEBUG)
 logger.addHandler(sh)
 logger = logging.getLogger(__name__)
+
+
+MAPCHETE_COMMANDS = {
+    "convert": commands.convert,
+    "cp": commands.cp,
+    "execute": commands.execute,
+    "index": commands.index,
+}
 
 
 app = FastAPI()
@@ -152,7 +157,13 @@ def post_job(
     """Executes a process, i.e. creates a new job."""
     job_id = uuid4().hex
     # send task to background to be able to quickly return a message
-    background_tasks.add_task(task_wrapper, job_id, backend_db, dask_scheduler)
+    background_tasks.add_task(
+        job_wrapper,
+        job_id,
+        job_config,
+        backend_db,
+        dask_scheduler
+    )
     return {"job_id": job_id}
 
 
@@ -168,10 +179,15 @@ async def list_jobs(
     to_date: datetime.datetime = None,
 ):
     """Returns the running and finished jobs for a process."""
-    logger.debug(f"using {backend_db}")
-    result = backend_db.jobs()
-    logger.debug(result)
-    return result
+    return backend_db.jobs(
+        output_path=output_path,
+        state=state,
+        command=command,
+        job_name=job_name,
+        bounds=bounds,
+        from_date=from_date,
+        to_date=to_date,
+    )
 
 
 @app.get("/jobs/{job_id}")
@@ -184,56 +200,48 @@ async def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
 async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Cancel a job execution."""
     backend_db.set(job_id, status="abort")
-    # async with redis.client() as conn:
-    #     status = await conn.get(f"status-{job_id}")
-    #     if status == "started":
-    #         await cancel_task(conn, job_id)
-    #     status = await conn.get(f"status-{job_id}")
-    return {"job_id": job_id, "status": status or "unknown"}
+    return backend_db.job(job_id)
 
 
 @app.get("/jobs/{job_id}/result")
 def get_job_result(job_id: str):
     """Returns the result of a job."""
-    raise NotImplementedError()
+    return backend_db.job(job_id)["result"]
 
 
-async def cancel_task(backend_db: BackendDB, job_id: str):
-    """ Send a task cancellation message. Does not check if the task is
-        actually valid.
-    """
-    logger.info(f"cancel job {job_id}")
-    # return await conn.lpush(f"cancel-{job_id}", "cancel")
-    return await conn.set(f"status-{job_id}", "abort")
-
-
-async def task_wrapper(job_id: str, backend_db: BackendDB, dask_scheduler: str):
+async def job_wrapper(
+    job_id: str,
+    job_config: dict,
+    backend_db: BackendDB,
+    dask_scheduler: str
+):
     """ Create a Job iterator through the mapchete_execute function. On every new finished task,
         check whether the task already got the abort status.
     """
-    logger.info(f"Starting task {job_id}")
-    logger.debug("starting mapchete_execute")
-    await conn.set(f"status-{job_id}", "started")
+    command = job_config.get("command", "execute")
+    logger.debug(f"starting mapchete {command}")
+    backend_db.set(job_id, status="started")
     # Mapchete now will initialize the process and prepare all the tasks required.
-    job = mapchete_execute(
+    job = MAPCHETE_COMMANDS[command](
         None,
         as_iterator=True,
         concurrency="dask",
         executor_kwargs=dict(dask_scheduler=dask_scheduler)
     )
-    logger.debug(f"created {job}")
+    backend_db.set(job_id, progress=0)
+    logger.debug(f"created {job_id}")
     # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
     # yield the results.
     for i, t in enumerate(job):
         logger.debug(f"job {job_id} task {i + 1}/{len(job)} finished")
         # determine if there is a cancel signal for this task
-        status = await conn.get(f"status-{job_id}")
-        if status == "abort":
+        state = backend_db.job(job_id)["state"]
+        if state == "abort":
             logger.debug(f"abort status caught: {status}")
             # By calling the job's cancel method, all pending futures will be cancelled.
             job.cancel()
-            await conn.set(f"status-{job_id}", "cancelled")
+            backend_db.set(job_id, state="cancelled")
             return
-        # TODO update job state
+        backend_db.set(job_id, progress=i + 1)
     # task finished successfully
-    conn.set(f"status-{job_id}", "finished")
+    backend_db.set(job_id, state="finished")
