@@ -1,5 +1,4 @@
 db.getSiblingDB("mhub")
-db.getSiblingDB("celery")
 db.mhub.createIndex({"job_id": 1})
 db.mhub.createIndex({"timestamp": 1, "state": 1})
 db.mhub.createIndex({"timestamp": 1, "output_path": 1})

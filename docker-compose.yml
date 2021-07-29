@@ -18,23 +18,16 @@ services:
   server:
     build: .
     depends_on:
-      - redis
       - dask_scheduler
       - db
     environment:
-      - REDIS_URL=redis://redis:6379
       - DASK_SCHEDULER=tcp://dask_scheduler:8786
       - MHUB_STATUS_DB_URI=mongodb://mhub:REDACTED_API_KEY@db:27017
     networks:
       - backend
     ports:
       - 5000:8000
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
-
-  redis:
-    image: redis:6.2.5-alpine
-    networks:
-      - backend
+    command: ["uvicorn", "mapchete_hub.app:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
 
   dask_scheduler:
     build: .

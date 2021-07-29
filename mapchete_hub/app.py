@@ -62,7 +62,6 @@ import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks
 import logging
 from mapchete import commands
-import motor.motor_asyncio
 import os
 from random import random
 import time
@@ -74,7 +73,7 @@ from mapchete_hub.db import BackendDB
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("mapchete_hub")
 sh = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
 sh.setFormatter(formatter)
@@ -85,14 +84,29 @@ else:
     logger.setLevel(logging.DEBUG)
     sh.setLevel(logging.DEBUG)
 logger.addHandler(sh)
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI()
 
-# dependency
-def get_mongo_client():
-    client = motor.motor_asyncio.AsyncIOMotorClient(os.environ.get("MONGO_URL"))
+# dependencies
 
+def get_backend_db():
+    url = os.environ.get("MONGO_URL")
+    if not url:
+        raise ValueError("MONGO_URL must be provided")
+    logger.debug(f"connect to {url}")
+    return BackendDB(src=url)
+
+
+def get_dask_scheduler():
+    scheduler = os.environ.get("DASK_SCHEDULER")
+    if scheduler is None:
+        raise ValueError("DASK_SCHEDULER environment variable must be set")
+    return scheduler
+
+
+# REST endpoints
 
 @app.get("/")
 def root():
@@ -129,17 +143,22 @@ def post_process(process_id: str):
 
 
 @app.post("/processes/{process_id}/execution")
-def post_job(background_tasks: BackgroundTasks, process_id: str, mongo_client: motor.motor_asyncio.AsyncIOMotorClient = Depends(get_mongo_client)):
+def post_job(
+    background_tasks: BackgroundTasks,
+    process_id: str,
+    backend_db: BackendDB = Depends(get_backend_db),
+    dask_scheduler: str = Depends(get_dask_scheduler)
+):
     """Executes a process, i.e. creates a new job."""
     job_id = uuid4().hex
-    print(job_id)
     # send task to background to be able to quickly return a message
-    background_tasks.add_task(task_wrapper, job_id, mongo_client)
+    background_tasks.add_task(task_wrapper, job_id, backend_db, dask_scheduler)
     return {"job_id": job_id}
 
 
 @app.get("/jobs")
-def list_jobs(
+async def list_jobs(
+    backend_db: BackendDB = Depends(get_backend_db),
     output_path: str = None,
     state: str = None,
     command: str = None,
@@ -149,20 +168,22 @@ def list_jobs(
     to_date: datetime.datetime = None,
 ):
     """Returns the running and finished jobs for a process."""
-    raise NotImplementedError()
+    logger.debug(f"using {backend_db}")
+    result = backend_db.jobs()
+    logger.debug(result)
+    return result
 
 
 @app.get("/jobs/{job_id}")
-async def get_job(job_id: str, mongo_client: motor.motor_asyncio.AsyncIOMotorClient = Depends(get_mongo_client)):
+async def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Returns the status of a job."""
-    # async with redis.client() as conn:
-    #     status = await conn.get(f"status-{job_id}")
-    return {"job_id": job_id, "status": status or "unknown"}
+    return backend_db.job(job_id)
 
 
 @app.delete("/jobs/{job_id}")
-async def cancel_job(job_id: str, mongo_client: motor.motor_asyncio.AsyncIOMotorClient = Depends(get_mongo_client)):
+async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Cancel a job execution."""
+    backend_db.set(job_id, status="abort")
     # async with redis.client() as conn:
     #     status = await conn.get(f"status-{job_id}")
     #     if status == "started":
@@ -177,7 +198,7 @@ def get_job_result(job_id: str):
     raise NotImplementedError()
 
 
-async def cancel_task(mongo_client: motor.motor_asyncio.AsyncIOMotorClient, job_id: str):
+async def cancel_task(backend_db: BackendDB, job_id: str):
     """ Send a task cancellation message. Does not check if the task is
         actually valid.
     """
@@ -186,41 +207,33 @@ async def cancel_task(mongo_client: motor.motor_asyncio.AsyncIOMotorClient, job_
     return await conn.set(f"status-{job_id}", "abort")
 
 
-async def task_wrapper(job_id: str, mongo_client):
+async def task_wrapper(job_id: str, backend_db: BackendDB, dask_scheduler: str):
     """ Create a Job iterator through the mapchete_execute function. On every new finished task,
         check whether the task already got the abort status.
     """
-    print(mongo_client)
-    1/0
     logger.info(f"Starting task {job_id}")
-    scheduler = os.environ.get("DASK_SCHEDULER")
-    # if scheduler is None:
-    #     raise ValueError("DASK_SCHEDULER environment variable must be set")
-    # redis = get_redis()
-    # async with redis.client() as conn:
-    #     logger.debug("starting mapchete_execute")
-    #     await conn.set(f"status-{job_id}", "started")
-    #     # Mapchete now will initialize the process and prepare all the tasks required.
-    #     raise NotImplementedError
-    #     job = mapchete_execute(
-    #         None,
-    #         as_iterator=True,
-    #         concurrency="dask",
-    #         executor_kwargs=dict(dask_scheduler=scheduler)
-    #     )
-    #     logger.debug(f"created {job}")
-    #     # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
-    #     # yield the results.
-    #     for i, t in enumerate(job):
-    #         logger.debug(f"job {job_id} task {i + 1}/{len(job)} finished")
-    #         # determine if there is a cancel signal for this task
-    #         status = await conn.get(f"status-{job_id}")
-    #         if status == "abort":
-    #             logger.debug(f"abort status caught: {status}")
-    #             # By calling the job's cancel method, all pending futures will be cancelled.
-    #             job.cancel()
-    #             await conn.set(f"status-{job_id}", "cancelled")
-    #             return
-    #         # TODO update job state
-    #     # task finished successfully
-    #     conn.set(f"status-{job_id}", "finished")
+    logger.debug("starting mapchete_execute")
+    await conn.set(f"status-{job_id}", "started")
+    # Mapchete now will initialize the process and prepare all the tasks required.
+    job = mapchete_execute(
+        None,
+        as_iterator=True,
+        concurrency="dask",
+        executor_kwargs=dict(dask_scheduler=dask_scheduler)
+    )
+    logger.debug(f"created {job}")
+    # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
+    # yield the results.
+    for i, t in enumerate(job):
+        logger.debug(f"job {job_id} task {i + 1}/{len(job)} finished")
+        # determine if there is a cancel signal for this task
+        status = await conn.get(f"status-{job_id}")
+        if status == "abort":
+            logger.debug(f"abort status caught: {status}")
+            # By calling the job's cancel method, all pending futures will be cancelled.
+            job.cancel()
+            await conn.set(f"status-{job_id}", "cancelled")
+            return
+        # TODO update job state
+    # task finished successfully
+    conn.set(f"status-{job_id}", "finished")

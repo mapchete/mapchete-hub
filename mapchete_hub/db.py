@@ -54,10 +54,8 @@ class BackendDB():
         """Initialize."""
         if isinstance(src, str) and src.startswith("mongodb"):  # pragma: no cover
             return MongoDBStatusHandler(db_uri=src)
-        elif isinstance(src, (pymongo.MongoClient, mongomock.database.Database)):
+        elif isinstance(src, (pymongo.MongoClient, mongomock.MongoClient)):
             return MongoDBStatusHandler(client=src)
-        elif isinstance(src, mongomock.collection.Collection):
-            return MongoDBStatusHandler(collection=src)
         else:  # pragma: no cover
             raise NotImplementedError("backend {} of type {}".format(src, type(src)))
 
@@ -81,6 +79,7 @@ class MongoDBStatusHandler():
             self._client = None
             self._db = None
             self._jobs = collection
+        logger.debug(f"active client {self._client}")
 
     def jobs(self, **kwargs):
         """
@@ -214,7 +213,7 @@ class MongoDBStatusHandler():
         -------
         None
         """
-        logger.debug("got new job {} with metadata {}".format(job_id, metadata))
+        logger.debug(f"got new job {job_id} with metadata {metadata}")
         # metadata looks like:
         # job_id=job_id,
         # command=job["command"],
@@ -225,7 +224,6 @@ class MongoDBStatusHandler():
         # process_area=mapping(process_area),
         # process_area_process_crs=mapping(process_area_process_crs),
         entry = {
-            "child_job_ids": metadata.get("child_job_id"),
             "geometry": metadata.get("process_area_process_crs"),
             "job_id": job_id,
             "mapchete": {
@@ -245,6 +243,9 @@ class MongoDBStatusHandler():
         }
         self._jobs.insert_one(entry)
         return self._entry_to_geojson(entry)
+
+    def set(self, job_id, status=None, progress=None):
+        raise NotImplementedError
 
     def _entry_to_geojson(self, entry):
         return {

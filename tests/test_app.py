@@ -21,8 +21,6 @@ def test_post_process(client, test_process_id):
 
 def test_post_job(client, test_process_id):
     response = client.post(f"/processes/{test_process_id}/execution")
-    print(response)
-    print(response.json())
     assert response.status_code == 200
     # TODO
     # assert response.json() == {}
@@ -35,7 +33,7 @@ def test_list_jobs(client):
     # assert response.json() == {}
 
 
-def test_get_job(client, redis):
+def test_get_job(client):
     # TODO get job id
     response = client.get(f"/jobs/{test_job_id}")
     assert response.status_code == 200
@@ -43,7 +41,7 @@ def test_get_job(client, redis):
     # assert response.json() == {}
 
 
-def test_cancel_job(client, redis):
+def test_cancel_job(client):
     # TODO get job id
     response = client.delete(f"/jobs/{job_id}")
     assert response.status_code == 200
