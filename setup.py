@@ -14,34 +14,18 @@ with open("mapchete_hub/__init__.py") as f:
 
 
 install_requires = [
-    "celery<5.0.0",
-    "celery-slack",
-    "click",
-    "click-spinner",
-    "environ-config",
-    "Flask-Celery-py3",
-    "flask_pymongo",
-    "flask_restful",
-    "fsspec==0.8.7",
-    "future",
-    "geojson",
-    "mapchete>=0.31",
-    "mongomock",
-    "pymongo",
-    "requests",
-    "slacker",
-    "tornado>=4.2.0,<6.0.0",
-    "webargs>=6.0.0,<7.0.0",
-    "xarray",
-]
-mundi_requires = [
-    "xmltodict"
+    "aioredis>=2.0.0a1",
+    "cached_property",
+    "dask",
+    "distributed",
+    "fastapi==0.66",
+    "mapchete[contours,geobuf,http,s3,vrt]>=0.40",
+    "uvicorn",
 ]
 test_requires = [
     "pytest",
     "pytest-cov",
     "pytest-env",
-    "pytest-flask",
     "pytest-mongodb",
 ]
 
@@ -54,14 +38,9 @@ setup(
     url="https://gitlab.eox.at/maps/mapchete_hub",
     license="MIT",
     packages=find_packages(),
-    entry_points={
-        "console_scripts": ["mhub=mapchete_hub.cli:mhub"],
-        "mapchete.cli.commands": ["mhub=mapchete_hub.cli:mhub"],
-    },
     install_requires=install_requires,
     extras_require={
-        "complete": install_requires + mundi_requires,
-        "mundi": mundi_requires,
+        "complete": install_requires,
         "test": test_requires
     },
     classifiers=[

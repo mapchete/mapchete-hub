@@ -22,4 +22,4 @@ if [ "$TAG" == "master" ]; then
 fi
 
 echo "build mhub:$TAG"
-docker build -t $REGISTRY_BASEURL/mhub:$TAG .
+docker build --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} -t $REGISTRY_BASEURL/mhub:$TAG .
