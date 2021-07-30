@@ -3,5 +3,6 @@ cached_property
 dask
 distributed
 fastapi==0.66
-motor
+odmantic
+pymongo
 uvicorn

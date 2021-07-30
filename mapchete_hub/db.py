@@ -6,45 +6,7 @@ import pymongo
 from shapely.geometry import box, mapping, Polygon
 import time
 
-from mapchete_hub.api import job_states
-
 logger = logging.getLogger(__name__)
-
-
-MONGO_ENTRY_SCHEMA = {
-    "exception": str,
-    "geometry": dict,
-    "mapchete": {
-        "command": str,
-        "params": dict,
-        "config": dict,
-    },
-    "job_id": str,
-    "parent_job_id": str,
-    "child_job_ids": list,
-    "previous_job_id": str,
-    "next_job_id": str,
-    "hostname": str,
-    "progress_data": dict,
-    "runtime": float,
-    "started": float,
-    "state": str,
-    "terminated": bool,
-    "timestamp": float,
-    "traceback": str,
-    "output_path": str,
-    "command": str,
-    "queue": str,
-    "job_name": str,
-}
-
-OUTPUT_SCHEMA = {
-    "id": "job_id",
-    "geometry": Polygon,
-    "properties": {
-        "mapchete": "mapchete"
-    }
-}
 
 
 class BackendDB():

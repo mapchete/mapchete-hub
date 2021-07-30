@@ -58,14 +58,14 @@ Trigger a job using a given process_id. This returns a job ID.
 
 from dask.distributed import as_completed, Client
 import datetime
-from fastapi import Depends, FastAPI, BackgroundTasks
+from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException
 import logging
 from mapchete import commands
 import os
 from typing import Union
 from uuid import uuid4
 
-from mapchete_hub import __version__
+from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 
 
@@ -74,7 +74,7 @@ logger = logging.getLogger("mapchete_hub")
 sh = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
 sh.setFormatter(formatter)
-if __name__ != "main":
+if __name__ != "__main__":
     logger.setLevel(uvicorn_logger.level)
     sh.setLevel(uvicorn_logger.level)
 else:
@@ -106,8 +106,8 @@ def get_backend_db():
 
 def get_dask_scheduler():
     scheduler = os.environ.get("DASK_SCHEDULER")
-    if scheduler is None:
-        raise ValueError("DASK_SCHEDULER environment variable must be set")
+    # if scheduler is None:
+    #     raise ValueError("DASK_SCHEDULER environment variable must be set")
     return scheduler
 
 
@@ -149,23 +149,29 @@ def post_process(process_id: str):
 
 @app.post("/processes/{process_id}/execution")
 def post_job(
+    job_config: models.Mapchete,
     background_tasks: BackgroundTasks,
     process_id: str,
     backend_db: BackendDB = Depends(get_backend_db),
     dask_scheduler: str = Depends(get_dask_scheduler)
 ):
     """Executes a process, i.e. creates a new job."""
-    job_id = uuid4().hex
-    # send task to background to be able to quickly return a message
-    background_tasks.add_task(
-        job_wrapper,
-        job_id,
-        job_config,
-        backend_db,
-        dask_scheduler
-    )
-    return {"job_id": job_id}
-
+    logger.debug(job_config)
+    try:
+        job_id = uuid4().hex
+        # send task to background to be able to quickly return a message
+        background_tasks.add_task(
+            job_wrapper,
+            job_id,
+            job_config,
+            backend_db,
+            dask_scheduler
+        )
+        return {"job_id": job_id}
+    except Exception as e:
+        logger.exception(e)
+        raise
+ 
 
 @app.get("/jobs")
 async def list_jobs(
@@ -223,7 +229,8 @@ async def job_wrapper(
     backend_db.set(job_id, status="started")
     # Mapchete now will initialize the process and prepare all the tasks required.
     job = MAPCHETE_COMMANDS[command](
-        None,
+        job_config["config"],
+        **job_config["params"],
         as_iterator=True,
         concurrency="dask",
         executor_kwargs=dict(dask_scheduler=dask_scheduler)

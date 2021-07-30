@@ -26,3 +26,34 @@ def client():
 @pytest.fixture
 def test_process_id():
     return "mapchete.processes.convert"
+
+
+@pytest.fixture
+def example_config_json():
+    return {
+        "command": "execute",
+        "params": {
+            "zoom": 5,
+            "bounds": [0, 1, 2, 3]
+        },
+        "config": {
+            "process": "mapchete.processes.convert",
+            "input": {
+                "inp": "s3://eox-s2cloudless-2020/rgbnir/final/"
+            },
+            "output": {
+                "format": "GTiff",
+                "bands": 4,
+                "dtype": "uint16",
+                "path": "s3://orgonite-methods-tests/test_mapchete_dask_joachim/"
+            },
+            "pyramid": {
+                "grid": "geodetic",
+                "metatiling": 2
+            },
+            "zoom_levels": {
+                "min": 0,
+                "max": 13
+            }
+        }
+    }
