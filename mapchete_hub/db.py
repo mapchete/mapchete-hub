@@ -6,6 +6,8 @@ import pymongo
 from shapely.geometry import box, mapping, Polygon
 import time
 
+from mapchete_hub import models
+
 logger = logging.getLogger(__name__)
 
 
@@ -176,46 +178,44 @@ class MongoDBStatusHandler():
         None
         """
         logger.debug(f"got new job {job_id} with metadata {metadata}")
-        # metadata looks like:
-        # job_id=job_id,
-        # command=job["command"],
-        # params=job["params"],
-        # config=cleanup_datetime(job["config"]),
-        # parent_job_id=parent_job_id,
-        # child_job_id=child_job_id,
-        # process_area=mapping(process_area),
-        # process_area_process_crs=mapping(process_area_process_crs),
-        entry = {
-            "geometry": metadata.get("process_area_process_crs"),
-            "job_id": job_id,
-            "mapchete": {
-                "command": metadata.get("command"),
-                "params": metadata.get("params"),
-                "config": metadata.get("config"),
-            },
-            "next_job_id": metadata.get("next_job_id"),
-            "parent_job_id": metadata.get("parent_job_id"),
-            "previous_job_id": metadata.get("previous_job_id"),
-            "state": "PENDING",
-            "output_path": metadata.get("config", {}).get("output", {}).get("path"),
-            "command": metadata.get("command"),
-            "queue": metadata.get("params").get("queue"),
-            "job_name": metadata.get("params").get("job_name"),
-            "timestamp": time.time()
-        }
-        self._jobs.insert_one(entry)
-        return self._entry_to_geojson(entry)
+        entry = models.Job(
+            job_id=job_id,
+            state=models.State["pending"],
+            geometry={},
+            mapchete=metadata,
 
-    def set(self, job_id, status=None, progress=None):
-        raise NotImplementedError
+        )
+        self._jobs.insert_one(entry.dict())
+        return self._entry_to_geojson(entry.dict())
+
+    def set(self, job_id, state=None, progress=None, exception=None):
+        if job_id:
+            entry = {"job_id": job_id}
+            if state is not None:
+                entry.update(state=state)
+            if progress is not None:
+                entry.update(progress=progress)
+            if exception is not None:
+                entry.update(exception=exception)
+            logger.debug(f"upsert entry: {entry}")
+            return self._entry_to_geojson(
+                self._jobs.find_one_and_update(
+                    {"job_id": job_id},
+                    {"$set": entry},
+                    upsert=True,
+                    return_document=pymongo.ReturnDocument.AFTER
+                )
+            )
 
     def _entry_to_geojson(self, entry):
         return {
+            "type": "Feature",
             "id": entry["job_id"],
             "geometry": entry["geometry"],
             "properties": {
                 k: entry.get(k)
-                for k in MONGO_ENTRY_SCHEMA.keys()
+                for k in entry.keys()
+                if k not in ["job_id", "geometry"]
             }
         }
 

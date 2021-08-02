@@ -1,10 +1,11 @@
 from enum import Enum
-from pydantic import BaseModel, Field
 from odmantic import Model
+from pydantic import BaseModel, Field
 from typing import Optional
 
 
 class State(str, Enum):
+    pending = "pending"
     running = "running"
     aborting = "aborting"
     cancelled = "cancelled"
@@ -19,18 +20,19 @@ class MapcheteCommand(str, Enum):
     # index = "index"
 
 
-class MapcheteConfig(BaseModel):
+class MapcheteProcessConfig(BaseModel):
     process: str
     input: dict
     output: dict
     pyramid: dict
     zoom_levels: dict
+    config_dir: str = None
 
 
-class Mapchete(BaseModel):
+class MapcheteJob(BaseModel):
     command: MapcheteCommand
     params: dict
-    config: MapcheteConfig
+    config: MapcheteProcessConfig
 
 
 class Progress(BaseModel):
@@ -42,7 +44,7 @@ class Job(Model, BaseModel):
     job_id: str
     state: State
     geometry: dict
-    mapchete: Mapchete
+    mapchete: MapcheteJob
     exception: Optional[str] = None
     traceback: Optional[str] = None
     output_path: Optional[str] = None

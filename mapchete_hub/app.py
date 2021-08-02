@@ -149,9 +149,9 @@ def post_process(process_id: str):
 
 @app.post("/processes/{process_id}/execution")
 def post_job(
-    job_config: models.Mapchete,
-    background_tasks: BackgroundTasks,
     process_id: str,
+    job_config: models.MapcheteJob,
+    background_tasks: BackgroundTasks,
     backend_db: BackendDB = Depends(get_backend_db),
     dask_scheduler: str = Depends(get_dask_scheduler)
 ):
@@ -205,7 +205,7 @@ async def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
 @app.delete("/jobs/{job_id}")
 async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Cancel a job execution."""
-    backend_db.set(job_id, status="abort")
+    backend_db.set(job_id, state="abort")
     return backend_db.job(job_id)
 
 
@@ -224,31 +224,35 @@ async def job_wrapper(
     """ Create a Job iterator through the mapchete_execute function. On every new finished task,
         check whether the task already got the abort status.
     """
-    command = job_config.get("command", "execute")
-    logger.debug(f"starting mapchete {command}")
-    backend_db.set(job_id, status="started")
-    # Mapchete now will initialize the process and prepare all the tasks required.
-    job = MAPCHETE_COMMANDS[command](
-        job_config["config"],
-        **job_config["params"],
-        as_iterator=True,
-        concurrency="dask",
-        executor_kwargs=dict(dask_scheduler=dask_scheduler)
-    )
-    backend_db.set(job_id, progress=0)
-    logger.debug(f"created {job_id}")
-    # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
-    # yield the results.
-    for i, t in enumerate(job):
-        logger.debug(f"job {job_id} task {i + 1}/{len(job)} finished")
-        # determine if there is a cancel signal for this task
-        state = backend_db.job(job_id)["state"]
-        if state == "abort":
-            logger.debug(f"abort status caught: {status}")
-            # By calling the job's cancel method, all pending futures will be cancelled.
-            job.cancel()
-            backend_db.set(job_id, state="cancelled")
-            return
-        backend_db.set(job_id, progress=i + 1)
-    # task finished successfully
-    backend_db.set(job_id, state="finished")
+    logger.debug(f"starting mapchete {job_config.command}")
+    backend_db.new(job_id=job_id, metadata=job_config)
+    try:
+        backend_db.set(job_id, state="started")
+        # Mapchete now will initialize the process and prepare all the tasks required.
+        job = MAPCHETE_COMMANDS[job_config.command](
+            job_config.config.dict(),
+            **job_config.params,
+            as_iterator=True,
+            concurrency="dask",
+            dask_scheduler=dask_scheduler
+        )
+        backend_db.set(job_id, progress=0)
+        logger.debug(f"created {job_id}")
+        # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
+        # yield the results.
+        for i, t in enumerate(job):
+            logger.debug(f"job {job_id} task {i + 1}/{len(job)} finished")
+            # determine if there is a cancel signal for this task
+            state = backend_db.job(job_id)["properties"]["state"]
+            if state == "abort":
+                logger.debug(f"abort state caught: {state}")
+                # By calling the job's cancel method, all pending futures will be cancelled.
+                job.cancel()
+                backend_db.set(job_id, state="cancelled")
+                return
+            backend_db.set(job_id, progress=i + 1)
+        # task finished successfully
+        backend_db.set(job_id, state="finished")
+    except Exception as e:
+        backend_db.set(job_id=job_id, state="failed", exception=e)
+        logger.exception(e)

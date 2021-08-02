@@ -1,3 +1,6 @@
+import json
+
+
 def test_get_conformance(client):
     response = client.get("/conformance")
     assert response.status_code == 200
@@ -20,11 +23,11 @@ def test_post_process(client, test_process_id):
 
 
 def test_post_job(client, test_process_id, example_config_json):
-    response = client.get("/jobs")
+    # response = client.get("/jobs")
     print(example_config_json)
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=example_config_json
+        data=json.dumps(example_config_json)
     )
     print(response.json())
     assert response.status_code == 200
