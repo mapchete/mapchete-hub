@@ -30,9 +30,37 @@ class MapcheteProcessConfig(BaseModel):
 
 
 class MapcheteJob(BaseModel):
-    command: MapcheteCommand
-    params: dict
-    config: MapcheteProcessConfig
+    command: MapcheteCommand = Field(None, example="execute")
+    params: dict = Field(
+        None,
+        example={
+            "zoom": 8,
+            "bounds": [0, 1, 2, 3]
+        }
+    )
+    config: MapcheteProcessConfig = Field(
+        None,
+        example={
+            "process": "mapchete.processes.convert",
+            "input": {
+                "inp": "https://ungarj.github.io/mapchete_testdata/tiled_data/raster/cleantopo/"
+            },
+            "output": {
+                "format": "GTiff",
+                "bands": 4,
+                "dtype": "uint16",
+                "path": "/tmp/mhub/"
+            },
+            "pyramid": {
+                "grid": "geodetic",
+                "metatiling": 2
+            },
+            "zoom_levels": {
+                "min": 0,
+                "max": 13
+            }
+        }
+    )
 
 
 class Progress(BaseModel):

@@ -5,9 +5,11 @@ import mongomock.database
 from mapchete_hub.app import app, get_backend_db, get_dask_scheduler
 from mapchete_hub.db import BackendDB
 
+_fake_backend_db = BackendDB(mongomock.MongoClient())
+
 
 def fake_backend_db():
-    return BackendDB(mongomock.MongoClient())
+    return _fake_backend_db
 
 
 def local_dask_scheduler():
@@ -17,10 +19,9 @@ app.dependency_overrides[get_backend_db] = fake_backend_db
 app.dependency_overrides[get_dask_scheduler] = local_dask_scheduler
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def client():
-    _client = TestClient(app)
-    return _client
+    return TestClient(app)
 
 
 @pytest.fixture
@@ -29,11 +30,11 @@ def test_process_id():
 
 
 @pytest.fixture
-def example_config_json():
+def example_config_json(tmpdir):
     return {
         "command": "execute",
         "params": {
-            "zoom": 5,
+            "zoom": 8,
             "bounds": [0, 1, 2, 3]
         },
         "config": {
@@ -45,7 +46,7 @@ def example_config_json():
                 "format": "GTiff",
                 "bands": 4,
                 "dtype": "uint16",
-                "path": "/tmp/test/"
+                "path": str(tmpdir)
             },
             "pyramid": {
                 "grid": "geodetic",

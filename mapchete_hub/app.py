@@ -58,7 +58,7 @@ Trigger a job using a given process_id. This returns a job ID.
 
 from dask.distributed import as_completed, Client
 import datetime
-from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException
+from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
 import logging
 from mapchete import commands
 import os
@@ -146,17 +146,18 @@ def post_process(process_id: str):
     raise NotImplementedError()
 
 
-@app.post("/processes/{process_id}/execution")
+@app.post("/processes/{process_id}/execution", status_code=201)
 def post_job(
     process_id: str,
     job_config: models.MapcheteJob,
     background_tasks: BackgroundTasks,
     backend_db: BackendDB = Depends(get_backend_db),
-    dask_scheduler: str = Depends(get_dask_scheduler)
+    dask_scheduler: str = Depends(get_dask_scheduler),
+    response: Response = None
 ):
     """Executes a process, i.e. creates a new job."""
     try:
-        job = backend_db.new(metadata=job_config)
+        job = backend_db.new(job_config=job_config)
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper,
@@ -165,6 +166,11 @@ def post_job(
             backend_db,
             dask_scheduler
         )
+        response.headers["Location"] = f"/jobs/{job['id']}"
+        # return job
+        job = backend_db.job(job["id"])
+        logger.debug(f"submitted job {job}")
+        logger.debug(f"currently running {len(backend_db.jobs())} jobs")
         return job
     except Exception as e:
         logger.exception(e)
@@ -172,7 +178,7 @@ def post_job(
  
 
 @app.get("/jobs")
-async def list_jobs(
+def list_jobs(
     backend_db: BackendDB = Depends(get_backend_db),
     output_path: str = None,
     state: str = None,
@@ -195,15 +201,15 @@ async def list_jobs(
 
 
 @app.get("/jobs/{job_id}")
-async def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
+def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Returns the status of a job."""
     return backend_db.job(job_id)
 
 
 @app.delete("/jobs/{job_id}")
-async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
+def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Cancel a job execution."""
-    backend_db.set(job_id, state="abort")
+    backend_db.set(job_id, state="aborting")
     return backend_db.job(job_id)
 
 
@@ -213,7 +219,7 @@ def get_job_result(job_id: str):
     return backend_db.job(job_id)["result"]
 
 
-async def job_wrapper(
+def job_wrapper(
     job_id: str,
     job_config: dict,
     backend_db: BackendDB,
@@ -224,7 +230,7 @@ async def job_wrapper(
     """
     logger.debug(f"starting mapchete {job_config.command}")
     try:
-        backend_db.set(job_id, state="started")
+        backend_db.set(job_id, state="running")
         # Mapchete now will initialize the process and prepare all the tasks required.
         job = MAPCHETE_COMMANDS[job_config.command](
             job_config.config.dict(),
@@ -233,23 +239,23 @@ async def job_wrapper(
             concurrency="dask",
             dask_scheduler=dask_scheduler
         )
-        backend_db.set(job_id, progress=0)
+        backend_db.set(job_id, current_progress=0, total_progress=len(job))
         logger.debug(f"created {job_id}")
         # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
         # yield the results.
         for i, t in enumerate(job):
             logger.debug(f"job {job_id} task {i + 1}/{len(job)} finished")
             # determine if there is a cancel signal for this task
-            backend_db.set(job_id, progress=i + 1)
+            backend_db.set(job_id, current_progress=i + 1)
             state = backend_db.job(job_id)["properties"]["state"]
-            if state == "abort":
+            if state == "aborting":
                 logger.debug(f"abort state caught: {state}")
                 # By calling the job's cancel method, all pending futures will be cancelled.
                 job.cancel()
                 backend_db.set(job_id, state="cancelled")
                 return
-        # task finished successfully
-        backend_db.set(job_id, state="finished")
+        # job finished successfully
+        backend_db.set(job_id, state="done")
     except Exception as e:
         backend_db.set(job_id=job_id, state="failed", exception=e)
         logger.exception(e)

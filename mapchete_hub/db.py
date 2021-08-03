@@ -190,7 +190,7 @@ class MongoDBStatusHandler():
             "properties": {
                 k: entry.get(k)
                 for k in entry.keys()
-                if k not in ["job_id", "geometry"]
+                if k not in ["job_id", "geometry", "id", "_id"]
             }
         }
 
