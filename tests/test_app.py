@@ -24,15 +24,16 @@ def test_post_process(client, test_process_id):
 
 def test_post_job(client, test_process_id, example_config_json):
     # response = client.get("/jobs")
-    print(example_config_json)
     response = client.post(
         f"/processes/{test_process_id}/execution",
         data=json.dumps(example_config_json)
     )
-    print(response.json())
     assert response.status_code == 200
-    # TODO
-    # assert response.json() == {}
+
+    # check if job is submitted
+    job_id = response.json()["job_id"]
+    response = client.get(f"/jobs/{job_id}")
+    assert response.status_code == 200
 
 
 def test_list_jobs(client):

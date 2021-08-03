@@ -1,12 +1,13 @@
 from datetime import datetime
 import logging
-import mongomock.collection
-import mongomock.database
+import mongomock
+from pydantic import NonNegativeInt
 import pymongo
 from shapely.geometry import box, mapping, Polygon
 import time
 
 from mapchete_hub import models
+from mapchete_hub.geometry import process_area_from_config
 
 logger = logging.getLogger(__name__)
 
@@ -20,29 +21,31 @@ class BackendDB():
             return MongoDBStatusHandler(db_uri=src)
         elif isinstance(src, (pymongo.MongoClient, mongomock.MongoClient)):
             return MongoDBStatusHandler(client=src)
+        elif isinstance(src, mongomock.database.Database):
+            return MongoDBStatusHandler(database=src)
         else:  # pragma: no cover
-            raise NotImplementedError("backend {} of type {}".format(src, type(src)))
+            raise NotImplementedError(f"backend {src} of type {type(src)}")
 
 
 class MongoDBStatusHandler():
     """Abstraction layer over MongoDB backend."""
 
-    def __init__(self, db_uri=None, client=None, collection=None):
+    def __init__(self, db_uri=None, client=None, database=None):
         """Initialize."""
         if db_uri:  # pragma: no cover
-            logger.debug("connect to MongoDB: {}".format(db_uri))
+            logger.debug(f"connect to MongoDB: {db_uri}")
             self._client = pymongo.MongoClient(db_uri, tz_aware=True)
             self._db = self._client["mhub"]
             self._jobs = self._db["jobs"]
         elif client:
-            logger.debug("use existing PyMongo client instance: {}".format(client))
+            logger.debug(f"use existing PyMongo client instance: {client}")
             self._client = client
             self._db = self._client["mhub"]
             self._jobs = self._db["jobs"]
-        elif collection:
+        elif database:
             self._client = None
-            self._db = None
-            self._jobs = collection
+            self._db = database
+            self._jobs = self._db["jobs"]
         logger.debug(f"active client {self._client}")
 
     def jobs(self, **kwargs):
@@ -77,14 +80,9 @@ class MongoDBStatusHandler():
 
         # parsing job state groups and job states
         if query.get("state") is not None:
-            state = query.get("state")
+            state = models.State[query.get("state")]
             # group states are lowercase!
-            if state.lower() in job_states:
-                # for all group states (todo, doing, done) query full group
-                query.update(state={"$in": job_states[state.lower()]})
-            # celery task states are uppercase!
-            else:
-                query.update(state={"$in": [state.upper()]})
+            query.update(state={"$in": [state]})
 
         # convert bounds query into a geo search query
         if query.get("bounds") is not None:
@@ -109,7 +107,7 @@ class MongoDBStatusHandler():
             query.pop("from_date", None)
             query.pop("to_date", None)
 
-        logger.debug("MongoDB query: {}".format(query))
+        logger.debug(f"MongoDB query: {query}")
         return [
             self._entry_to_geojson(e)
             for e in self._jobs.find(query)
@@ -132,7 +130,7 @@ class MongoDBStatusHandler():
         if result:
             return self._entry_to_geojson(result)
         else:
-            return None
+            raise KeyError(f"job {job_id} not found in the database: {result}")
 
     def update(self, job_id=None, metadata={}):
         """
@@ -150,9 +148,9 @@ class MongoDBStatusHandler():
         Updated entry
         """
         if job_id:
-            logger.debug("got event metadata {}".format(metadata))
+            logger.debug(f"got event metadata {metadata}")
             entry = self._event_to_db_schema(job_id, metadata)
-            logger.debug("upsert entry: {}".format(entry))
+            logger.debug(f"upsert entry: {entry}")
             return self._entry_to_geojson(
                 self._jobs.find_one_and_update(
                     {"job_id": job_id},
@@ -162,41 +160,49 @@ class MongoDBStatusHandler():
                 )
             )
 
-    def new(self, job_id=None, metadata=None):
+    def new(
+        self,
+        job_id: str = None,
+        job_config: models.MapcheteJob = None,
+        geometry: dict = None
+    ):
         """
         Create new job entry in database.
-
-        Parameters
-        ----------
-        job_id : str
-            Unique job ID.
-        metadate : dict
-            Job metadata.
-
-        Returns
-        -------
-        None
         """
-        logger.debug(f"got new job {job_id} with metadata {metadata}")
+        if geometry is None:
+            geometry, _ = process_area_from_config(job_config, dst_crs="EPSG:4326")
+        logger.debug(f"got new job {job_id} with job config {job_config}")
         entry = models.Job(
             job_id=job_id,
             state=models.State["pending"],
-            geometry={},
-            mapchete=metadata,
-
+            geometry=geometry,
+            mapchete=job_config,
+            output_path=job_config.dict()["config"]["output"]["path"]
         )
-        self._jobs.insert_one(entry.dict())
-        return self._entry_to_geojson(entry.dict())
+        result = self._jobs.insert_one(entry.dict())
+        if result.acknowledged:
+            return self._entry_to_geojson(entry.dict())
+        else:
+            raise RuntimeError(f"entry {entry} could not be inserted into MongoDB")
 
-    def set(self, job_id, state=None, progress=None, exception=None):
+    def set(
+        self,
+        job_id,
+        state: models.State = None,
+        current_progress: NonNegativeInt = None,
+        total_progress: NonNegativeInt= None,
+        exception: str = None
+    ):
         if job_id:
             entry = {"job_id": job_id}
             if state is not None:
-                entry.update(state=state)
-            if progress is not None:
-                entry.update(progress=progress)
+                entry.update(state=models.State[state])
+            if current_progress is not None:
+                entry.update(current_progress=current_progress)
+            if total_progress is not None:
+                entry.update(total_progress=total_progress)
             if exception is not None:
-                entry.update(exception=exception)
+                entry.update(exception=str(exception))
             logger.debug(f"upsert entry: {entry}")
             return self._entry_to_geojson(
                 self._jobs.find_one_and_update(

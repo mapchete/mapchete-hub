@@ -39,13 +39,13 @@ def example_config_json():
         "config": {
             "process": "mapchete.processes.convert",
             "input": {
-                "inp": "s3://eox-s2cloudless-2020/rgbnir/final/"
+                "inp": "https://ungarj.github.io/mapchete_testdata/tiled_data/raster/cleantopo/"
             },
             "output": {
                 "format": "GTiff",
                 "bands": 4,
                 "dtype": "uint16",
-                "path": "s3://orgonite-methods-tests/test_mapchete_dask_joachim/"
+                "path": "/tmp/test/"
             },
             "pyramid": {
                 "grid": "geodetic",

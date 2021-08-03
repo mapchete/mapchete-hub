@@ -40,6 +40,13 @@ class Progress(BaseModel):
     total: int
 
 
+class GeoJSON(BaseModel):
+    type: str = "Feature"
+    id: str = None
+    geometry: dict = None
+    properties: dict = None
+
+
 class Job(Model, BaseModel):
     job_id: str
     state: State

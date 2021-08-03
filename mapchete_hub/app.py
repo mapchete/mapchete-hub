@@ -156,9 +156,10 @@ def post_job(
     dask_scheduler: str = Depends(get_dask_scheduler)
 ):
     """Executes a process, i.e. creates a new job."""
-    logger.debug(job_config)
     try:
         job_id = uuid4().hex
+        # determine process area in global CRS
+        backend_db.new(job_id=job_id, metadata=job_config)
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper,
@@ -225,7 +226,6 @@ async def job_wrapper(
         check whether the task already got the abort status.
     """
     logger.debug(f"starting mapchete {job_config.command}")
-    backend_db.new(job_id=job_id, metadata=job_config)
     try:
         backend_db.set(job_id, state="started")
         # Mapchete now will initialize the process and prepare all the tasks required.
@@ -243,6 +243,7 @@ async def job_wrapper(
         for i, t in enumerate(job):
             logger.debug(f"job {job_id} task {i + 1}/{len(job)} finished")
             # determine if there is a cancel signal for this task
+            backend_db.set(job_id, progress=i + 1)
             state = backend_db.job(job_id)["properties"]["state"]
             if state == "abort":
                 logger.debug(f"abort state caught: {state}")
@@ -250,7 +251,6 @@ async def job_wrapper(
                 job.cancel()
                 backend_db.set(job_id, state="cancelled")
                 return
-            backend_db.set(job_id, progress=i + 1)
         # task finished successfully
         backend_db.set(job_id, state="finished")
     except Exception as e:
