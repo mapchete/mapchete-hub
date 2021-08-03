@@ -63,7 +63,6 @@ import logging
 from mapchete import commands
 import os
 from typing import Union
-from uuid import uuid4
 
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
@@ -157,18 +156,16 @@ def post_job(
 ):
     """Executes a process, i.e. creates a new job."""
     try:
-        job_id = uuid4().hex
-        # determine process area in global CRS
-        backend_db.new(job_id=job_id, metadata=job_config)
+        job = backend_db.new(metadata=job_config)
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper,
-            job_id,
+            job["id"],
             job_config,
             backend_db,
             dask_scheduler
         )
-        return {"job_id": job_id}
+        return job
     except Exception as e:
         logger.exception(e)
         raise

@@ -5,6 +5,7 @@ from pydantic import NonNegativeInt
 import pymongo
 from shapely.geometry import box, mapping, Polygon
 import time
+from uuid import uuid4
 
 from mapchete_hub import models
 from mapchete_hub.geometry import process_area_from_config
@@ -132,91 +133,59 @@ class MongoDBStatusHandler():
         else:
             raise KeyError(f"job {job_id} not found in the database: {result}")
 
-    def update(self, job_id=None, metadata={}):
-        """
-        Update job entry in database.
-
-        Parameters
-        ----------
-        job_id : str
-            Unique job ID.
-        metadata : dict
-            Job metadata.
-
-        Returns
-        -------
-        Updated entry
-        """
-        if job_id:
-            logger.debug(f"got event metadata {metadata}")
-            entry = self._event_to_db_schema(job_id, metadata)
-            logger.debug(f"upsert entry: {entry}")
-            return self._entry_to_geojson(
-                self._jobs.find_one_and_update(
-                    {"job_id": job_id},
-                    {"$set": entry},
-                    upsert=True,
-                    return_document=pymongo.ReturnDocument.AFTER
-                )
-            )
-
-    def new(
-        self,
-        job_id: str = None,
-        job_config: models.MapcheteJob = None,
-        geometry: dict = None
-    ):
+    def new(self, job_config: models.MapcheteJob = None):
         """
         Create new job entry in database.
         """
-        if geometry is None:
-            geometry, _ = process_area_from_config(job_config, dst_crs="EPSG:4326")
-        logger.debug(f"got new job {job_id} with job config {job_config}")
+        job_id = uuid4().hex
+        logger.debug(f"got new job with config {job_config} and assigning job ID {job_id}")
         entry = models.Job(
             job_id=job_id,
             state=models.State["pending"],
-            geometry=geometry,
+            geometry=process_area_from_config(job_config, dst_crs="EPSG:4326")[0],
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"]
         )
+        logger.debug(entry)
         result = self._jobs.insert_one(entry.dict())
+        logger.debug(result)
         if result.acknowledged:
-            return self._entry_to_geojson(entry.dict())
+            return self.job(job_id)
+            # return self._entry_to_geojson(job)
         else:
             raise RuntimeError(f"entry {entry} could not be inserted into MongoDB")
 
     def set(
         self,
-        job_id,
+        job_id: str = None,
         state: models.State = None,
         current_progress: NonNegativeInt = None,
         total_progress: NonNegativeInt= None,
         exception: str = None
     ):
-        if job_id:
-            entry = {"job_id": job_id}
-            if state is not None:
-                entry.update(state=models.State[state])
-            if current_progress is not None:
-                entry.update(current_progress=current_progress)
-            if total_progress is not None:
-                entry.update(total_progress=total_progress)
-            if exception is not None:
-                entry.update(exception=str(exception))
-            logger.debug(f"upsert entry: {entry}")
-            return self._entry_to_geojson(
-                self._jobs.find_one_and_update(
-                    {"job_id": job_id},
-                    {"$set": entry},
-                    upsert=True,
-                    return_document=pymongo.ReturnDocument.AFTER
-                )
+        entry = {"job_id": job_id}
+        if state is not None:
+            entry.update(state=models.State[state])
+        if current_progress is not None:
+            entry.update(current_progress=current_progress)
+        if total_progress is not None:
+            entry.update(total_progress=total_progress)
+        if exception is not None:
+            entry.update(exception=str(exception))
+        logger.debug(f"upsert entry: {entry}")
+        return self._entry_to_geojson(
+            self._jobs.find_one_and_update(
+                {"job_id": job_id},
+                {"$set": entry},
+                upsert=True,
+                return_document=pymongo.ReturnDocument.AFTER
             )
+        )
 
     def _entry_to_geojson(self, entry):
         return {
             "type": "Feature",
-            "id": entry["job_id"],
+            "id": str(entry["job_id"]),
             "geometry": entry["geometry"],
             "properties": {
                 k: entry.get(k)
@@ -224,38 +193,6 @@ class MongoDBStatusHandler():
                 if k not in ["job_id", "geometry"]
             }
         }
-
-    def _event_to_db_schema(self, job_id=None, metadata=None):
-        """Map celery event metadata to entry schema."""
-        # example metadata keys returned by celery:
-        # metadata.keys():
-        # ['args', 'type', 'clock', 'timestamp', 'kwargs', 'root_id', 'hostname',
-        # 'local_received', 'uuid', 'routing_key', 'eta', 'name', 'exchange',
-        # 'expires', 'retries', 'utcoffset', 'state', 'queue', 'parent_id', 'pid']
-        # in 'kwargs' we have the process information encoded as json
-
-        # json.loads(metadata["kwargs"]).keys():
-        # ['command', 'queue', 'parent_job_id', 'child_job_id', 'process_area', 'mode',
-        # 'bounds', 'tile', 'point', 'mapchete_config', 'wkt_geometry', 'zoom']
-
-        # remember timestamp when process started
-        if metadata.get("type") in ["task-started", "task-received"]:
-            metadata.update(started=metadata.get("timestamp"))
-
-        # get all celery related metadata
-        entry = {
-            "job_id": job_id,
-            **{
-                k: v for k, v in metadata.items()
-                if k in MONGO_ENTRY_SCHEMA.keys() and v is not None
-            }
-        }
-
-        # update state to TERMINATED if task was terminated successfully or was revoked
-        if metadata.get("terminated"):
-            entry.update(state="TERMINATED")
-
-        return entry
 
     def __enter__(self):
         """Enter context."""
