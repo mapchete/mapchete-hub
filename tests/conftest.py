@@ -19,7 +19,7 @@ app.dependency_overrides[get_backend_db] = fake_backend_db
 app.dependency_overrides[get_dask_scheduler] = local_dask_scheduler
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def client():
     return TestClient(app)
 

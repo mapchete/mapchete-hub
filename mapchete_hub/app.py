@@ -61,6 +61,7 @@ import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
 import logging
 from mapchete import commands
+from mapchete.processes import process_names_docstrings, registered_processes
 import os
 from typing import Union
 
@@ -137,7 +138,22 @@ def get_conformance():
 @app.get("/processes")
 def get_processes():
     """Lists the processes this API offers."""
-    raise NotImplementedError()
+    return {
+        "processes": [
+            {"title": title, "description": description}
+            for title, description in process_names_docstrings()
+        ]
+    }
+
+
+@app.get("/processes/{process_id}")
+def get_process(process_id: str):
+    """Returns a detailed description of a process."""
+    try:
+        title, description = process_names_docstrings(process_id)[0]
+        return {"title": title, "description": description}
+    except IndexError:
+        raise HTTPException(404, f"process '{process_id}' not found")
 
 
 @app.post("/processes/{process_id}")
