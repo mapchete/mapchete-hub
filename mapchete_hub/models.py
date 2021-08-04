@@ -1,7 +1,7 @@
 from enum import Enum
 from odmantic import Model
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Union
 
 
 class State(str, Enum):
@@ -21,12 +21,12 @@ class MapcheteCommand(str, Enum):
 
 
 class MapcheteProcessConfig(BaseModel):
-    process: str
+    process: Union[str, list]
     input: dict
     output: dict
     pyramid: dict
     zoom_levels: dict
-    process_bounds: tuple = None
+    bounds: tuple = None
     config_dir: str = None
 
 

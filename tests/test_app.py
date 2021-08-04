@@ -51,6 +51,24 @@ def test_post_job(client, test_process_id, example_config_json):
     assert response.status_code == 200
 
 
+def test_post_job_custom_process(client, test_process_id, example_config_custom_process_json):
+    print(json.dumps(example_config_custom_process_json))
+    response = client.post(
+        f"/processes/{test_process_id}/execution",
+        data=json.dumps(example_config_custom_process_json)
+    )
+    print(response.json())
+    assert response.status_code == 201
+
+    assert client.get("/jobs/").json()
+
+    # check if job is submitted
+    job_id = response.json()["id"]
+    response = client.get(f"/jobs/{job_id}")
+    assert response.status_code == 200
+    assert response.json()["properties"]["state"] == "done"
+
+
 def test_list_jobs(client, test_process_id, example_config_json):
     # this should be empty
     response = client.get("/jobs")

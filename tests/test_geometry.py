@@ -62,7 +62,7 @@ def test_process_area_from_config(example_config_json):
             example_config_json,
             config=dict(
                 example_config_json["config"],
-                process_bounds=bounds
+                bounds=bounds
             ),
             params=dict(zoom=8)
         )

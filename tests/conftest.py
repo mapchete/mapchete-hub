@@ -58,3 +58,39 @@ def example_config_json(tmpdir):
             }
         }
     }
+
+
+@pytest.fixture
+def example_config_custom_process_json(tmpdir):
+    return {
+        "command": "execute",
+        "params": {
+            "zoom": 8,
+            "bounds": [0, 1, 2, 3]
+        },
+        "config": {
+            "process": [
+                "def execute(mp):",
+                "    with mp.open('inp') as inp:",
+                "        return inp.read()",
+
+            ],
+            "input": {
+                "inp": "https://ungarj.github.io/mapchete_testdata/tiled_data/raster/cleantopo/"
+            },
+            "output": {
+                "format": "GTiff",
+                "bands": 4,
+                "dtype": "uint16",
+                "path": str(tmpdir)
+            },
+            "pyramid": {
+                "grid": "geodetic",
+                "metatiling": 2
+            },
+            "zoom_levels": {
+                "min": 0,
+                "max": 13
+            }
+        }
+    }

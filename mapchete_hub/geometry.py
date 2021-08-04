@@ -70,8 +70,8 @@ def process_area_from_config(
     elif params.get("tile"):
         geometry = tp.tile(*params.get("tile")).bbox
     # mapchete_config
-    elif config.get("process_bounds"):
-        geometry = box(*config.get("process_bounds"))
+    elif config.get("bounds"):
+        geometry = box(*config.get("bounds"))
     else:
         # raise error if no process areas is given
         raise AttributeError(
