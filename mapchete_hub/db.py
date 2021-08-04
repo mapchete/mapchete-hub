@@ -159,7 +159,8 @@ class MongoDBStatusHandler():
         state: models.State = None,
         current_progress: NonNegativeInt = None,
         total_progress: NonNegativeInt= None,
-        exception: str = None
+        exception: str = None,
+        traceback: str = None
     ):
         entry = {"job_id": job_id}
         if state is not None:
@@ -172,6 +173,8 @@ class MongoDBStatusHandler():
             entry.update(total_progress=total_progress)
         if exception is not None:
             entry.update(exception=str(exception))
+        if traceback is not None:
+            entry.update(traceback=traceback)
         # add timestamp to entry
         entry.update(timestamp=time.time())
         logger.debug(f"upsert entry: {entry}")

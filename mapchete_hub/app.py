@@ -63,6 +63,7 @@ import logging
 from mapchete import commands
 from mapchete.processes import process_names_docstrings, registered_processes
 import os
+import traceback
 from typing import Union
 
 from mapchete_hub import __version__, models
@@ -106,8 +107,8 @@ def get_backend_db():  # pragma: no cover
 
 def get_dask_scheduler():  # pragma: no cover
     scheduler = os.environ.get("DASK_SCHEDULER")
-    if scheduler is None:
-        raise ValueError("DASK_SCHEDULER environment variable must be set")
+    # if scheduler is None:
+    #     raise ValueError("DASK_SCHEDULER environment variable must be set")
     return scheduler
 
 
@@ -275,5 +276,5 @@ def job_wrapper(
         # job finished successfully
         backend_db.set(job_id, state="done")
     except Exception as e:
-        backend_db.set(job_id=job_id, state="failed", exception=e)
+        backend_db.set(job_id=job_id, state="failed", exception=repr(e), traceback="".join(traceback.format_tb(e.__traceback__)))
         logger.exception(e)
