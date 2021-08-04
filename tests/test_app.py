@@ -93,9 +93,18 @@ def test_list_jobs(client, test_process_id, example_config_json):
 #     assert response.json()["properties"]["state"] == "aborting"
 
 
-# def get_job_result(client):
-#     # TODO get job id
-#     response = client.get(f"/jobs/{test_job_id}/result")
-#     assert response.status_code == 200
-#     # TODO
-#     # assert response.json() == {}
+def test_job_result(client, test_process_id, example_config_json):
+    result = client.post(
+        f"/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json,
+                params=dict(example_config_json["params"], zoom=2)
+            )
+        )
+    )
+    job_id = result.json()["id"]
+
+    result = client.get(f"/jobs/{job_id}/result")
+    assert result.status_code == 200
+    assert "tmp" in result.json()

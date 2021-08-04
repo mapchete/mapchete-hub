@@ -230,9 +230,9 @@ def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
 
 
 @app.get("/jobs/{job_id}/result")
-def get_job_result(job_id: str):
+def get_job_result(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Returns the result of a job."""
-    return backend_db.job(job_id)["result"]
+    return backend_db.job(job_id)["properties"]["output_path"]
 
 
 def job_wrapper(
