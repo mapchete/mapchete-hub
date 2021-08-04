@@ -8,7 +8,7 @@ from mapchete_hub.db import BackendDB
 from mapchete_hub.geometry import process_area_from_config
 
 
-def test_mongodb_backend(example_config_json, mongodb):
+def test_mongodb_backend_job(example_config_json, mongodb):
     job_config = models.MapcheteJob(**example_config_json)
     with BackendDB(src=mongodb) as db:
         # add new job
@@ -80,9 +80,6 @@ def test_mongodb_backend(example_config_json, mongodb):
 
         # TODO: filter by time
         now = datetime.datetime.utcfromtimestamp(time.time())
-        print(now)
-        for j in db.jobs():
-            print(datetime.datetime.utcfromtimestamp(j["properties"]["timestamp"]))
         assert len(db.jobs(from_date=now)) == 0
 
         # filter by state

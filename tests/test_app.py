@@ -52,7 +52,6 @@ def test_post_job(client, test_process_id, example_config_json):
 
 
 def test_post_job_custom_process(client, test_process_id, example_config_custom_process_json):
-    print(json.dumps(example_config_custom_process_json))
     response = client.post(
         f"/processes/{test_process_id}/execution",
         data=json.dumps(example_config_custom_process_json)
