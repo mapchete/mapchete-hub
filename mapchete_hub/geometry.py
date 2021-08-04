@@ -1,13 +1,14 @@
+from mapchete.config import get_zoom_levels
 from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTilePyramid
 from rasterio.crs import CRS
-from shapely.geometry import box, mapping
+from shapely.geometry import box, mapping, shape
 
 from mapchete_hub import models
 
 
 def process_area_from_config(
-    job_config,
+    job_config: models.MapcheteJob,
     dst_crs=None,
     **kwargs
 ):
@@ -38,8 +39,9 @@ def process_area_from_config(
     (geometry, geometry_process_crs) : tuple of shapely.Polygon
         Geometry in mhub CRS (which is defined in status_gpkg_profile) and in process CRS.
     """
-    config = job_config.dict().get("config", {})
-    params = job_config.dict().get("params", {})
+    job_config = models.MapcheteJob(**job_config) if isinstance(job_config, dict) else job_config
+    config = job_config.dict().get("config") or {}
+    params = job_config.dict().get("params") or {}
 
     if "pyramid" not in config:
         raise KeyError("mapchete_config has no 'pyramid' defined")

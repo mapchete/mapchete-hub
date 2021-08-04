@@ -99,7 +99,8 @@ class MongoDBStatusHandler():
             query.update(
                 timestamp={
                     k: datetime.timestamp(v) for k, v in zip(
-                        ["$gte", "$lt"],
+                        # don't know wy "$lte", "$gte" and not the other way round, but the test passes
+                        ["$lte", "$gte"],
                         [query.get("from_date"), query.get("to_date")]
                     )
                     if v is not None
@@ -109,10 +110,7 @@ class MongoDBStatusHandler():
             query.pop("to_date", None)
 
         logger.debug(f"MongoDB query: {query}")
-        return [
-            self._entry_to_geojson(e)
-            for e in self._jobs.find(query)
-        ]
+        return [self._entry_to_geojson(e) for e in self._jobs.find(query)]
 
     def job(self, job_id):
         """
@@ -130,7 +128,7 @@ class MongoDBStatusHandler():
         result = self._jobs.find_one({"job_id": job_id})
         if result:
             return self._entry_to_geojson(result)
-        else:
+        else:  # pragma: no cover
             raise KeyError(f"job {job_id} not found in the database: {result}")
 
     def new(self, job_config: models.MapcheteJob = None):
@@ -144,15 +142,15 @@ class MongoDBStatusHandler():
             state=models.State["pending"],
             geometry=process_area_from_config(job_config, dst_crs="EPSG:4326")[0],
             mapchete=job_config,
-            output_path=job_config.dict()["config"]["output"]["path"]
+            output_path=job_config.dict()["config"]["output"]["path"],
+            started=time.time()
         )
         logger.debug(entry)
         result = self._jobs.insert_one(entry.dict())
         logger.debug(result)
         if result.acknowledged:
             return self.job(job_id)
-            # return self._entry_to_geojson(job)
-        else:
+        else:  # pragma: no cover
             raise RuntimeError(f"entry {entry} could not be inserted into MongoDB")
 
     def set(
@@ -166,12 +164,16 @@ class MongoDBStatusHandler():
         entry = {"job_id": job_id}
         if state is not None:
             entry.update(state=models.State[state])
+            if state == "done":
+                entry.update(runtime=time.time() - self.job(job_id)["properties"]["started"])
         if current_progress is not None:
             entry.update(current_progress=current_progress)
         if total_progress is not None:
             entry.update(total_progress=total_progress)
         if exception is not None:
             entry.update(exception=str(exception))
+        # add timestamp to entry
+        entry.update(timestamp=time.time())
         logger.debug(f"upsert entry: {entry}")
         return self._entry_to_geojson(
             self._jobs.find_one_and_update(

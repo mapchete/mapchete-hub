@@ -1,5 +1,7 @@
+import datetime
 import pytest
 from shapely.geometry import shape
+import time
 
 from mapchete_hub import models
 from mapchete_hub.db import BackendDB
@@ -77,6 +79,11 @@ def test_mongodb_backend(example_config_json, mongodb):
         assert len(all_jobs) == 2
 
         # TODO: filter by time
+        now = datetime.datetime.utcfromtimestamp(time.time())
+        print(now)
+        for j in db.jobs():
+            print(datetime.datetime.utcfromtimestamp(j["properties"]["timestamp"]))
+        assert len(db.jobs(from_date=now)) == 0
 
         # filter by state
         assert len(db.jobs(state="done")) == 0
