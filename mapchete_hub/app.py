@@ -77,7 +77,7 @@ sh.setFormatter(formatter)
 if __name__ != "__main__":
     logger.setLevel(uvicorn_logger.level)
     sh.setLevel(uvicorn_logger.level)
-else:
+else:  # pragma: no cover
     logger.setLevel(logging.DEBUG)
     sh.setLevel(logging.DEBUG)
 logger.addHandler(sh)
@@ -96,7 +96,7 @@ app = FastAPI()
 
 # dependencies
 
-def get_backend_db():
+def get_backend_db():  # pragma: no cover
     url = os.environ.get("MONGO_URL")
     if not url:
         raise ValueError("MONGO_URL must be provided")
@@ -104,10 +104,10 @@ def get_backend_db():
     return BackendDB(src=url)
 
 
-def get_dask_scheduler():
+def get_dask_scheduler():  # pragma: no cover
     scheduler = os.environ.get("DASK_SCHEDULER")
-    # if scheduler is None:
-    #     raise ValueError("DASK_SCHEDULER environment variable must be set")
+    if scheduler is None:
+        raise ValueError("DASK_SCHEDULER environment variable must be set")
     return scheduler
 
 
@@ -188,9 +188,9 @@ def post_job(
         logger.debug(f"submitted job {job}")
         logger.debug(f"currently running {len(backend_db.jobs())} jobs")
         return job
-    except Exception as e:
+    except Exception as e:  # pragma: no cover
         logger.exception(e)
-        raise
+        raise HTTPException(400, e)
  
 
 @app.get("/jobs")
@@ -225,7 +225,9 @@ def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
 @app.delete("/jobs/{job_id}")
 def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Cancel a job execution."""
-    backend_db.set(job_id, state="aborting")
+    job = backend_db.job(job_id)
+    if job["properties"]["state"] in ["pending", "running"]:
+        backend_db.set(job_id, state="aborting")
     return backend_db.job(job_id)
 
 

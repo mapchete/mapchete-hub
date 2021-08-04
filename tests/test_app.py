@@ -1,11 +1,17 @@
 import json
+import pytest
 
 
-# def test_get_conformance(client):
-#     response = client.get("/conformance")
-#     assert response.status_code == 200
-#     # TODO
-#     # assert response.json() == {}
+def test_get_root(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json()
+
+
+def test_get_conformance(client):
+    # TODO
+    with pytest.raises(NotImplementedError):
+        response = client.get("/conformance")
 
 
 def test_get_processes(client):
@@ -19,12 +25,14 @@ def test_get_process(client):
     assert response.status_code == 200
     assert "title" in response.json()
 
+    response = client.get("/processes/invalid_process")
+    assert response.status_code == 404
 
-# def test_post_process(client, test_process_id):
-#     response = client.post(f"/processes/{test_process_id}")
-#     assert response.status_code == 200
-#     # TODO
-#     # assert response.json() == {}
+
+def test_post_process(client, test_process_id):
+    # TODO
+    with pytest.raises(NotImplementedError):
+        response = client.post(f"/processes/{test_process_id}")
 
 
 def test_post_job(client, test_process_id, example_config_json):
@@ -69,28 +77,29 @@ def test_list_jobs(client, test_process_id, example_config_json):
     assert after > before
 
 
-# def test_cancel_job(client, test_process_id, example_config_json):
-#     # make one long running job
-#     response = client.post(
-#         f"/processes/{test_process_id}/execution",
-#         data=json.dumps(
-#             dict(
-#                 example_config_json,
-#                 params=dict(example_config_json["params"], zoom=12)
-#             )
-#         )
-#     )
-#     job_id = response.json()["id"]
+@pytest.mark.skip(reason="the background task does not run in the background in TestClient")
+def test_cancel_job(client, test_process_id, example_config_json):
+    # make one long running job
+    response = client.post(
+        f"/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json,
+                params=dict(example_config_json["params"], zoom=12)
+            )
+        )
+    )
+    job_id = response.json()["id"]
 
-#     # make sure job is running
-#     response = client.get(f"/jobs/{job_id}")
-#     assert response.json()["properties"]["state"] == "running"
+    # make sure job is running
+    response = client.get(f"/jobs/{job_id}")
+    assert response.json()["properties"]["state"] == "running"
 
-#     # send cancel signal
-#     response = client.delete(f"/jobs/{job_id}")
+    # send cancel signal
+    response = client.delete(f"/jobs/{job_id}")
 
-#     response = client.get(f"/jobs/{job_id}")
-#     assert response.json()["properties"]["state"] == "aborting"
+    response = client.get(f"/jobs/{job_id}")
+    assert response.json()["properties"]["state"] == "aborting"
 
 
 def test_job_result(client, test_process_id, example_config_json):
