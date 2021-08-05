@@ -101,7 +101,8 @@ class MongoDBStatusHandler():
                 timestamp={
                     k: datetime.timestamp(v) for k, v in zip(
                         # don't know wy "$lte", "$gte" and not the other way round, but the test passes
-                        ["$lte", "$gte"],
+                        # ["$lte", "$gte"],
+                        ["$gte", "$lte"],
                         [query.get("from_date"), query.get("to_date")]
                     )
                     if v is not None
