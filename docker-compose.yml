@@ -26,15 +26,13 @@ services:
     networks:
       - backend
     ports:
-      - 5000:8000
-    command: ["uvicorn", "mapchete_hub.app:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "debug"]
+      - ${MHUB_PORT:-5000}:5000
+    command: ["uvicorn", "mapchete_hub.app:app", "--host", "0.0.0.0", "--port", "5000", "--log-level", "debug"]
 
   dask_scheduler:
     build: .
     networks:
       - backend
-    ports:
-      - "8786:8786"
     command: ["dask-scheduler", "--host", "dask_scheduler", "--port", "8786"]
 
   dask_worker:

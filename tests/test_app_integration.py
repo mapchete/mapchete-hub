@@ -1,44 +1,45 @@
 import json
+import os
 import pytest
 import requests
 import time
 
 
-TEST_ENDPOINT = "http://0.0.0.0:5000"
+TEST_ENDPOINT = os.environ.get("MHUB_HOST", "http://0.0.0.0:5000")
 
-def _endpoint_not_available():
+def _endpoint_available():
     try:
         response = requests.get(TEST_ENDPOINT)
-        return response.status_code != 200
+        return response.status_code == 200
     except requests.exceptions.ConnectionError:
-        return True
+        return False
 
 
-ENDPOINT_NOT_AVAILABLE = _endpoint_not_available()
+ENDPOINT_AVAILABLE = _endpoint_available()
 
 
-@pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 def test_get_root():
     response = requests.get(f"{TEST_ENDPOINT}/")
     assert response.status_code == 200
     assert response.json()
 
 
-# @pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+# @pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 # def test_get_conformance():
 #     # TODO
 #     with pytest.raises(NotImplementedError):
 #         response = requests.get(f"{TEST_ENDPOINT}/conformance")
 
 
-@pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 def test_get_processes():
     response = requests.get(f"{TEST_ENDPOINT}/processes")
     assert response.status_code == 200
     assert len(response.json()) > 0
 
 
-@pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 def test_get_process():
     response = requests.get(f"{TEST_ENDPOINT}/processes/mapchete.processes.convert")
     assert response.status_code == 200
@@ -48,14 +49,14 @@ def test_get_process():
     assert response.status_code == 404
 
 
-# @pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+# @pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 # def test_post_process(test_process_id):
 #     # TODO
 #     with pytest.raises(NotImplementedError):
 #         response = requests.post(f"{TEST_ENDPOINT}/processes/{test_process_id}")
 
 
-@pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 def test_post_job(test_process_id, example_config_json):
     response = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
@@ -71,7 +72,7 @@ def test_post_job(test_process_id, example_config_json):
     assert response.status_code == 200
 
 
-@pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 def test_post_job_custom_process(test_process_id, example_config_custom_process_json):
     response = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
@@ -88,7 +89,7 @@ def test_post_job_custom_process(test_process_id, example_config_custom_process_
     assert response.json()["properties"]["state"] == "running"
 
 
-@pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 def test_list_jobs(test_process_id, example_config_json):
     # this should be empty
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
@@ -115,7 +116,7 @@ def test_list_jobs(test_process_id, example_config_json):
     assert after > before
 
 
-@pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 def test_cancel_job(test_process_id, example_config_json):
     # make one long running job
     response = requests.post(
@@ -145,7 +146,7 @@ def test_cancel_job(test_process_id, example_config_json):
     assert response.json()["properties"]["state"] == "cancelled"
 
 
-@pytest.mark.skipif(ENDPOINT_NOT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 def test_job_result(test_process_id, example_config_json):
     result = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
