@@ -44,7 +44,7 @@ def example_config_json(tmpdir):
             },
             "output": {
                 "format": "GTiff",
-                "bands": 4,
+                "bands": 1,
                 "dtype": "uint16",
                 "path": str(tmpdir)
             },
@@ -80,7 +80,7 @@ def example_config_custom_process_json(tmpdir):
             },
             "output": {
                 "format": "GTiff",
-                "bands": 4,
+                "bands": 1,
                 "dtype": "uint16",
                 "path": str(tmpdir)
             },

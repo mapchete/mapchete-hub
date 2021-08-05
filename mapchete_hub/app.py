@@ -98,15 +98,15 @@ app = FastAPI()
 # dependencies
 
 def get_backend_db():  # pragma: no cover
-    url = os.environ.get("MONGO_URL")
+    url = os.environ.get("MHUB_MONGODB_URL")
     if not url:
-        raise ValueError("MONGO_URL must be provided")
+        raise ValueError("MHUB_MONGODB_URL must be provided")
     logger.debug(f"connect to {url}")
     return BackendDB(src=url)
 
 
 def get_dask_scheduler():  # pragma: no cover
-    scheduler = os.environ.get("DASK_SCHEDULER")
+    scheduler = os.environ.get("MHUB_DASK_SCHEDULER_URL")
     # if scheduler is None:
     #     raise ValueError("DASK_SCHEDULER environment variable must be set")
     return scheduler

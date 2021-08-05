@@ -3,6 +3,7 @@ cached_property
 dask
 distributed
 fastapi==0.66
+mongomock
 odmantic
 pymongo
 uvicorn

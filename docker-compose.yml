@@ -21,8 +21,8 @@ services:
       - dask_scheduler
       - db
     environment:
-      - DASK_SCHEDULER=tcp://dask_scheduler:8786
-      - MHUB_STATUS_DB_URI=mongodb://mhub:REDACTED_API_KEY@db:27017
+      - MHUB_DASK_SCHEDULER_URL=tcp://dask_scheduler:8786
+      - MHUB_MONGODB_URL=mongodb://mhub:REDACTED_API_KEY@db:27017
     networks:
       - backend
     ports:

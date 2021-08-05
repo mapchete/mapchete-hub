@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import mongomock
+import os
 from pydantic import NonNegativeInt
 import pymongo
 from shapely.geometry import box, mapping, Polygon
@@ -140,7 +141,10 @@ class MongoDBStatusHandler():
         entry = models.Job(
             job_id=job_id,
             state=models.State["pending"],
-            geometry=process_area_from_config(job_config, dst_crs="EPSG:4326")[0],
+            geometry=process_area_from_config(
+                job_config,
+                dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
+            )[0],
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"],
             started=time.time()

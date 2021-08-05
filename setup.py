@@ -20,6 +20,9 @@ install_requires = [
     "distributed",
     "fastapi==0.66",
     "mapchete[contours,geobuf,http,s3,vrt]>=0.40",
+    "mongomock",
+    "odmantic",
+    "pymongo",
     "uvicorn",
 ]
 test_requires = [
@@ -27,6 +30,7 @@ test_requires = [
     "pytest-cov",
     "pytest-env",
     "pytest-mongodb",
+    "requests",
 ]
 
 setup(
@@ -48,8 +52,8 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: Scientific/Engineering :: GIS",
         "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
     setup_requires=["pytest-runner"],
     tests_require=["pytest", "pytest-flask"]
