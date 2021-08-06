@@ -29,8 +29,8 @@ Please consult the ``docker-compose.yml`` file to gather details.
 A mapchete process can be used in mapchete Hub if its inputs and outputs are not locally stored as we cannot be sure on which worker (or host) the process will run.
 
 
-Cluster configuration options
------------------------------
+Configuration options
+---------------------
 
 MHUB_BACKEND_CRS
 ~~~~~~~~~~~~~~~~
@@ -47,6 +47,17 @@ MHUB_DASK_SCHEDULER_URL
 
 URL to dask scheduler.
 
+
+MHUB_ADD_MAPCHETE_LOGGER
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add mapchete logger to log output.
+
+
+MHUB_WORKER_EVENT_RATE_LIMIT
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Limit frequency in seconds to send job updates to metadatabase. This eases the DB traffic especially for jobs with short running tasks. Defaults to 0.2.
 
 ------
 Docker
@@ -71,6 +82,6 @@ License
 
 MIT License
 
-Copyright (c) 2018 - 2020 `EOX IT Services`_
+Copyright (c) 2018 - 2021 `EOX IT Services`_
 
 .. _`EOX IT Services`: https://eox.at/
