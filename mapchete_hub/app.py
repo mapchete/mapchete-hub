@@ -56,13 +56,14 @@ POST /processes/{process_id}/execution
 Trigger a job using a given process_id. This returns a job ID.
 """
 
-from dask.distributed import as_completed, Client
+from dask.distributed import get_client
 import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
 import logging
 from mapchete import commands
 from mapchete.processes import process_names_docstrings, registered_processes
 import os
+import time
 import traceback
 from typing import Union
 
@@ -71,17 +72,23 @@ from mapchete_hub.db import BackendDB
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
-logger = logging.getLogger("mapchete_hub")
 sh = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
 sh.setFormatter(formatter)
-if __name__ != "__main__":
-    logger.setLevel(uvicorn_logger.level)
-    sh.setLevel(uvicorn_logger.level)
-else:  # pragma: no cover
-    logger.setLevel(logging.DEBUG)
-    sh.setLevel(logging.DEBUG)
-logger.addHandler(sh)
+
+loggers = ["mapchete_hub"]
+if os.environ.get("MHUB_ADD_MAPCHETE_LOGGER", "").lower() == "true":
+    loggers.append("mapchete")
+for l in loggers:
+    logger = logging.getLogger(l)
+    if __name__ != "__main__":
+        logger.setLevel(uvicorn_logger.level)
+        sh.setLevel(uvicorn_logger.level)
+    else:  # pragma: no cover
+        logger.setLevel(logging.DEBUG)
+        sh.setLevel(logging.DEBUG)
+    logger.addHandler(sh)
+
 logger = logging.getLogger(__name__)
 
 
@@ -91,6 +98,7 @@ MAPCHETE_COMMANDS = {
     "execute": commands.execute,
     "index": commands.index,
 }
+MHUB_WORKER_EVENT_RATE_LIMIT = os.environ.get("MHUB_WORKER_EVENT_RATE_LIMIT", 0.2)
 
 
 app = FastAPI()
@@ -187,7 +195,7 @@ def post_job(
         # return job
         job = backend_db.job(job["id"])
         logger.debug(f"submitted job {job}")
-        logger.debug(f"currently running {len(backend_db.jobs())} jobs")
+        logger.debug(f"currently running {len(backend_db.jobs(state='running'))} jobs")
         return job
     except Exception as e:  # pragma: no cover
         logger.exception(e)
@@ -247,32 +255,39 @@ def job_wrapper(
     """ Create a Job iterator through the mapchete_execute function. On every new finished task,
         check whether the task already got the abort status.
     """
-    logger.debug(f"starting mapchete {job_config.command}")
+    logger.debug(f"job {job_id} starting mapchete {job_config.command}")
     try:
         backend_db.set(job_id, state="running")
+        dask_client = get_client(dask_scheduler)
         # Mapchete now will initialize the process and prepare all the tasks required.
         job = MAPCHETE_COMMANDS[job_config.command](
             job_config.config.dict(),
             **job_config.params,
             as_iterator=True,
             concurrency="dask",
-            dask_scheduler=dask_scheduler
+            dask_client=dask_client
         )
         backend_db.set(job_id, current_progress=0, total_progress=len(job))
-        logger.debug(f"created {job_id}")
+        logger.debug(f"job {job_id} created")
         # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
         # yield the results.
+        last_event = 0.
         for i, t in enumerate(job):
-            logger.debug(f"job {job_id} task {i + 1}/{len(job)} finished")
-            # determine if there is a cancel signal for this task
-            backend_db.set(job_id, current_progress=i + 1)
-            state = backend_db.job(job_id)["properties"]["state"]
-            if state == "aborting":
-                logger.debug(f"abort state caught: {state}")
-                # By calling the job's cancel method, all pending futures will be cancelled.
-                job.cancel()
-                backend_db.set(job_id, state="cancelled")
-                return
+            i += 1
+            logger.debug(f"job {job_id} task {i}/{len(job)} finished")
+
+            event_time_passed = time.time() - last_event
+            if event_time_passed > MHUB_WORKER_EVENT_RATE_LIMIT or i == len(job):
+                last_event = time.time()
+                # determine if there is a cancel signal for this task
+                backend_db.set(job_id, current_progress=i)
+                state = backend_db.job(job_id)["properties"]["state"]
+                if state == "aborting":
+                    logger.debug(f"job {job_id} abort state caught: {state}")
+                    # By calling the job's cancel method, all pending futures will be cancelled.
+                    job.cancel()
+                    backend_db.set(job_id, state="cancelled")
+                    return
         # job finished successfully
         backend_db.set(job_id, state="done")
     except Exception as e:
