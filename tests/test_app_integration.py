@@ -147,6 +147,53 @@ def test_cancel_job(test_process_id, example_config_json):
 
 
 @pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+def test_cancel_jobs(test_process_id, example_config_json):
+    # make one long running job
+    jobs = [
+        requests.post(
+            f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
+            data=json.dumps(
+                dict(
+                    example_config_json,
+                    params=dict(example_config_json["params"], zoom=12)
+                )
+            ),
+            timeout=3
+        ).json()["id"]
+        for _ in range(2)
+    ]
+
+    for job_id in jobs:
+        # make sure jobs are running
+        response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
+        assert response.json()["properties"]["state"] == "running"
+
+    # send cancel signal
+    response = requests.delete(f"{TEST_ENDPOINT}/jobs/{jobs[0]}", timeout=3)
+
+    # make sure cancel signal is stored successfully
+    response = requests.get(f"{TEST_ENDPOINT}/jobs/{jobs[0]}", timeout=3)
+    assert response.json()["properties"]["state"] in ["aborting", "cancelled"]
+
+    # see if job is cancelled
+    start = time.time()
+    while True:
+        time.sleep(1)
+        response = requests.get(f"{TEST_ENDPOINT}/jobs/{jobs[0]}", timeout=3)
+        state = response.json()["properties"]["state"]
+        traceback = response.json()["properties"]["traceback"] or ""
+        if state == "cancelled":
+            break
+        elif time.time() - start > 10:
+            raise RuntimeError(f"job not cancelled in time, last state was '{state}' {traceback}")
+
+    # make sure other job has not failed
+    response = requests.get(f"{TEST_ENDPOINT}/jobs/{jobs[1]}", timeout=3)
+    assert response.json()["properties"]["state"] in ["running", "done"]
+
+
+
+@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
 def test_job_result(test_process_id, example_config_json):
     result = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
