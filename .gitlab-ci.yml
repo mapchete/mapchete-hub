@@ -58,7 +58,14 @@ test_mhub:
     - export IMAGE_TAG=`if [ "$CI_COMMIT_REF_NAME" == "master" ]; then echo "latest"; else echo $CI_COMMIT_REF_NAME; fi`
   script:
     # run tests
-    - ./run_integration_tests.sh
+    - >
+      docker-compose \
+        -p $CI_JOB_ID \
+        -f docker-compose.yml \
+        -f docker-compose.test.yml \
+        up \
+        --exit-code-from mhub_tester
+
   after_script:
     - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml down -v --rmi all --remove-orphans || true
     - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml rm -fv || true
@@ -79,7 +86,13 @@ test_mhub-s1:
     - export IMAGE_TAG=`if [ "$CI_COMMIT_REF_NAME" == "master" ]; then echo "latest"; else echo $CI_COMMIT_REF_NAME; fi`
   script:
     # run tests
-    - ./run_integration_tests.sh
+    - >
+      docker-compose \
+        -p $CI_JOB_ID \
+        -f docker-compose.yml \
+        -f docker-compose.test.yml \
+        up \
+        --exit-code-from mhub_tester
   after_script:
     - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml down -v --rmi all --remove-orphans || true
     - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml rm -fv || true
