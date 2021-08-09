@@ -141,7 +141,7 @@ def test_cancel_job(test_process_id, example_config_json):
     assert response.json()["properties"]["state"] == "aborting"
 
     # see if job is cancelled
-    time.sleep(5)
+    time.sleep(10)
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
     assert response.json()["properties"]["state"] == "cancelled"
 
