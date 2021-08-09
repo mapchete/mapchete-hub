@@ -60,7 +60,7 @@ COPY requirements.in $MHUB_DIR/
 # install wheels first and then everything else
 RUN pip install $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
-    ./$MHUB_DIR/pypi_dont_update.sh fiona gdal jenkspy numcodecs numpy psutil rasterio shapely >> ${MHUB_DIR}/requirements.in && \
+    ./$MHUB_DIR/pypi_dont_update.sh fiona gdal jenkspy numcodecs numpy rasterio shapely >> ${MHUB_DIR}/requirements.in && \
     cat $MHUB_DIR/requirements.in && \
     pip install pip-tools && \
     pip-compile \

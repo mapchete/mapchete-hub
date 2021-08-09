@@ -1,8 +1,10 @@
-cached_property
 dask
 distributed
 fastapi==0.66
+mapchete
 mongomock
 odmantic
 pymongo
+rasterio
+shapely
 uvicorn
