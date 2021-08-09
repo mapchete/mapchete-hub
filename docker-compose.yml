@@ -41,7 +41,7 @@ services:
       - dask_scheduler
     networks:
       - backend
-    command: ["dask-worker", "--nthreads", "1", "--nprocs", "8", "tcp://dask_scheduler:8786"]
+    command: ["dask-worker", "--nthreads", "2", "--nprocs", "8", "tcp://dask_scheduler:8786"]
 
 volumes:
   db-data:

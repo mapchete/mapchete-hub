@@ -184,7 +184,7 @@ def test_cancel_jobs(test_process_id, example_config_json):
         traceback = response.json()["properties"]["traceback"] or ""
         if state == "cancelled":
             break
-        elif time.time() - start > 10:
+        elif time.time() - start > 120:
             raise RuntimeError(f"job not cancelled in time, last state was '{state}' {traceback}")
 
     # make sure other job has not failed
@@ -206,6 +206,6 @@ def test_job_result(test_process_id, example_config_json):
     )
     job_id = result.json()["id"]
 
-    result = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}/result")
-    assert result.status_code == 200
-    assert "tmp" in result.json()
+    response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}/result")
+    assert response.status_code == 200
+    assert "tmp" in response.json()

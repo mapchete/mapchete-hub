@@ -56,7 +56,7 @@ POST /processes/{process_id}/execution
 Trigger a job using a given process_id. This returns a job ID.
 """
 
-from dask.distributed import get_client
+from dask.distributed import Client, get_client
 import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
 import logging
@@ -115,8 +115,8 @@ def get_backend_db():  # pragma: no cover
 
 def get_dask_scheduler():  # pragma: no cover
     scheduler = os.environ.get("MHUB_DASK_SCHEDULER_URL")
-    # if scheduler is None:
-    #     raise ValueError("DASK_SCHEDULER environment variable must be set")
+    if scheduler is None:
+        raise ValueError("DASK_SCHEDULER environment variable must be set")
     return scheduler
 
 
@@ -258,7 +258,7 @@ def job_wrapper(
     logger.debug(f"job {job_id} starting mapchete {job_config.command}")
     try:
         backend_db.set(job_id, state="running")
-        dask_client = get_client(dask_scheduler)
+        dask_client = get_client(dask_scheduler) if dask_scheduler else Client()
         # Mapchete now will initialize the process and prepare all the tasks required.
         job = MAPCHETE_COMMANDS[job_config.command](
             job_config.config.dict(),
