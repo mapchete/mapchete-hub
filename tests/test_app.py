@@ -99,7 +99,7 @@ def test_list_jobs_bounds(client, test_process_id, example_config_json):
     response = client.get("/jobs")
     assert response.status_code == 200
     response = client.post(
-        "/processes/{test_process_id}/execution",
+        f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
                 example_config_json,
@@ -125,7 +125,7 @@ def test_list_jobs_output_path(client, test_process_id, example_config_json):
     response = client.get("/jobs")
     assert response.status_code == 200
     response = client.post(
-        "/processes/{test_process_id}/execution",
+        f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
                 example_config_json,
@@ -149,7 +149,7 @@ def test_list_jobs_state(client, test_process_id, example_config_json):
     response = client.get("/jobs")
     assert response.status_code == 200
     response = client.post(
-        "/processes/{test_process_id}/execution",
+        f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
                 example_config_json,
@@ -173,7 +173,7 @@ def test_list_jobs_job_name(client, test_process_id, example_config_json):
     response = client.get("/jobs")
     assert response.status_code == 200
     response = client.post(
-        "/processes/{test_process_id}/execution",
+        f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
                 example_config_json,
@@ -198,7 +198,7 @@ def test_list_jobs_from_date(client, test_process_id, example_config_json):
     response = client.get("/jobs")
     assert response.status_code == 200
     response = client.post(
-        "/processes/{test_process_id}/execution",
+        f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
                 example_config_json,
@@ -225,7 +225,7 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
     response = client.get("/jobs")
     assert response.status_code == 200
     response = client.post(
-        "/processes/{test_process_id}/execution",
+        f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
                 example_config_json,

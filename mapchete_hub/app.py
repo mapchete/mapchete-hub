@@ -217,7 +217,6 @@ def list_jobs(
 ):
     """Returns the running and finished jobs for a process."""
     bounds = tuple(map(float, bounds.split(","))) if bounds else None
-    logger.debug(from_date)
     from_date = str_to_date(from_date) if from_date else None
     to_date = str_to_date(to_date) if to_date else None
     kwargs = {
@@ -229,7 +228,6 @@ def list_jobs(
         "from_date": from_date,
         "to_date": to_date,
     }
-    logger.debug(kwargs)
     return backend_db.jobs(**kwargs)
 
 

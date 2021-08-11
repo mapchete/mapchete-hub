@@ -3,7 +3,6 @@ import logging
 import mongomock
 import os
 from pydantic import NonNegativeInt
-import pytz
 import pymongo
 from shapely.geometry import box, mapping, Polygon
 import time
@@ -155,9 +154,7 @@ class MongoDBStatusHandler():
             started=datetime.utcnow(),
             job_name=job_config.params.get("job_name", "unnamed_job")
         )
-        logger.debug(entry)
         result = self._jobs.insert_one(entry.dict())
-        logger.debug(result)
         if result.acknowledged:
             return self.job(job_id)
         else:  # pragma: no cover
@@ -178,7 +175,6 @@ class MongoDBStatusHandler():
         if state is not None:
             entry.update(state=models.State[state])
             if state == "done":
-                logger.debug(timestamp)
                 logger.debug(self.job(job_id)["properties"]["started"])
                 entry.update(
                     runtime=(timestamp - self.job(job_id)["properties"]["started"]).total_seconds(),
