@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from mapchete_hub import models
 from mapchete_hub.geometry import process_area_from_config
+from mapchete_hub.random_names import random_name
 from mapchete_hub.timetools import str_to_date
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ class MongoDBStatusHandler():
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"],
             started=datetime.utcnow(),
-            job_name=job_config.params.get("job_name", "unnamed_job")
+            job_name=job_config.params.get("job_name", random_name())
         )
         result = self._jobs.insert_one(entry.dict())
         if result.acknowledged:
