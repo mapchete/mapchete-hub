@@ -22,10 +22,20 @@ build_mhub:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
   script:
-    - docker build --no-cache --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
+    - >
+      docker build \
+        --no-cache \
+        --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
+        --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
+        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
+        .
   after_script:
     # dump installed package versions as artefact
-    - docker run --rm -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
+    - >
+      docker run \
+        --rm \
+        -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
+        /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
 
 build_mhub-s1:
   stage: build
@@ -36,10 +46,20 @@ build_mhub-s1:
     IMAGE_NAME: mhub-s1
     BASE_IMAGE_NAME: snap-mapchete-ost
   script:
-    - docker build --no-cache --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
+    - >
+      docker build \
+      --no-cache \
+      --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
+      --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
+      -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
+      .
   after_script:
     # dump installed package versions as artefact
-    - docker run --rm -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
+    - >
+      docker run \
+        --rm \
+        -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
+        /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
 
 # test mapchete_hub package in built images
 test_mhub:
@@ -59,6 +79,7 @@ test_mhub:
     - MHUB_PORT=$(( 5000 + $RANDOM % 1000 ))
   script:
     # run tests
+    - echo "run mhub on port ${MHUB_PORT}"
     - >
       docker-compose \
         -p $CI_JOB_ID \
@@ -68,8 +89,23 @@ test_mhub:
         --exit-code-from mhub_tester
 
   after_script:
-    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml down -v --rmi all --remove-orphans || true
-    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml rm -fv || true
+    - >
+      docker-compose \
+        -p $CI_JOB_ID \
+        -f docker-compose.yml \
+        -f docker-compose.test.yml \
+        down \
+        -v \
+        --rmi all \
+        --remove-orphans \
+      || true
+    - >
+      docker-compose \
+        -p $CI_JOB_ID \
+        -f docker-compose.yml \
+        -f docker-compose.test.yml \
+        rm -fv \
+      || true
 
 test_mhub-s1:
   stage: test
@@ -88,6 +124,7 @@ test_mhub-s1:
     - MHUB_PORT=$(( 5000 + $RANDOM % 1000 ))
   script:
     # run tests
+    - echo "run mhub on port ${MHUB_PORT}"
     - >
       docker-compose \
         -p $CI_JOB_ID \
@@ -96,8 +133,23 @@ test_mhub-s1:
         up \
         --exit-code-from mhub_tester
   after_script:
-    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml down -v --rmi all --remove-orphans || true
-    - docker-compose -p $CI_JOB_ID -f docker-compose.yml -f docker-compose.test.yml rm -fv || true
+    - >
+      docker-compose \
+        -p $CI_JOB_ID \
+        -f docker-compose.yml \
+        -f docker-compose.test.yml \
+        down \
+        -v \
+        --rmi all \
+        --remove-orphans \
+      || true
+    - >
+      docker-compose \
+        -p $CI_JOB_ID \
+        -f docker-compose.yml \
+        -f docker-compose.test.yml \
+        rm -fv \
+      || true
 
 # push images to registry
 push_mhub:
@@ -129,8 +181,18 @@ push_tag:
     - tags
   script:
     # mhub
-    - docker tag ${CI_REGISTRY_IMAGE}/mhub:${IMAGE_TAG} ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
-    - docker push ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
+    - >
+      docker tag \
+        ${CI_REGISTRY_IMAGE}/mhub:${IMAGE_TAG} \
+        ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
+    - >
+      docker push \
+        ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
     # mhub-s1
-    - docker tag ${CI_REGISTRY_IMAGE}/mhub-s1:${IMAGE_TAG} ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}
-    - docker push ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}
+    - >
+      docker tag \
+        ${CI_REGISTRY_IMAGE}/mhub-s1:${IMAGE_TAG} \
+        ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}
+    - >
+      docker push \
+        ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}
