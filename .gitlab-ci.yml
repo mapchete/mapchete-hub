@@ -27,8 +27,7 @@ build_mhub:
         --no-cache \
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
-        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
-        .
+        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
   after_script:
     # dump installed package versions as artefact
     - >
@@ -48,11 +47,10 @@ build_mhub-s1:
   script:
     - >
       docker build \
-      --no-cache \
-      --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
-      --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
-      -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
-      .
+        --no-cache \
+        --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
+        --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
+        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
   after_script:
     # dump installed package versions as artefact
     - >
