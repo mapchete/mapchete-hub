@@ -1,5 +1,7 @@
+import datetime
 import json
 import pytest
+import time
 
 
 def test_get_root(client):
@@ -56,7 +58,6 @@ def test_post_job_custom_process(client, test_process_id, example_config_custom_
         f"/processes/{test_process_id}/execution",
         data=json.dumps(example_config_custom_process_json)
     )
-    print(response.json())
     assert response.status_code == 201
 
     assert client.get("/jobs/").json()
@@ -92,6 +93,158 @@ def test_list_jobs(client, test_process_id, example_config_json):
     after = len(response.json())
 
     assert after > before
+
+
+def test_list_jobs_bounds(client, test_process_id, example_config_json):
+    response = client.get("/jobs")
+    assert response.status_code == 200
+    response = client.post(
+        "/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json,
+                params=dict(example_config_json["params"], zoom=2)
+            )
+        )
+    )
+
+    job_id = response.json()["id"]
+
+    # NotImplementedError: '$geoIntersects' is a valid operation but it is not supported by Mongomock yet.
+    with pytest.raises(NotImplementedError):
+        response = client.get("/jobs", params={"bounds": "0,1,2,3"})
+        jobs = [j["id"] for j in response.json()]
+        assert job_id in jobs
+    with pytest.raises(NotImplementedError):
+        response = client.get("/jobs", params={"bounds": "10,1,12,3"})
+        jobs = [j["id"] for j in response.json()]
+        assert job_id not in jobs
+
+
+def test_list_jobs_output_path(client, test_process_id, example_config_json):
+    response = client.get("/jobs")
+    assert response.status_code == 200
+    response = client.post(
+        "/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json,
+                params=dict(example_config_json["params"], zoom=2)
+            )
+        )
+    )
+
+    job_id = response.json()["id"]
+
+    response = client.get("/jobs", params={"output_path": example_config_json["config"]["output"]["path"]})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id in jobs
+
+    response = client.get("/jobs", params={"output_path": "foo"})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id not in jobs
+
+
+def test_list_jobs_state(client, test_process_id, example_config_json):
+    response = client.get("/jobs")
+    assert response.status_code == 200
+    response = client.post(
+        "/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json,
+                params=dict(example_config_json["params"], zoom=2)
+            )
+        )
+    )
+
+    job_id = response.json()["id"]
+
+    response = client.get("/jobs", params={"state": "done"})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id in jobs
+
+    response = client.get("/jobs", params={"state": "cancelled"})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id not in jobs
+
+
+def test_list_jobs_job_name(client, test_process_id, example_config_json):
+    response = client.get("/jobs")
+    assert response.status_code == 200
+    response = client.post(
+        "/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json,
+                params=dict(example_config_json["params"], zoom=2, job_name="foo")
+            )
+        )
+    )
+
+    job_id = response.json()["id"]
+
+    response = client.get("/jobs", params={"job_name": "foo"})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id in jobs
+
+    response = client.get("/jobs", params={"job_name": "bar"})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id not in jobs
+
+
+# @pytest.mark.skip(reason="mongomock does not seem to handle $lte and $gte operators correctly")
+def test_list_jobs_from_date(client, test_process_id, example_config_json):
+    response = client.get("/jobs")
+    assert response.status_code == 200
+    response = client.post(
+        "/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json,
+                params=dict(example_config_json["params"], zoom=2)
+            )
+        )
+    )
+
+    job_id = response.json()["id"]
+
+    now = datetime.datetime.utcfromtimestamp(time.time())
+    response = client.get("/jobs", params={"from_date": now})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id in jobs
+
+    future = now = datetime.datetime.utcfromtimestamp(time.time() + 60)
+    response = client.get("/jobs", params={"from_date": future})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id not in jobs
+
+
+# @pytest.mark.skip(reason="mongomock does not seem to handle $lte and $gte operators correctly")
+def test_list_jobs_to_date(client, test_process_id, example_config_json):
+    response = client.get("/jobs")
+    assert response.status_code == 200
+    response = client.post(
+        "/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json,
+                params=dict(example_config_json["params"], zoom=2)
+            )
+        )
+    )
+
+    job_id = response.json()["id"]
+
+    now = datetime.datetime.utcfromtimestamp(time.time())
+    response = client.get("/jobs", params={"to_date": now})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id in jobs
+
+    past = now = datetime.datetime.utcfromtimestamp(time.time() - 60)
+    response = client.get("/jobs", params={"to_date": past})
+    jobs = [j["id"] for j in response.json()]
+    assert job_id not in jobs
 
 
 @pytest.mark.skip(reason="the background task does not run in the background in TestClient")

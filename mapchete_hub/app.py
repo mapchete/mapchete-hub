@@ -63,6 +63,7 @@ import logging
 from mapchete import commands
 from mapchete.processes import process_names_docstrings, registered_processes
 import os
+from pydantic import Field
 import time
 import traceback
 from typing import Union
@@ -204,25 +205,28 @@ def post_job(
 
 @app.get("/jobs")
 def list_jobs(
-    backend_db: BackendDB = Depends(get_backend_db),
     output_path: str = None,
     state: str = None,
     command: str = None,
     job_name: str = None,
-    bounds: Union[list, tuple] = None,
+    bounds: str = None,  # Field(None, example="0.0,1.0,2.0,3.0"),
     from_date: datetime.datetime = None,
     to_date: datetime.datetime = None,
+    backend_db: BackendDB = Depends(get_backend_db),
 ):
     """Returns the running and finished jobs for a process."""
-    return backend_db.jobs(
-        output_path=output_path,
-        state=state,
-        command=command,
-        job_name=job_name,
-        bounds=bounds,
-        from_date=from_date,
-        to_date=to_date,
-    )
+    bounds = tuple(map(float, bounds.split(","))) if bounds else None
+    kwargs = {
+        "output_path": output_path,
+        "state": state,
+        "command": command,
+        "job_name": job_name,
+        "bounds": bounds,
+        "from_date": from_date,
+        "to_date": to_date,
+    }
+    logger.debug(kwargs)
+    return backend_db.jobs(**kwargs)
 
 
 @app.get("/jobs/{job_id}")
@@ -262,7 +266,7 @@ def job_wrapper(
         # Mapchete now will initialize the process and prepare all the tasks required.
         job = MAPCHETE_COMMANDS[job_config.command](
             job_config.config.dict(),
-            **job_config.params,
+            **{k: v for k, v in job_config.params.items() if k != "job_name"},
             as_iterator=True,
             concurrency="dask",
             dask_client=dask_client

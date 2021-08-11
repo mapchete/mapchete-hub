@@ -88,8 +88,9 @@ class Job(Model, BaseModel):
     previous_job_id: Optional[str] = None
     next_job_id: Optional[str] = None
     progress: Optional[Progress] = None
-    runtime: Optional[float] = None
     started: Optional[float] = None
-    timestamp: Optional[float] = None
+    finished: Optional[float] = None
+    updated: Optional[float] = None
+    runtime: Optional[float] = None
     command: Optional[MapcheteCommand] = MapcheteCommand.execute
     job_name: Optional[str] = None

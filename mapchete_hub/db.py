@@ -95,10 +95,10 @@ class MongoDBStatusHandler():
             )
             query.pop("bounds")
 
-        # convert from_date and to_date kwargs to timestamp query
+        # convert from_date and to_date kwargs to updated query
         if query.get("from_date") or query.get("to_date"):
             query.update(
-                timestamp={
+                updated={
                     k: datetime.timestamp(v) for k, v in zip(
                         # don't know wy "$lte", "$gte" and not the other way round, but the test passes
                         # ["$lte", "$gte"],
@@ -148,7 +148,8 @@ class MongoDBStatusHandler():
             )[0],
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"],
-            started=time.time()
+            started=time.time(),
+            job_name=job_config.params.get("job_name", "unnamed_job")
         )
         logger.debug(entry)
         result = self._jobs.insert_one(entry.dict())
@@ -168,10 +169,14 @@ class MongoDBStatusHandler():
         traceback: str = None
     ):
         entry = {"job_id": job_id}
+        timestamp = time.time()
         if state is not None:
             entry.update(state=models.State[state])
             if state == "done":
-                entry.update(runtime=time.time() - self.job(job_id)["properties"]["started"])
+                entry.update(
+                    runtime=timestamp - self.job(job_id)["properties"]["started"],
+                    finished=timestamp
+                )
         if current_progress is not None:
             entry.update(current_progress=current_progress)
         if total_progress is not None:
@@ -181,7 +186,7 @@ class MongoDBStatusHandler():
         if traceback is not None:
             entry.update(traceback=traceback)
         # add timestamp to entry
-        entry.update(timestamp=time.time())
+        entry.update(updated=timestamp)
         logger.debug(f"upsert entry: {entry}")
         return self._entry_to_geojson(
             self._jobs.find_one_and_update(
