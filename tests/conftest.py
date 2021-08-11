@@ -34,7 +34,7 @@ def example_config_json(tmpdir):
     return {
         "command": "execute",
         "params": {
-            "zoom": 8,
+            "zoom": 5,
             "bounds": [0, 1, 2, 3]
         },
         "config": {

@@ -184,7 +184,15 @@ def test_list_jobs_state(test_process_id, example_config_json):
     )
 
     job_id = response.json()["id"]
-    time.sleep(3)
+    start = time.time()
+    while True:
+        time.sleep(1)
+        response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
+        state = response.json()["properties"]["state"]
+        if state == "done":
+            break
+        elif time.time() - start > 120:
+            raise RuntimeError(f"job not done in time, last state was '{state}'")
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"state": "done"})
     jobs = [j["id"] for j in response.json()]
