@@ -70,6 +70,7 @@ from typing import Union
 
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
+from mapchete_hub.timetools import str_to_date
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
@@ -210,12 +211,15 @@ def list_jobs(
     command: str = None,
     job_name: str = None,
     bounds: str = None,  # Field(None, example="0.0,1.0,2.0,3.0"),
-    from_date: datetime.datetime = None,
-    to_date: datetime.datetime = None,
+    from_date: str = None,
+    to_date: str = None,
     backend_db: BackendDB = Depends(get_backend_db),
 ):
     """Returns the running and finished jobs for a process."""
     bounds = tuple(map(float, bounds.split(","))) if bounds else None
+    logger.debug(from_date)
+    from_date = str_to_date(from_date) if from_date else None
+    to_date = str_to_date(to_date) if to_date else None
     kwargs = {
         "output_path": output_path,
         "state": state,

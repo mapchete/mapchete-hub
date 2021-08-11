@@ -5,6 +5,8 @@ import pytest
 import requests
 import time
 
+from mapchete_hub.timetools import str_to_date, date_to_str
+
 
 TEST_ENDPOINT = os.environ.get("MHUB_HOST", "http://0.0.0.0:5000")
 
@@ -236,12 +238,12 @@ def test_list_jobs_from_date(test_process_id, example_config_json):
     job_id = response.json()["id"]
     time.sleep(3)
 
-    now = datetime.datetime.utcfromtimestamp(time.time())
+    now = date_to_str(datetime.datetime.utcfromtimestamp(time.time() - 600))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"from_date": now})
     jobs = [j["id"] for j in response.json()]
     assert job_id in jobs
 
-    future = now = datetime.datetime.utcfromtimestamp(time.time() + 60)
+    future = date_to_str(datetime.datetime.utcfromtimestamp(time.time() + 600))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"from_date": future})
     jobs = [j["id"] for j in response.json()]
     assert job_id not in jobs
@@ -264,12 +266,12 @@ def test_list_jobs_to_date(test_process_id, example_config_json):
     job_id = response.json()["id"]
     time.sleep(3)
 
-    now = datetime.datetime.utcfromtimestamp(time.time())
+    now = date_to_str(datetime.datetime.utcfromtimestamp(time.time()))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"to_date": now})
     jobs = [j["id"] for j in response.json()]
     assert job_id in jobs
 
-    past = now = datetime.datetime.utcfromtimestamp(time.time() - 60)
+    past = date_to_str(datetime.datetime.utcfromtimestamp(time.time() - 60))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"to_date": past})
     jobs = [j["id"] for j in response.json()]
     assert job_id not in jobs

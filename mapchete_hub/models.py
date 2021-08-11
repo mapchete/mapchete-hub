@@ -1,3 +1,4 @@
+import datetime
 from enum import Enum
 from odmantic import Model
 from pydantic import BaseModel, Field
@@ -88,9 +89,9 @@ class Job(Model, BaseModel):
     previous_job_id: Optional[str] = None
     next_job_id: Optional[str] = None
     progress: Optional[Progress] = None
-    started: Optional[float] = None
-    finished: Optional[float] = None
-    updated: Optional[float] = None
+    started: Optional[datetime.datetime] = None
+    finished: Optional[datetime.datetime] = None
+    updated: Optional[datetime.datetime] = None
     runtime: Optional[float] = None
     command: Optional[MapcheteCommand] = MapcheteCommand.execute
     job_name: Optional[str] = None

@@ -209,12 +209,12 @@ def test_list_jobs_from_date(client, test_process_id, example_config_json):
 
     job_id = response.json()["id"]
 
-    now = datetime.datetime.utcfromtimestamp(time.time())
+    now = datetime.datetime.utcfromtimestamp(time.time()).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.get("/jobs", params={"from_date": now})
     jobs = [j["id"] for j in response.json()]
     assert job_id in jobs
 
-    future = now = datetime.datetime.utcfromtimestamp(time.time() + 60)
+    future = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.get("/jobs", params={"from_date": future})
     jobs = [j["id"] for j in response.json()]
     assert job_id not in jobs
@@ -236,12 +236,12 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
 
     job_id = response.json()["id"]
 
-    now = datetime.datetime.utcfromtimestamp(time.time())
+    now = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.get("/jobs", params={"to_date": now})
     jobs = [j["id"] for j in response.json()]
     assert job_id in jobs
 
-    past = now = datetime.datetime.utcfromtimestamp(time.time() - 60)
+    past = datetime.datetime.utcfromtimestamp(time.time() - 60).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.get("/jobs", params={"to_date": past})
     jobs = [j["id"] for j in response.json()]
     assert job_id not in jobs

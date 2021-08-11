@@ -78,9 +78,13 @@ def test_mongodb_backend_job(example_config_json, mongodb):
 
         assert len(all_jobs) == 2
 
-        # TODO: filter by time
-        now = datetime.datetime.utcfromtimestamp(time.time())
-        assert len(db.jobs(from_date=now)) == 0
+        # filter by time
+        future = datetime.datetime.utcfromtimestamp(time.time() + 60)
+        assert len(db.jobs(from_date=future)) == 0
+        assert len(db.jobs(to_date=future)) == 2
+        past = datetime.datetime.utcfromtimestamp(time.time() - 60)
+        assert len(db.jobs(from_date=past)) == 2
+        assert len(db.jobs(to_date=past)) == 0
 
         # filter by state
         assert len(db.jobs(state="done")) == 0
@@ -101,4 +105,4 @@ def test_mongodb_backend_job(example_config_json, mongodb):
             assert len(db.jobs(bounds=[11, 12, 13, 14])) == 0
 
         # filter by job_name
-        assert len(db.jobs(job_name="unnamed_job")) == 0
+        assert len(db.jobs(job_name="unnamed_job")) == 2

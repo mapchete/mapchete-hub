@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import mongomock
 import os
 from pydantic import NonNegativeInt
+import pytz
 import pymongo
 from shapely.geometry import box, mapping, Polygon
 import time
@@ -10,6 +11,7 @@ from uuid import uuid4
 
 from mapchete_hub import models
 from mapchete_hub.geometry import process_area_from_config
+from mapchete_hub.timetools import str_to_date
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +38,7 @@ class MongoDBStatusHandler():
         """Initialize."""
         if db_uri:  # pragma: no cover
             logger.debug(f"connect to MongoDB: {db_uri}")
-            self._client = pymongo.MongoClient(db_uri, tz_aware=True)
+            self._client = pymongo.MongoClient(db_uri, tz_aware=False)
             self._db = self._client["mhub"]
             self._jobs = self._db["jobs"]
         elif client:
@@ -97,9 +99,11 @@ class MongoDBStatusHandler():
 
         # convert from_date and to_date kwargs to updated query
         if query.get("from_date") or query.get("to_date"):
+            for i in ["from_date", "to_date"]:
+                query[i] = str_to_date(query.get(i)) if isinstance(query.get(i), str) else query.get(i)
             query.update(
                 updated={
-                    k: datetime.timestamp(v) for k, v in zip(
+                    k: v for k, v in zip(
                         # don't know wy "$lte", "$gte" and not the other way round, but the test passes
                         # ["$lte", "$gte"],
                         ["$gte", "$lte"],
@@ -148,7 +152,7 @@ class MongoDBStatusHandler():
             )[0],
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"],
-            started=time.time(),
+            started=datetime.utcnow(),
             job_name=job_config.params.get("job_name", "unnamed_job")
         )
         logger.debug(entry)
@@ -169,12 +173,15 @@ class MongoDBStatusHandler():
         traceback: str = None
     ):
         entry = {"job_id": job_id}
-        timestamp = time.time()
+        timestamp = datetime.utcnow()
+        logger.debug(f"update timestamp: {timestamp}")
         if state is not None:
             entry.update(state=models.State[state])
             if state == "done":
+                logger.debug(timestamp)
+                logger.debug(self.job(job_id)["properties"]["started"])
                 entry.update(
-                    runtime=timestamp - self.job(job_id)["properties"]["started"],
+                    runtime=(timestamp - self.job(job_id)["properties"]["started"]).total_seconds(),
                     finished=timestamp
                 )
         if current_progress is not None:
