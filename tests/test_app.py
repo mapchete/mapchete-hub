@@ -41,10 +41,14 @@ def test_post_job(client, test_process_id, example_config_json):
     # response = client.get("/jobs")
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(example_config_json)
+            data=json.dumps(
+                dict(
+                    example_config_json,
+                    params=dict(example_config_json["params"], zoom=2)
+                )
+            )
     )
     assert response.status_code == 201
-
     assert client.get("/jobs/").json()
 
     # check if job is submitted
@@ -56,10 +60,14 @@ def test_post_job(client, test_process_id, example_config_json):
 def test_post_job_custom_process(client, test_process_id, example_config_custom_process_json):
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(example_config_custom_process_json)
+            data=json.dumps(
+                dict(
+                    example_config_custom_process_json,
+                    params=dict(example_config_custom_process_json["params"], zoom=2)
+                )
+            )
     )
     assert response.status_code == 201
-
     assert client.get("/jobs/").json()
 
     # check if job is submitted
@@ -76,7 +84,6 @@ def test_list_jobs(client, test_process_id, example_config_json):
     before = len(response.json())
 
     # make two short running jobs
-
     for _ in range(2):
         client.post(
             f"/processes/{test_process_id}/execution",
@@ -91,7 +98,6 @@ def test_list_jobs(client, test_process_id, example_config_json):
     response = client.get("/jobs")
     assert response.status_code == 200
     after = len(response.json())
-
     assert after > before
 
 
@@ -107,7 +113,6 @@ def test_list_jobs_bounds(client, test_process_id, example_config_json):
             )
         )
     )
-
     job_id = response.json()["id"]
 
     # NotImplementedError: '$geoIntersects' is a valid operation but it is not supported by Mongomock yet.
@@ -133,7 +138,6 @@ def test_list_jobs_output_path(client, test_process_id, example_config_json):
             )
         )
     )
-
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"output_path": example_config_json["config"]["output"]["path"]})
@@ -157,7 +161,6 @@ def test_list_jobs_state(client, test_process_id, example_config_json):
             )
         )
     )
-
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"state": "done"})
@@ -181,7 +184,6 @@ def test_list_jobs_job_name(client, test_process_id, example_config_json):
             )
         )
     )
-
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"job_name": "foo"})
@@ -206,7 +208,6 @@ def test_list_jobs_from_date(client, test_process_id, example_config_json):
             )
         )
     )
-
     job_id = response.json()["id"]
 
     now = datetime.datetime.utcfromtimestamp(time.time()).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -233,7 +234,6 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
             )
         )
     )
-
     job_id = response.json()["id"]
 
     now = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -247,29 +247,29 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
     assert job_id not in jobs
 
 
-@pytest.mark.skip(reason="the background task does not run in the background in TestClient")
-def test_cancel_job(client, test_process_id, example_config_json):
+def test_send_cancel_signal(client, test_process_id, example_config_json):
+    """The background task does not run in the background in TestClient, therefore we can only test the request."""
     # make one long running job
     response = client.post(
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
                 example_config_json,
-                params=dict(example_config_json["params"], zoom=12)
+                params=dict(example_config_json["params"], zoom=2)
             )
         )
     )
     job_id = response.json()["id"]
 
-    # make sure job is running
-    response = client.get(f"/jobs/{job_id}")
-    assert response.json()["properties"]["state"] == "running"
+    # # make sure job is running
+    # response = client.get(f"/jobs/{job_id}")
+    # assert response.json()["properties"]["state"] == "running"
 
     # send cancel signal
     response = client.delete(f"/jobs/{job_id}")
 
-    response = client.get(f"/jobs/{job_id}")
-    assert response.json()["properties"]["state"] == "aborting"
+    # response = client.get(f"/jobs/{job_id}")
+    # assert response.json()["properties"]["state"] == "aborting"
 
 
 def test_job_result(client, test_process_id, example_config_json):
@@ -287,3 +287,30 @@ def test_job_result(client, test_process_id, example_config_json):
     result = client.get(f"/jobs/{job_id}/result")
     assert result.status_code == 200
     assert "tmp" in result.json()
+
+
+def test_errors(client, example_config_json):
+    # get job
+    response = client.get(f"/jobs/foo")
+    assert response.status_code == 404
+
+    # cancel job
+    response = client.delete(f"/jobs/foo")
+    assert response.status_code == 404
+
+    # get job result
+    response = client.get(f"/jobs/foo/result")
+    assert response.status_code == 404
+
+
+def test_process_exception(client, test_process_id, example_config_process_exception_json):
+    response = client.post(
+        f"/processes/{test_process_id}/execution",
+        data=json.dumps(example_config_process_exception_json)
+    )
+    job_id = response.json()["id"]
+
+    # make sure job failed
+    response = client.get(f"/jobs/{job_id}")
+    assert response.json()["properties"]["state"] == "failed"
+    assert response.json()["properties"]["traceback"]

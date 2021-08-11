@@ -79,7 +79,7 @@ formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
 sh.setFormatter(formatter)
 
 loggers = ["mapchete_hub"]
-if os.environ.get("MHUB_ADD_MAPCHETE_LOGGER", "").lower() == "true":
+if os.environ.get("MHUB_ADD_MAPCHETE_LOGGER", "").lower() == "true":  # pragma: no cover
     loggers.append("mapchete")
 for l in loggers:
     logger = logging.getLogger(l)
@@ -234,22 +234,31 @@ def list_jobs(
 @app.get("/jobs/{job_id}")
 def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Returns the status of a job."""
-    return backend_db.job(job_id)
+    try:
+        return backend_db.job(job_id)
+    except KeyError as e:
+        raise HTTPException(404, f"job {job_id} not found in the database")
 
 
 @app.delete("/jobs/{job_id}")
 def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Cancel a job execution."""
-    job = backend_db.job(job_id)
-    if job["properties"]["state"] in ["pending", "running"]:
-        backend_db.set(job_id, state="aborting")
-    return backend_db.job(job_id)
+    try:
+        job = backend_db.job(job_id)
+        if job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
+            backend_db.set(job_id, state="aborting")
+        return backend_db.job(job_id)
+    except KeyError as e:
+        raise HTTPException(404, f"job {job_id} not found in the database")
 
 
 @app.get("/jobs/{job_id}/result")
 def get_job_result(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Returns the result of a job."""
-    return backend_db.job(job_id)["properties"]["output_path"]
+    try:
+        return backend_db.job(job_id)["properties"]["output_path"]
+    except KeyError as e:
+        raise HTTPException(404, f"job {job_id} not found in the database")
 
 
 def job_wrapper(
@@ -288,7 +297,7 @@ def job_wrapper(
                 # determine if there is a cancel signal for this task
                 backend_db.set(job_id, current_progress=i)
                 state = backend_db.job(job_id)["properties"]["state"]
-                if state == "aborting":
+                if state == "aborting":  # pragma: no cover
                     logger.debug(f"job {job_id} abort state caught: {state}")
                     # By calling the job's cancel method, all pending futures will be cancelled.
                     job.cancel()

@@ -132,12 +132,12 @@ def test_list_jobs_bounds(test_process_id, example_config_json):
             )
         )
     )
-
     job_id = response.json()["id"]
-    time.sleep(3)
+
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"bounds": "0,1,2,3"})
     jobs = [j["id"] for j in response.json()]
     assert job_id in jobs
+
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"bounds": "10,1,12,3"})
     jobs = [j["id"] for j in response.json()]
     assert job_id not in jobs
@@ -156,9 +156,7 @@ def test_list_jobs_output_path(test_process_id, example_config_json):
             )
         )
     )
-
     job_id = response.json()["id"]
-    time.sleep(3)
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"output_path": example_config_json["config"]["output"]["path"]})
     jobs = [j["id"] for j in response.json()]
@@ -182,8 +180,8 @@ def test_list_jobs_state(test_process_id, example_config_json):
             )
         )
     )
-
     job_id = response.json()["id"]
+
     start = time.time()
     while True:
         time.sleep(1)
@@ -218,7 +216,6 @@ def test_list_jobs_job_name(test_process_id, example_config_json):
     )
 
     job_id = response.json()["id"]
-    time.sleep(3)
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"job_name": "foo"})
     jobs = [j["id"] for j in response.json()]
@@ -244,7 +241,6 @@ def test_list_jobs_from_date(test_process_id, example_config_json):
     )
 
     job_id = response.json()["id"]
-    time.sleep(3)
 
     now = date_to_str(datetime.datetime.utcfromtimestamp(time.time() - 600))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"from_date": now})
@@ -272,7 +268,6 @@ def test_list_jobs_to_date(test_process_id, example_config_json):
     )
 
     job_id = response.json()["id"]
-    time.sleep(3)
 
     now = date_to_str(datetime.datetime.utcfromtimestamp(time.time()))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"to_date": now})
@@ -294,7 +289,7 @@ def test_cancel_job(test_process_id, example_config_json):
         data=json.dumps(
             dict(
                 example_config_json,
-                params=dict(example_config_json["params"], zoom=12)
+                params=dict(example_config_json["params"], zoom=8)
             )
         )
     )
@@ -311,7 +306,16 @@ def test_cancel_job(test_process_id, example_config_json):
     assert response.json()["properties"]["state"] == "aborting"
 
     # see if job is cancelled
-    time.sleep(10)
+    start = time.time()
+    while True:
+        time.sleep(1)
+        response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
+        state = response.json()["properties"]["state"]
+        traceback = response.json()["properties"]["traceback"] or ""
+        if state == "cancelled":
+            break
+        elif time.time() - start > 120:
+            raise RuntimeError(f"job not cancelled in time, last state was '{state}' {traceback}")
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
     assert response.json()["properties"]["state"] == "cancelled"
 
@@ -325,7 +329,7 @@ def test_cancel_jobs(test_process_id, example_config_json):
             data=json.dumps(
                 dict(
                     example_config_json,
-                    params=dict(example_config_json["params"], zoom=12)
+                    params=dict(example_config_json["params"], zoom=8)
                 )
             ),
             timeout=3
