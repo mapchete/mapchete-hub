@@ -201,7 +201,7 @@ def post_job(
         return job
     except Exception as e:  # pragma: no cover
         logger.exception(e)
-        raise HTTPException(400, e)
+        raise HTTPException(400, str(e))
  
 
 @app.get("/jobs")
@@ -272,15 +272,22 @@ def job_wrapper(
     """
     logger.debug(f"job {job_id} starting mapchete {job_config.command}")
     try:
+        config = job_config.config.dict()
+
+        # relative output paths are not useful, so raise exception
+        out_path = config.get("output", {}).get("path", {})
+        if not os.path.isabs(out_path):
+            raise ValueError(f"process output path must be absolute: {out_path}")
+
         backend_db.set(job_id, state="running")
-        dask_client = get_client(dask_scheduler) if dask_scheduler else Client()
+
         # Mapchete now will initialize the process and prepare all the tasks required.
         job = MAPCHETE_COMMANDS[job_config.command](
-            job_config.config.dict(),
+            config,
             **{k: v for k, v in job_config.params.items() if k != "job_name"},
             as_iterator=True,
             concurrency="dask",
-            dask_client=dask_client
+            dask_client=get_client(dask_scheduler) if dask_scheduler else Client()
         )
         backend_db.set(job_id, current_progress=0, total_progress=len(job))
         logger.debug(f"job {job_id} created")
