@@ -235,7 +235,10 @@ def list_jobs(
         "from_date": from_date,
         "to_date": to_date,
     }
-    return backend_db.jobs(**kwargs)
+    return {
+        "type": "FeatureCollection",
+        "features": backend_db.jobs(**kwargs)
+    }
 
 
 @app.get("/jobs/{job_id}")

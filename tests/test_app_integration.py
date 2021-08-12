@@ -97,7 +97,7 @@ def test_list_jobs(test_process_id, example_config_json):
     # this should be empty
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
     assert response.status_code == 200
-    before = len(response.json())
+    before = len(response.json()["features"])
 
     # make two short running jobs
     for _ in range(2):
@@ -113,7 +113,7 @@ def test_list_jobs(test_process_id, example_config_json):
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
     assert response.status_code == 200
-    after = len(response.json())
+    after = len(response.json()["features"])
 
     assert after > before
 
@@ -135,11 +135,11 @@ def test_list_jobs_bounds(test_process_id, example_config_json):
     job_id = response.json()["id"]
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"bounds": "0,1,2,3"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"bounds": "10,1,12,3"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
@@ -159,11 +159,11 @@ def test_list_jobs_output_path(test_process_id, example_config_json):
     job_id = response.json()["id"]
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"output_path": example_config_json["config"]["output"]["path"]})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"output_path": "foo"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
@@ -193,11 +193,11 @@ def test_list_jobs_state(test_process_id, example_config_json):
             raise RuntimeError(f"job not done in time, last state was '{state}'")
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"state": "done"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"state": "cancelled"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
@@ -218,11 +218,11 @@ def test_list_jobs_job_name(test_process_id, example_config_json):
     job_id = response.json()["id"]
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"job_name": "foo"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"job_name": "bar"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
@@ -244,12 +244,12 @@ def test_list_jobs_from_date(test_process_id, example_config_json):
 
     now = date_to_str(datetime.datetime.utcfromtimestamp(time.time() - 600))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"from_date": now})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     future = date_to_str(datetime.datetime.utcfromtimestamp(time.time() + 600))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"from_date": future})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
@@ -271,12 +271,12 @@ def test_list_jobs_to_date(test_process_id, example_config_json):
 
     now = date_to_str(datetime.datetime.utcfromtimestamp(time.time()))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"to_date": now})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     past = date_to_str(datetime.datetime.utcfromtimestamp(time.time() - 60))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"to_date": past})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 

@@ -81,7 +81,7 @@ def test_list_jobs(client, test_process_id, example_config_json):
     # this should be empty
     response = client.get("/jobs")
     assert response.status_code == 200
-    before = len(response.json())
+    before = len(response.json()["features"])
 
     # make two short running jobs
     for _ in range(2):
@@ -97,7 +97,7 @@ def test_list_jobs(client, test_process_id, example_config_json):
 
     response = client.get("/jobs")
     assert response.status_code == 200
-    after = len(response.json())
+    after = len(response.json()["features"])
     assert after > before
 
 
@@ -118,11 +118,11 @@ def test_list_jobs_bounds(client, test_process_id, example_config_json):
     # NotImplementedError: '$geoIntersects' is a valid operation but it is not supported by Mongomock yet.
     with pytest.raises(NotImplementedError):
         response = client.get("/jobs", params={"bounds": "0,1,2,3"})
-        jobs = [j["id"] for j in response.json()]
+        jobs = [j["id"] for j in response.json()["features"]]
         assert job_id in jobs
     with pytest.raises(NotImplementedError):
         response = client.get("/jobs", params={"bounds": "10,1,12,3"})
-        jobs = [j["id"] for j in response.json()]
+        jobs = [j["id"] for j in response.json()["features"]]
         assert job_id not in jobs
 
 
@@ -141,11 +141,11 @@ def test_list_jobs_output_path(client, test_process_id, example_config_json):
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"output_path": example_config_json["config"]["output"]["path"]})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = client.get("/jobs", params={"output_path": "foo"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
@@ -164,11 +164,11 @@ def test_list_jobs_state(client, test_process_id, example_config_json):
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"state": "done"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = client.get("/jobs", params={"state": "cancelled"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
@@ -187,11 +187,11 @@ def test_list_jobs_job_name(client, test_process_id, example_config_json):
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"job_name": "foo"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = client.get("/jobs", params={"job_name": "bar"})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
@@ -212,12 +212,12 @@ def test_list_jobs_from_date(client, test_process_id, example_config_json):
 
     now = datetime.datetime.utcfromtimestamp(time.time()).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.get("/jobs", params={"from_date": now})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     future = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.get("/jobs", params={"from_date": future})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
@@ -238,12 +238,12 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
 
     now = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.get("/jobs", params={"to_date": now})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     past = datetime.datetime.utcfromtimestamp(time.time() - 60).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.get("/jobs", params={"to_date": past})
-    jobs = [j["id"] for j in response.json()]
+    jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
