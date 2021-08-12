@@ -9,7 +9,7 @@ services:
       context: .
       args:
         BASE_IMAGE_NAME: "${BASE_IMAGE_NAME:-mapchete}"
-    command: /bin/bash -c "pip install -r requirements_test.txt && pytest -v --cov=mapchete_hub"
+    command: /bin/bash -c "pip install -r requirements_test.txt && pytest -v --cov=mapchete_hub && coverage report"
     networks:
       - backend
 
