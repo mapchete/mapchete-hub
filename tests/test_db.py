@@ -103,6 +103,3 @@ def test_mongodb_backend_job(example_config_json, mongodb):
             assert len(db.jobs(bounds=[1, 2, 3, 4])) == 2
         with pytest.raises(NotImplementedError):
             assert len(db.jobs(bounds=[11, 12, 13, 14])) == 0
-
-        # filter by job_name
-        assert len(db.jobs(job_name="unnamed_job")) == 2
