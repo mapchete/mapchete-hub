@@ -1,22 +1,24 @@
+from dask.distributed import Client
 from fastapi.testclient import TestClient
 import pytest
 import mongomock.database
 
-from mapchete_hub.app import app, get_backend_db, get_dask_scheduler
+from mapchete_hub.app import app, get_backend_db, get_dask_client
 from mapchete_hub.db import BackendDB
 
 _fake_backend_db = BackendDB(mongomock.MongoClient())
+_dask_client = Client()
 
 
 def fake_backend_db():
     return _fake_backend_db
 
 
-def local_dask_scheduler():
-    return None
+def local_dask_client():
+    return _dask_client
 
 app.dependency_overrides[get_backend_db] = fake_backend_db
-app.dependency_overrides[get_dask_scheduler] = local_dask_scheduler
+app.dependency_overrides[get_dask_client] = local_dask_client
 
 
 @pytest.fixture

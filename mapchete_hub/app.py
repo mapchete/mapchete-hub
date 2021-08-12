@@ -122,6 +122,13 @@ def get_dask_scheduler():  # pragma: no cover
     return scheduler
 
 
+def get_dask_client():  # pragma: no cover
+    scheduler = os.environ.get("MHUB_DASK_SCHEDULER_URL")
+    if scheduler is None:
+        raise ValueError("DASK_SCHEDULER environment variable must be set")
+    return get_client(scheduler)
+
+
 # REST endpoints
 
 @app.get("/")
@@ -179,7 +186,7 @@ def post_job(
     job_config: models.MapcheteJob,
     background_tasks: BackgroundTasks,
     backend_db: BackendDB = Depends(get_backend_db),
-    dask_scheduler: str = Depends(get_dask_scheduler),
+    dask_client: str = Depends(get_dask_client),
     response: Response = None
 ):
     """Executes a process, i.e. creates a new job."""
@@ -191,7 +198,7 @@ def post_job(
             job["id"],
             job_config,
             backend_db,
-            dask_scheduler
+            dask_client
         )
         response.headers["Location"] = f"/jobs/{job['id']}"
         # return job
@@ -265,7 +272,7 @@ def job_wrapper(
     job_id: str,
     job_config: dict,
     backend_db: BackendDB,
-    dask_scheduler: str
+    dask_client: str
 ):
     """ Create a Job iterator through the mapchete_execute function. On every new finished task,
         check whether the task already got the abort status.
@@ -287,7 +294,7 @@ def job_wrapper(
             **{k: v for k, v in job_config.params.items() if k != "job_name"},
             as_iterator=True,
             concurrency="dask",
-            dask_client=get_client(dask_scheduler) if dask_scheduler else Client()
+            dask_client=dask_client
         )
         backend_db.set(job_id, current_progress=0, total_progress=len(job))
         logger.debug(f"job {job_id} created")
