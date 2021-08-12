@@ -283,7 +283,7 @@ def job_wrapper(
 
         # relative output paths are not useful, so raise exception
         out_path = config.get("output", {}).get("path", {})
-        if not os.path.isabs(out_path):
+        if not os.path.isabs(out_path):  # pragma: no cover
             raise ValueError(f"process output path must be absolute: {out_path}")
 
         backend_db.set(job_id, state="running")
