@@ -61,6 +61,7 @@ import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
 import logging
 from mapchete import commands
+from mapchete.io import path_is_remote
 from mapchete.processes import process_names_docstrings, registered_processes
 import os
 from pydantic import Field
@@ -286,7 +287,7 @@ def job_wrapper(
 
         # relative output paths are not useful, so raise exception
         out_path = config.get("output", {}).get("path", {})
-        if not os.path.isabs(out_path):  # pragma: no cover
+        if not path_is_remote(out_path) and not os.path.isabs(out_path):  # pragma: no cover
             raise ValueError(f"process output path must be absolute: {out_path}")
 
         backend_db.set(job_id, state="running")
