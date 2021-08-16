@@ -66,6 +66,7 @@ test_mhub:
   timeout: 30m
   retry: 2
   variables:
+    EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
     MHUB_ENV: testing
@@ -112,6 +113,7 @@ test_mhub-s1:
   timeout: 30m
   retry: 2
   variables:
+    EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     IMAGE_NAME: mhub-s1
     BASE_IMAGE_NAME: snap-mapchete-ost
     MHUB_ENV: testing
