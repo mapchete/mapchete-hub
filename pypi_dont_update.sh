@@ -4,5 +4,8 @@
 
 echo ""
 for PACKAGE in $@; do
-    echo `pip list --format=freeze | grep -i ${PACKAGE}`
+    RESULTS=`pip list --format=freeze | grep -i "${PACKAGE}=="`
+    for RESULT in ${RESULTS}; do
+        echo ${RESULT}
+    done
 done
