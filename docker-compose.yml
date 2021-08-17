@@ -16,6 +16,7 @@ services:
     command: ["--bind_ip_all"]
 
   server:
+    # image: registry.gitlab.eox.at/maps/mapchete_hub/mhub:fastapi_dask
     build:
       context: .
       args:
@@ -38,13 +39,23 @@ services:
     command: ["uvicorn", "mapchete_hub.app:app", "--host", "0.0.0.0", "--port", "5000", "--log-level", "debug"]
 
   dask_scheduler:
-    build: .
+    # image: registry.gitlab.eox.at/maps/mapchete_hub/mhub:fastapi_dask
+    build:
+      context: .
+      args:
+        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME}
+        EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     networks:
       - backend
     command: ["dask-scheduler", "--host", "dask_scheduler", "--port", "8786"]
 
   dask_worker:
-    build: .
+    # image: registry.gitlab.eox.at/maps/mapchete_hub/mhub:fastapi_dask
+    build:
+      context: .
+      args:
+        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME}
+        EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     depends_on:
       - dask_scheduler
     networks:
