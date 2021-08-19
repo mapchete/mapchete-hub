@@ -56,7 +56,7 @@ POST /processes/{process_id}/execution
 Trigger a job using a given process_id. This returns a job ID.
 """
 
-from dask.distributed import get_client
+from dask.distributed import Client, get_client
 from dask_gateway import Gateway, BasicAuth
 import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
@@ -129,9 +129,10 @@ def _get_dask_client():  # pragma: no cover
         scheduler = os.environ.get("MHUB_DASK_SCHEDULER_URL")
         return get_client(scheduler)
     else:
-        raise ValueError(
-            "either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set"
+        logger.warning(
+            "Either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set. For now, a local cluster is being used."
         )
+        return Client()
 
 
 DASK_CLIENT = _get_dask_client()
