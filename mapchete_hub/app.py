@@ -324,6 +324,7 @@ def job_wrapper(
     """ Create a Job iterator through the mapchete_execute function. On every new finished task,
         check whether the task already got the abort status.
     """
+    cluster = None
     try:
         config = job_config.config.dict()
 
@@ -388,3 +389,10 @@ def job_wrapper(
             traceback="".join(traceback.format_tb(exc.__traceback__))
         )
         logger.exception(exc)
+    finally:  # pragma: no cover
+        try:
+            logger.debug(f"try to shutdown cluster {cluster}")
+            cluster.shutdown()
+        except Exception as exc:
+            logger.error(f"cluster shutdown threw exception {exc}")
+            pass
