@@ -2,10 +2,8 @@ bokeh
 dask
 dask-gateway
 distributed
-eox_preprocessing
 fastapi==0.66
 mapchete
-mapchete_satellite[brdf,cli,stac,xarray]
 mongomock
 odmantic
 pymongo
