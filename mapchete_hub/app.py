@@ -117,7 +117,7 @@ def get_backend_db():  # pragma: no cover
 
 
 def _get_dask_client():  # pragma: no cover
-    if os.environ.get("MHUB_DASK_GATEWAY_URL"):
+    if os.environ.get("MHUB_DASK_GATEWAY_URL"):  # pragma: no cover
         gateway = Gateway(
             os.environ.get("MHUB_DASK_GATEWAY_URL"),
             auth=BasicAuth(password=os.environ.get("MHUB_DASK_GATEWAY_PASS")),
@@ -126,8 +126,7 @@ def _get_dask_client():  # pragma: no cover
         cluster.adapt(minimum=0, maximum=int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)))
         return cluster.get_client()
     elif os.environ.get("MHUB_DASK_SCHEDULER_URL"):
-        scheduler = os.environ.get("MHUB_DASK_SCHEDULER_URL")
-        return get_client(scheduler)
+        return get_client(os.environ.get("MHUB_DASK_SCHEDULER_URL"))
     else:
         logger.warning(
             "Either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set. For now, a local cluster is being used."
