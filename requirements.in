@@ -1,10 +1,13 @@
 bokeh
+blosc
 dask
 dask-gateway
 dask-gateway-server
+dask-kubernetes
 distributed
 eox_preprocessing
 fastapi==0.66
+lz4
 mapchete
 mapchete_satellite[brdf,cli,stac]
 mongomock
@@ -12,4 +15,5 @@ odmantic
 pymongo
 rasterio
 shapely
+sqlalchemy
 uvicorn
