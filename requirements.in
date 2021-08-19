@@ -10,4 +10,5 @@ orgonite
 pymongo
 rasterio
 shapely
+s2brdf
 uvicorn
