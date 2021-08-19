@@ -20,7 +20,7 @@ services:
     build:
       context: .
       args:
-        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME}
+        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME:-mapchete}
         EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     depends_on:
       - dask_scheduler
@@ -39,7 +39,7 @@ services:
     build:
       context: .
       args:
-        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME}
+        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME:-mapchete}
         EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     networks:
       - backend
@@ -50,7 +50,7 @@ services:
     build:
       context: .
       args:
-        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME}
+        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME:-mapchete}
         EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     depends_on:
       - dask_scheduler
