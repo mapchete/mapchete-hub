@@ -4,9 +4,9 @@ dask-gateway
 distributed
 fastapi==0.66
 mapchete
-mapchete_satellite[brdf,cli,stac,xarray]
 mongomock
 odmantic
+orgonite
 pymongo
 rasterio
 shapely
