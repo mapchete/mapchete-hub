@@ -56,7 +56,8 @@ POST /processes/{process_id}/execution
 Trigger a job using a given process_id. This returns a job ID.
 """
 
-from dask.distributed import Client, get_client
+from dask.distributed import get_client
+from dask_gateway import Gateway, BasicAuth
 import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
 import logging
@@ -107,7 +108,6 @@ MHUB_WORKER_EVENT_RATE_LIMIT = os.environ.get("MHUB_WORKER_EVENT_RATE_LIMIT", 0.
 app = FastAPI()
 
 # dependencies
-
 def get_backend_db():  # pragma: no cover
     url = os.environ.get("MHUB_MONGODB_URL")
     if not url:
@@ -116,19 +116,29 @@ def get_backend_db():  # pragma: no cover
     return BackendDB(src=url)
 
 
-def get_dask_scheduler():  # pragma: no cover
-    scheduler = os.environ.get("MHUB_DASK_SCHEDULER_URL")
-    if scheduler is None:
-        raise ValueError("DASK_SCHEDULER environment variable must be set")
-    return scheduler
+def _get_dask_client():  # pragma: no cover
+    if os.environ.get("MHUB_DASK_GATEWAY_URL"):
+        gateway = Gateway(
+            os.environ.get("MHUB_DASK_GATEWAY_URL"),
+            auth=BasicAuth(password=os.environ.get("MHUB_DASK_GATEWAY_PASS")),
+        )
+        cluster = gateway.new_cluster()
+        cluster.adapt(minimum=0, maximum=int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)))
+        return cluster.get_client()
+    elif os.environ.get("MHUB_DASK_SCHEDULER_URL"):
+        scheduler = os.environ.get("MHUB_DASK_SCHEDULER_URL")
+        return get_client(scheduler)
+    else:
+        raise ValueError(
+            "either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set"
+        )
 
 
-def get_dask_client():  # pragma: no cover
-    scheduler = os.environ.get("MHUB_DASK_SCHEDULER_URL")
-    if scheduler is None:
-        raise ValueError("DASK_SCHEDULER environment variable must be set")
-    return get_client(scheduler)
+DASK_CLIENT = _get_dask_client()
 
+
+def get_dask_client():
+    return DASK_CLIENT
 
 # REST endpoints
 

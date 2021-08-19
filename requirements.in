@@ -1,4 +1,6 @@
+bokeh
 dask
+dask-gateway
 distributed
 eox_preprocessing
 fastapi==0.66
