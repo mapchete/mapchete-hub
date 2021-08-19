@@ -56,7 +56,7 @@ POST /processes/{process_id}/execution
 Trigger a job using a given process_id. This returns a job ID.
 """
 
-from dask.distributed import Client, get_client
+from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import Gateway, BasicAuth
 import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
@@ -116,29 +116,33 @@ def get_backend_db():  # pragma: no cover
     return BackendDB(src=url)
 
 
-def _get_dask_client():  # pragma: no cover
+def get_dask():  # pragma: no cover
+    """This allows lazily loading either a LocalCluster, a GatewayCluster or connection to a running scheduler."""
     if os.environ.get("MHUB_DASK_GATEWAY_URL"):  # pragma: no cover
-        gateway = Gateway(
-            os.environ.get("MHUB_DASK_GATEWAY_URL"),
-            auth=BasicAuth(password=os.environ.get("MHUB_DASK_GATEWAY_PASS")),
-        )
-        cluster = gateway.new_cluster()
-        cluster.adapt(minimum=0, maximum=int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)))
-        return cluster.get_client()
+        return {
+            "flavor": "gateway",
+            "url": os.environ.get("MHUB_DASK_GATEWAY_URL"),
+            "gateway_kwargs": {
+                "auth": BasicAuth(password=os.environ.get("MHUB_DASK_GATEWAY_PASS"))
+            },
+            "cluster_kwargs": {
+                "minimum": 0,
+                "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000))
+            }
+        }
     elif os.environ.get("MHUB_DASK_SCHEDULER_URL"):
-        return get_client(os.environ.get("MHUB_DASK_SCHEDULER_URL"))
-    else:
+        return {
+            "flavor": "scheduler",
+            "url": os.environ.get("MHUB_DASK_SCHEDULER_URL")
+        }
+    else:  # pragma: no cover
         logger.warning(
             "Either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set. For now, a local cluster is being used."
         )
-        return Client()
-
-
-DASK_CLIENT = _get_dask_client()
-
-
-def get_dask_client():
-    return DASK_CLIENT
+        return {
+            "flavor" : "local_cluster",
+            "cluster": LocalCluster()
+        }
 
 # REST endpoints
 
@@ -181,8 +185,8 @@ def get_process(process_id: str):
     try:
         title, description = process_names_docstrings(process_id)[0]
         return {"title": title, "description": description}
-    except IndexError:
-        raise HTTPException(404, f"process '{process_id}' not found")
+    except IndexError as exc:
+        raise HTTPException(404, f"process '{process_id}' not found") from exc
 
 
 @app.post("/processes/{process_id}")
@@ -192,12 +196,12 @@ def post_process(process_id: str):
 
 
 @app.post("/processes/{process_id}/execution", status_code=201)
-def post_job(
+async def post_job(
     process_id: str,
     job_config: models.MapcheteJob,
     background_tasks: BackgroundTasks,
     backend_db: BackendDB = Depends(get_backend_db),
-    dask_client: str = Depends(get_dask_client),
+    dask_opts: dict = Depends(get_dask),
     response: Response = None
 ):
     """Executes a process, i.e. creates a new job."""
@@ -209,7 +213,7 @@ def post_job(
             job["id"],
             job_config,
             backend_db,
-            dask_client
+            dask_opts
         )
         response.headers["Location"] = f"/jobs/{job['id']}"
         # return job
@@ -217,10 +221,10 @@ def post_job(
         logger.debug(f"submitted job {job}")
         logger.debug(f"currently running {len(backend_db.jobs(state='running'))} jobs")
         return job
-    except Exception as e:  # pragma: no cover
-        logger.exception(e)
-        raise HTTPException(400, str(e))
- 
+    except Exception as exc:  # pragma: no cover
+        logger.exception(exc)
+        raise HTTPException(400, str(exc)) from exc
+
 
 @app.get("/jobs")
 def list_jobs(
@@ -257,8 +261,8 @@ def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Returns the status of a job."""
     try:
         return backend_db.job(job_id)
-    except KeyError as e:
-        raise HTTPException(404, f"job {job_id} not found in the database")
+    except KeyError as exc:
+        raise HTTPException(404, f"job {job_id} not found in the database") from exc
 
 
 @app.delete("/jobs/{job_id}")
@@ -269,8 +273,8 @@ def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
         if job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
         return backend_db.job(job_id)
-    except KeyError as e:
-        raise HTTPException(404, f"job {job_id} not found in the database")
+    except KeyError as exc:
+        raise HTTPException(404, f"job {job_id} not found in the database") from exc
 
 
 @app.get("/jobs/{job_id}/result")
@@ -278,22 +282,65 @@ def get_job_result(job_id: str, backend_db: BackendDB = Depends(get_backend_db))
     """Returns the result of a job."""
     try:
         return backend_db.job(job_id)["properties"]["output_path"]
-    except KeyError as e:
-        raise HTTPException(404, f"job {job_id} not found in the database")
+    except KeyError as exc:
+        raise HTTPException(404, f"job {job_id} not found in the database") from exc
+
+
+def get_dask_cluster(
+    flavor=None,
+    url=None,
+    gateway_kwargs=None,
+    cluster=None,
+):
+    if flavor == "local_cluster" and isinstance(cluster, LocalCluster):
+        return cluster
+    elif flavor == "gateway":  # pragma: no cover
+        gateway = Gateway(url, **gateway_kwargs or {})
+        return gateway.new_cluster()
+    else:  # pragma: no cover
+        raise TypeError("cannot get cluster")
+
+def get_dask_client(
+    flavor=None,
+    url=None,
+    cluster=None,
+):
+    if flavor == "local_cluster":
+        return Client(cluster)
+    elif flavor == "gateway":  # pragma: no cover
+        return cluster.get_client()
+    elif flavor == "scheduler":  # pragma: no cover
+        return get_client(url)
+    else:  # pragma: no cover
+        raise TypeError("cannot get client")
 
 
 def job_wrapper(
     job_id: str,
     job_config: dict,
     backend_db: BackendDB,
-    dask_client: str
+    dask_opts: dict
 ):
     """ Create a Job iterator through the mapchete_execute function. On every new finished task,
         check whether the task already got the abort status.
     """
-    logger.debug(f"job {job_id} starting mapchete {job_config.command}")
     try:
         config = job_config.config.dict()
+
+        try:
+            cluster = get_dask_cluster(**dask_opts)
+            # TODO: use cluster.adapt()
+        except TypeError:  # pragma: no cover
+            cluster = None
+
+        logger.debug("determining dask client")
+        dask_client = get_dask_client(
+            flavor=dask_opts.get("flavor"),
+            url=dask_opts.get("url"),
+            cluster=cluster
+        )
+
+        logger.debug(f"job {job_id} starting mapchete {job_config.command}")
 
         # relative output paths are not useful, so raise exception
         out_path = config.get("output", {}).get("path", {})
@@ -333,6 +380,11 @@ def job_wrapper(
                     return
         # job finished successfully
         backend_db.set(job_id, state="done")
-    except Exception as e:
-        backend_db.set(job_id=job_id, state="failed", exception=repr(e), traceback="".join(traceback.format_tb(e.__traceback__)))
-        logger.exception(e)
+    except Exception as exc:
+        backend_db.set(
+            job_id=job_id,
+            state="failed",
+            exception=repr(exc),
+            traceback="".join(traceback.format_tb(exc.__traceback__))
+        )
+        logger.exception(exc)

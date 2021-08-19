@@ -17,6 +17,7 @@ install_requires = [
     "aioredis>=2.0.0a1",
     "cached_property",
     "dask",
+    "dask-gateway",
     "distributed",
     "fastapi==0.66",
     "mapchete[contours,geobuf,http,s3,vrt]>=0.40",
