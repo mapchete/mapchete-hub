@@ -34,10 +34,10 @@ WORKER_DEFAULT_SPECS = {
     }
 }
 
-def cluster_specs_handler(worker_spec):
-    options = Options(
-        worker_cores=WORKER_DEFAULT_SPECS[worker_spec]["worker_cores"],
-        worker_memory=WORKER_DEFAULT_SPECS[worker_spec]["worker_memory"],
-        image=WORKER_DEFAULT_SPECS[worker_spec]["image"]
-    )
+
+def _get_cluster_specs(gateway, worker_specs):
+    options = gateway.cluster_options()
+    options.worker_cores = WORKER_DEFAULT_SPECS[worker_spec]["worker_cores"]
+    options.worker_memory = WORKER_DEFAULT_SPECS[worker_spec]["worker_memory"]
+    options.image = WORKER_DEFAULT_SPECS[worker_spec]["image"]
     return options
