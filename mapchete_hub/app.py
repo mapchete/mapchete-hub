@@ -291,11 +291,21 @@ def get_dask_cluster(
     url=None,
     gateway_kwargs=None,
     cluster=None,
+    **kwargs
 ):
+    logger.debug(
+        {
+            "flavor": flavor,
+            "url": url,
+            "gateway_kwargs": gateway_kwargs,
+            "cluster": cluster
+        }
+    )
     if flavor == "local_cluster" and isinstance(cluster, LocalCluster):
         return cluster
     elif flavor == "gateway":  # pragma: no cover
         gateway = Gateway(url, **gateway_kwargs or {})
+        logger.debug(f"connected to gateway {gateway}")
         return gateway.new_cluster()
     else:  # pragma: no cover
         raise TypeError("cannot get cluster")
@@ -330,8 +340,15 @@ def job_wrapper(
 
         try:
             cluster = get_dask_cluster(**dask_opts)
+            logger.debug(f"cluster: {cluster}")
+            cluster_kwargs = dask_opts.get("cluster_kwargs")
+            if cluster_kwargs:
+                logger.debug(f"adapt cluster: {cluster_kwargs}")
+                cluster.adapt(**cluster_kwargs)
             # TODO: use cluster.adapt()
-        except TypeError:  # pragma: no cover
+        except TypeError as exc:  # pragma: no cover
+            logger.exception(exc)
+            logger.debug("no cluster available")
             cluster = None
 
         logger.debug("determining dask client")
@@ -391,8 +408,9 @@ def job_wrapper(
         logger.exception(exc)
     finally:  # pragma: no cover
         try:
-            logger.debug(f"try to shutdown cluster {cluster}")
-            cluster.shutdown()
+            if cluster:
+                logger.debug(f"try to shutdown cluster {cluster}")
+                cluster.shutdown()
         except Exception as exc:
             logger.error(f"cluster shutdown threw exception {exc}")
             pass
