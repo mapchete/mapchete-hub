@@ -349,6 +349,8 @@ def job_wrapper(
         config = job_config.config.dict()
 
         try:
+            if "worker_specs" not in job_config.params.keys():
+                job_config.params["worker_specs"] = None
             cluster = get_dask_cluster(
                 **dask_opts,
                 worker_specs=job_config.params["worker_specs"]
