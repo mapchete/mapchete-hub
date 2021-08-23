@@ -73,6 +73,7 @@ from typing import Union
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 from mapchete_hub.timetools import str_to_date
+from mapchete_hub.settings import _get_cluster_specs
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
@@ -287,10 +288,12 @@ def get_job_result(job_id: str, backend_db: BackendDB = Depends(get_backend_db))
 
 
 def get_dask_cluster(
+    job_id=None,
     flavor=None,
     url=None,
     gateway_kwargs=None,
     cluster=None,
+    worker_specs="default",
     **kwargs
 ):
     logger.debug(
@@ -306,7 +309,13 @@ def get_dask_cluster(
     elif flavor == "gateway":  # pragma: no cover
         gateway = Gateway(url, **gateway_kwargs or {})
         logger.debug(f"connected to gateway {gateway}")
-        return gateway.new_cluster()
+        cluster = gateway.new_cluster(
+            cluster_options=_get_cluster_specs(
+                gateway, worker_specs=worker_specs
+            )
+        )
+        logger.debug(f"Cluster:{cluster} created")
+        return cluster
     else:  # pragma: no cover
         raise TypeError("cannot get cluster")
 
@@ -345,6 +354,7 @@ def job_wrapper(
             if cluster_kwargs:
                 logger.debug(f"adapt cluster: {cluster_kwargs}")
                 cluster.adapt(**cluster_kwargs)
+            cluster.adapt(minimum=0, maximum=os.environ.get("MHUB_DASK_MAX_WORKERS",10))
             # TODO: use cluster.adapt()
         except TypeError as exc:  # pragma: no cover
             logger.exception(exc)
