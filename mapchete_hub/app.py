@@ -73,7 +73,7 @@ from typing import Union
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 from mapchete_hub.timetools import str_to_date
-from mapchete_hub.settings import _get_cluster_specs
+from mapchete_hub.utils import _get_cluster_specs
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
@@ -293,7 +293,7 @@ def get_dask_cluster(
     url=None,
     gateway_kwargs=None,
     cluster=None,
-    worker_specs="default",
+    worker_specs=None,
     **kwargs
 ):
     logger.debug(
@@ -309,12 +309,14 @@ def get_dask_cluster(
     elif flavor == "gateway":  # pragma: no cover
         gateway = Gateway(url, **gateway_kwargs or {})
         logger.debug(f"connected to gateway {gateway}")
-        cluster = gateway.new_cluster(
-            cluster_options=_get_cluster_specs(
-                gateway, worker_specs=worker_specs
+        if worker_specs is not None:
+            return gateway.new_cluster(
+                cluster_options=_get_cluster_specs(
+                    gateway, worker_specs=worker_specs
+                )
             )
-        )
-        return cluster
+        else:
+            return gateway.new_cluster()
     else:  # pragma: no cover
         raise TypeError("cannot get cluster")
 
@@ -347,7 +349,10 @@ def job_wrapper(
         config = job_config.config.dict()
 
         try:
-            cluster = get_dask_cluster(**dask_opts)
+            cluster = get_dask_cluster(
+                **dask_opts,
+                worker_specs=job_config.params["worker_specs"]
+            )
             logger.debug(f"cluster: {cluster}")
             cluster_kwargs = dask_opts.get("cluster_kwargs")
             if cluster_kwargs:
@@ -377,7 +382,10 @@ def job_wrapper(
         # Mapchete now will initialize the process and prepare all the tasks required.
         job = MAPCHETE_COMMANDS[job_config.command](
             config,
-            **{k: v for k, v in job_config.params.items() if k != "job_name"},
+            **{
+                k: v for k, v in job_config.params.items()
+                if k not in ["job_name", "worker_specs"]
+            },
             as_iterator=True,
             concurrency="dask",
             dask_client=dask_client
