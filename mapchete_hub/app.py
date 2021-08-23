@@ -314,7 +314,6 @@ def get_dask_cluster(
                 gateway, worker_specs=worker_specs
             )
         )
-        logger.debug(f"Cluster:{cluster} created")
         return cluster
     else:  # pragma: no cover
         raise TypeError("cannot get cluster")
@@ -354,7 +353,7 @@ def job_wrapper(
             if cluster_kwargs:
                 logger.debug(f"adapt cluster: {cluster_kwargs}")
                 cluster.adapt(**cluster_kwargs)
-            cluster.adapt(minimum=0, maximum=os.environ.get("MHUB_DASK_MAX_WORKERS",10))
+            # cluster.adapt(minimum=0, maximum=os.environ.get("MHUB_DASK_MAX_WORKERS",10))
             # TODO: use cluster.adapt()
         except TypeError as exc:  # pragma: no cover
             logger.exception(exc)
