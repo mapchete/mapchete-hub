@@ -288,21 +288,24 @@ def get_job_result(job_id: str, backend_db: BackendDB = Depends(get_backend_db))
 
 
 def get_dask_cluster(
+    job_id=None,
     flavor=None,
     url=None,
     gateway_kwargs=None,
     cluster=None,
+    worker_specs="default"
 ):
     if flavor == "local_cluster" and isinstance(cluster, LocalCluster):
         return cluster
     elif flavor == "gateway":  # pragma: no cover
         gateway = Gateway(url, **gateway_kwargs or {})
-        cluster_options = _get_cluster_specs(
-            gateway=gateway, worker_spec="default"
+        cluster = gateway.new_cluster(
+            cluster_options=_get_cluster_specs(
+                gateway, worker_specs=worker_specs
+            )
         )
-        return gateway.new_cluster(
-            cluster_options=cluster_options
-        )
+        logger.debug(f"Cluster:{cluster} created")
+        return cluster
     else:  # pragma: no cover
         raise TypeError("cannot get cluster")
 
@@ -336,6 +339,7 @@ def job_wrapper(
 
         try:
             cluster = get_dask_cluster(**dask_opts)
+            cluster.adapt(minimum=0, maximum=os.environ.get("MHUB_DASK_MAX_WORKERS",10))
             # TODO: use cluster.adapt()
         except TypeError:  # pragma: no cover
             cluster = None
