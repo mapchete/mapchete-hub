@@ -75,6 +75,7 @@ RUN pip install --upgrade pip setuptools wheel && \
         numpy \
         rasterio \
         shapely \
+        s3fs \
     >> ${MHUB_DIR}/requirements.in && \
     cat $MHUB_DIR/requirements.in && \
     pip install pip-tools && \
