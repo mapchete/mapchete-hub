@@ -73,6 +73,7 @@ from typing import Union
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 from mapchete_hub.timetools import str_to_date
+from mapchete_hub.settings import cluster_specs_handler
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
@@ -296,7 +297,9 @@ def get_dask_cluster(
         return cluster
     elif flavor == "gateway":  # pragma: no cover
         gateway = Gateway(url, **gateway_kwargs or {})
-        return gateway.new_cluster()
+        return gateway.new_cluster(
+            cluster_options=cluster_specs_handler(worker_spec="default")
+        )
     else:  # pragma: no cover
         raise TypeError("cannot get cluster")
 
