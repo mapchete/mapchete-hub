@@ -12,6 +12,7 @@ mapchete
 mapchete_satellite[brdf,cli,stac]
 mongomock
 odmantic
+prometheus-client
 pymongo
 rasterio
 shapely
