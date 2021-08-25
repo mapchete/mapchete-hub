@@ -73,7 +73,7 @@ from typing import Union
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 from mapchete_hub.timetools import str_to_date
-from mapchete_hub.utils import _get_cluster_specs
+from mapchete_hub.settings import _get_cluster_specs, WORKER_DEFAULT_SPECS
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
@@ -167,6 +167,11 @@ def root():
 @app.get("/conformance")
 def get_conformance():
     raise NotImplementedError()
+
+
+@app.get("/worker_specs")
+def get_worker_specs():
+    return WORKER_DEFAULT_SPECS
 
 
 @app.get("/processes")
