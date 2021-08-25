@@ -176,7 +176,7 @@ push_mhub:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
   script:
-    - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG}
+    - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} --all-tags
 
 push_mhub-s1:
   stage: push
@@ -185,7 +185,7 @@ push_mhub-s1:
     IMAGE_NAME: mhub-s1
     BASE_IMAGE_NAME: snap-mapchete-ost
   script:
-    - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG}
+    - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} --all-tags
 
 
 # also tag and push a tagged commit, i.e. a new version
@@ -204,7 +204,7 @@ push_tag:
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
     - >
       docker push \
-        ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
+        ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME} --all-tags
     # mhub-s1
     - >
       docker tag \
@@ -212,4 +212,4 @@ push_tag:
         ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}
     - >
       docker push \
-        ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}
+        ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME} --all-tags
