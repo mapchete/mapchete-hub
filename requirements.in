@@ -8,7 +8,7 @@ distributed
 eox_preprocessing
 fastapi==0.66
 lz4
-mapchete
+mapchete>=0.42
 mapchete_satellite[brdf,cli,stac]
 mongomock
 odmantic
