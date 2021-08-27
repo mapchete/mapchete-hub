@@ -63,6 +63,7 @@ from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
 import logging
 from mapchete import commands
 from mapchete.io import path_is_remote
+from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings, registered_processes
 import os
 from pydantic import Field
@@ -83,7 +84,7 @@ sh.setFormatter(formatter)
 
 loggers = ["mapchete_hub"]
 if os.environ.get("MHUB_ADD_MAPCHETE_LOGGER", "").lower() == "true":  # pragma: no cover
-    loggers.append("mapchete")
+    loggers.extend(list(all_mapchete_packages))
 for l in loggers:
     logger = logging.getLogger(l)
     if __name__ != "__main__":
