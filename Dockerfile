@@ -64,9 +64,13 @@ RUN pip install --upgrade pip setuptools wheel && \
     pip install $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
+        affine \
         aiohttp \
         boto3 \
         botocore \
+        click \
+        dask \
+        distributed \
         fiona \
         fsspec \
         gdal \
@@ -74,9 +78,16 @@ RUN pip install --upgrade pip setuptools wheel && \
         mapchete \
         numcodecs \
         numpy \
+        psutil \
         rasterio \
+        requests \
         shapely \
+        snuggs \
         s3fs \
+        tblib \
+        tqdm \
+        tilematrix \
+        zipp \
     >> ${MHUB_DIR}/requirements.in && \
     cat $MHUB_DIR/requirements.in && \
     pip install pip-tools && \
