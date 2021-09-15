@@ -40,7 +40,10 @@ class MapcheteJob(BaseModel):
             "bounds": [0, 1, 2, 3]
         }
     )
-    config: MapcheteProcessConfig = Field(
+    # TODO: fix https://github.com/ungarj/mapchete/issues/356
+    # before mapchete config validation works again
+    # config: MapcheteProcessConfig = Field(
+    config: dict = Field(
         None,
         example={
             "process": "mapchete.processes.convert",

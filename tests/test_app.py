@@ -314,3 +314,17 @@ def test_process_exception(client, test_process_id, example_config_process_excep
     response = client.get(f"/jobs/{job_id}")
     assert response.json()["properties"]["state"] == "failed"
     assert response.json()["properties"]["traceback"]
+
+
+def test_process_custom_params(client, test_process_id, example_config_json):
+    conf = dict(example_config_json)
+    conf["config"].update(foo="bar")
+    response = client.post(
+        f"/processes/{test_process_id}/execution",
+        data=json.dumps(conf)
+    )
+    job_id = response.json()["id"]
+
+    # make sure custom parameter was passed on
+    response = client.get(f"/jobs/{job_id}")
+    assert "foo" in response.json()["properties"]["mapchete"]["config"]
