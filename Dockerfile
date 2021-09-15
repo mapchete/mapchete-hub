@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=0.22
+ARG BASE_IMAGE_TAG=mapchete_pyproj_crs_clip
 
 # use builder to build python wheels #
 ######################################
