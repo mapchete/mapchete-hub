@@ -352,7 +352,12 @@ def job_wrapper(
     """
     cluster = None
     try:
-        config = job_config.config.dict()
+        # TODO: fix https://github.com/ungarj/mapchete/issues/356
+        # before mapchete config validation works again
+        # config = job_config.config.dict()
+        config = job_config.config
+        config["bounds"] = config.get("bounds")
+        config["config_dir"] = config.get("config_dir")
 
         try:
             if "worker_specs" not in job_config.params.keys():
