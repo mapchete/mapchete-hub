@@ -80,7 +80,6 @@ RUN pip install --upgrade pip setuptools wheel && \
         numpy \
         psutil \
         rasterio \
-        requests \
         shapely \
         snuggs \
         s3fs \
