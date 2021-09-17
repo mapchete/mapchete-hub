@@ -1,50 +1,19 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
-import mongomock.collection
-import mongomock.database
+import mongomock
+import os
+from pydantic import NonNegativeInt
 import pymongo
 from shapely.geometry import box, mapping, Polygon
 import time
+from uuid import uuid4
 
-from mapchete_hub.api import job_states
+from mapchete_hub import models
+from mapchete_hub.geometry import process_area_from_config
+from mapchete_hub.random_names import random_name
+from mapchete_hub.timetools import str_to_date
 
 logger = logging.getLogger(__name__)
-
-
-MONGO_ENTRY_SCHEMA = {
-    "exception": str,
-    "geometry": dict,
-    "mapchete": {
-        "command": str,
-        "params": dict,
-        "config": dict,
-    },
-    "job_id": str,
-    "parent_job_id": str,
-    "child_job_ids": list,
-    "previous_job_id": str,
-    "next_job_id": str,
-    "hostname": str,
-    "progress_data": dict,
-    "runtime": float,
-    "started": float,
-    "state": str,
-    "terminated": bool,
-    "timestamp": float,
-    "traceback": str,
-    "output_path": str,
-    "command": str,
-    "queue": str,
-    "job_name": str,
-}
-
-OUTPUT_SCHEMA = {
-    "id": "job_id",
-    "geometry": Polygon,
-    "properties": {
-        "mapchete": "mapchete"
-    }
-}
 
 
 class BackendDB():
@@ -54,33 +23,34 @@ class BackendDB():
         """Initialize."""
         if isinstance(src, str) and src.startswith("mongodb"):  # pragma: no cover
             return MongoDBStatusHandler(db_uri=src)
-        elif isinstance(src, (pymongo.MongoClient, mongomock.database.Database)):
+        elif isinstance(src, (pymongo.MongoClient, mongomock.MongoClient)):
             return MongoDBStatusHandler(client=src)
-        elif isinstance(src, mongomock.collection.Collection):
-            return MongoDBStatusHandler(collection=src)
+        elif isinstance(src, mongomock.database.Database):
+            return MongoDBStatusHandler(database=src)
         else:  # pragma: no cover
-            raise NotImplementedError("backend {} of type {}".format(src, type(src)))
+            raise NotImplementedError(f"backend {src} of type {type(src)}")
 
 
 class MongoDBStatusHandler():
     """Abstraction layer over MongoDB backend."""
 
-    def __init__(self, db_uri=None, client=None, collection=None):
+    def __init__(self, db_uri=None, client=None, database=None):
         """Initialize."""
         if db_uri:  # pragma: no cover
-            logger.debug("connect to MongoDB: {}".format(db_uri))
-            self._client = pymongo.MongoClient(db_uri, tz_aware=True)
+            logger.debug(f"connect to MongoDB: {db_uri}")
+            self._client = pymongo.MongoClient(db_uri, tz_aware=False)
             self._db = self._client["mhub"]
             self._jobs = self._db["jobs"]
         elif client:
-            logger.debug("use existing PyMongo client instance: {}".format(client))
+            logger.debug(f"use existing PyMongo client instance: {client}")
             self._client = client
             self._db = self._client["mhub"]
             self._jobs = self._db["jobs"]
-        elif collection:
+        elif database:
             self._client = None
-            self._db = None
-            self._jobs = collection
+            self._db = database
+            self._jobs = self._db["jobs"]
+        logger.debug(f"active client {self._client}")
 
     def jobs(self, **kwargs):
         """
@@ -114,14 +84,9 @@ class MongoDBStatusHandler():
 
         # parsing job state groups and job states
         if query.get("state") is not None:
-            state = query.get("state")
+            state = models.State[query.get("state")]
             # group states are lowercase!
-            if state.lower() in job_states:
-                # for all group states (todo, doing, done) query full group
-                query.update(state={"$in": job_states[state.lower()]})
-            # celery task states are uppercase!
-            else:
-                query.update(state={"$in": [state.upper()]})
+            query.update(state={"$in": [state]})
 
         # convert bounds query into a geo search query
         if query.get("bounds") is not None:
@@ -132,12 +97,16 @@ class MongoDBStatusHandler():
             )
             query.pop("bounds")
 
-        # convert from_date and to_date kwargs to timestamp query
+        # convert from_date and to_date kwargs to updated query
         if query.get("from_date") or query.get("to_date"):
+            for i in ["from_date", "to_date"]:
+                query[i] = str_to_date(query.get(i)) if isinstance(query.get(i), str) else query.get(i)
             query.update(
-                timestamp={
-                    k: datetime.timestamp(v) for k, v in zip(
-                        ["$gte", "$lt"],
+                updated={
+                    k: v for k, v in zip(
+                        # don't know wy "$lte", "$gte" and not the other way round, but the test passes
+                        # ["$lte", "$gte"],
+                        ["$gte", "$lte"],
                         [query.get("from_date"), query.get("to_date")]
                     )
                     if v is not None
@@ -146,11 +115,8 @@ class MongoDBStatusHandler():
             query.pop("from_date", None)
             query.pop("to_date", None)
 
-        logger.debug("MongoDB query: {}".format(query))
-        return [
-            self._entry_to_geojson(e)
-            for e in self._jobs.find(query)
-        ]
+        logger.debug(f"MongoDB query: {query}")
+        return [self._entry_to_geojson(e) for e in self._jobs.find(query)]
 
     def job(self, job_id):
         """
@@ -168,125 +134,84 @@ class MongoDBStatusHandler():
         result = self._jobs.find_one({"job_id": job_id})
         if result:
             return self._entry_to_geojson(result)
-        else:
-            return None
+        else:  # pragma: no cover
+            raise KeyError(f"job {job_id} not found in the database: {result}")
 
-    def update(self, job_id=None, metadata={}):
-        """
-        Update job entry in database.
-
-        Parameters
-        ----------
-        job_id : str
-            Unique job ID.
-        metadata : dict
-            Job metadata.
-
-        Returns
-        -------
-        Updated entry
-        """
-        if job_id:
-            logger.debug("got event metadata {}".format(metadata))
-            entry = self._event_to_db_schema(job_id, metadata)
-            logger.debug("upsert entry: {}".format(entry))
-            return self._entry_to_geojson(
-                self._jobs.find_one_and_update(
-                    {"job_id": job_id},
-                    {"$set": entry},
-                    upsert=True,
-                    return_document=pymongo.ReturnDocument.AFTER
-                )
-            )
-
-    def new(self, job_id=None, metadata=None):
+    def new(self, job_config: models.MapcheteJob = None):
         """
         Create new job entry in database.
-
-        Parameters
-        ----------
-        job_id : str
-            Unique job ID.
-        metadate : dict
-            Job metadata.
-
-        Returns
-        -------
-        None
         """
-        logger.debug("got new job {} with metadata {}".format(job_id, metadata))
-        # metadata looks like:
-        # job_id=job_id,
-        # command=job["command"],
-        # params=job["params"],
-        # config=cleanup_datetime(job["config"]),
-        # parent_job_id=parent_job_id,
-        # child_job_id=child_job_id,
-        # process_area=mapping(process_area),
-        # process_area_process_crs=mapping(process_area_process_crs),
-        entry = {
-            "child_job_ids": metadata.get("child_job_id"),
-            "geometry": metadata.get("process_area_process_crs"),
-            "job_id": job_id,
-            "mapchete": {
-                "command": metadata.get("command"),
-                "params": metadata.get("params"),
-                "config": metadata.get("config"),
-            },
-            "next_job_id": metadata.get("next_job_id"),
-            "parent_job_id": metadata.get("parent_job_id"),
-            "previous_job_id": metadata.get("previous_job_id"),
-            "state": "PENDING",
-            "output_path": metadata.get("config", {}).get("output", {}).get("path"),
-            "command": metadata.get("command"),
-            "queue": metadata.get("params").get("queue"),
-            "job_name": metadata.get("params").get("job_name"),
-            "timestamp": time.time()
-        }
-        self._jobs.insert_one(entry)
-        return self._entry_to_geojson(entry)
+        job_id = uuid4().hex
+        logger.debug(f"got new job with config {job_config} and assigning job ID {job_id}")
+        entry = models.Job(
+            job_id=job_id,
+            state=models.State["pending"],
+            geometry=process_area_from_config(
+                job_config,
+                dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
+            )[0],
+            mapchete=job_config,
+            output_path=job_config.dict()["config"]["output"]["path"],
+            started=datetime.utcnow(),
+            job_name=job_config.params.get("job_name", random_name())
+        )
+        result = self._jobs.insert_one(entry.dict())
+        if result.acknowledged:
+            return self.job(job_id)
+        else:  # pragma: no cover
+            raise RuntimeError(f"entry {entry} could not be inserted into MongoDB")
+
+    def set(
+        self,
+        job_id: str = None,
+        state: models.State = None,
+        current_progress: NonNegativeInt = None,
+        total_progress: NonNegativeInt= None,
+        exception: str = None,
+        traceback: str = None
+    ):
+        entry = {"job_id": job_id}
+        timestamp = datetime.utcnow()
+        logger.debug(f"update timestamp: {timestamp}")
+        if state is not None:
+            entry.update(state=models.State[state])
+            if state == "done":
+                logger.debug(self.job(job_id)["properties"]["started"])
+                entry.update(
+                    runtime=(timestamp - self.job(job_id)["properties"]["started"]).total_seconds(),
+                    finished=timestamp
+                )
+        if current_progress is not None:
+            entry.update(current_progress=current_progress)
+        if total_progress is not None:
+            entry.update(total_progress=total_progress)
+        if exception is not None:
+            entry.update(exception=str(exception))
+        if traceback is not None:
+            entry.update(traceback=traceback)
+        # add timestamp to entry
+        entry.update(updated=timestamp)
+        logger.debug(f"upsert entry: {entry}")
+        return self._entry_to_geojson(
+            self._jobs.find_one_and_update(
+                {"job_id": job_id},
+                {"$set": entry},
+                upsert=True,
+                return_document=pymongo.ReturnDocument.AFTER
+            )
+        )
 
     def _entry_to_geojson(self, entry):
         return {
-            "id": entry["job_id"],
+            "type": "Feature",
+            "id": str(entry["job_id"]),
             "geometry": entry["geometry"],
             "properties": {
                 k: entry.get(k)
-                for k in MONGO_ENTRY_SCHEMA.keys()
+                for k in entry.keys()
+                if k not in ["job_id", "geometry", "id", "_id"]
             }
         }
-
-    def _event_to_db_schema(self, job_id=None, metadata=None):
-        """Map celery event metadata to entry schema."""
-        # example metadata keys returned by celery:
-        # metadata.keys():
-        # ['args', 'type', 'clock', 'timestamp', 'kwargs', 'root_id', 'hostname',
-        # 'local_received', 'uuid', 'routing_key', 'eta', 'name', 'exchange',
-        # 'expires', 'retries', 'utcoffset', 'state', 'queue', 'parent_id', 'pid']
-        # in 'kwargs' we have the process information encoded as json
-
-        # json.loads(metadata["kwargs"]).keys():
-        # ['command', 'queue', 'parent_job_id', 'child_job_id', 'process_area', 'mode',
-        # 'bounds', 'tile', 'point', 'mapchete_config', 'wkt_geometry', 'zoom']
-
-        # remember timestamp when process started
-        if metadata.get("type") in ["task-started", "task-received"]:
-            metadata.update(started=metadata.get("timestamp"))
-
-        # get all celery related metadata
-        entry = {
-            "job_id": job_id,
-            **{
-                k: v for k, v in metadata.items()
-                if k in MONGO_ENTRY_SCHEMA.keys() and v is not None
-            }
-        }
-
-        # update state to TERMINATED if task was terminated successfully or was revoked
-        if metadata.get("terminated"):
-            entry.update(state="TERMINATED")
-
-        return entry
 
     def __enter__(self):
         """Enter context."""

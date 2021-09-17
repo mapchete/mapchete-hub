@@ -3,18 +3,28 @@ Changelog
 #########
 
 -----------------
+0.20 - 2021-09-17
+-----------------
+NOTE: major code changes!
+* replaced Celery with dask
+* moved CLI functionality and api module into separate ``mapchete_hub_cli`` package
+* replaced ``flask`` with ``FastAPI``
+* 
+
+
+-----------------
 0.19 - 2021-03-04
 -----------------
 * fixed the mhub state query (#120)
 * Docker
     * `pip-compile` is now used to resolve dependeny graph before installing requirements
     * dependencies
-        * update `mapchete_satellite` to `>=0.38`
-        * update `mapchete_satellite` to `0.15`
-        * update `eox_preprocessing` to `0.13`
-    * update base image `docker-base`
-        * `mapchete:0:17` for mhub
-        * `snap-mapchete-ost:0:17` for mhub-s1
+        * update ``mapchete`` to ``>=0.38``
+        * update ``mapchete_satellite`` to ``0.15``
+        * update ``eox_preprocessing`` to ``0.13``
+    * update base image ``docker-base``
+        * ``mapchete:0:17`` for mhub
+        * ``snap-mapchete-ost:0:17`` for mhub-s1
 
 
 -----------------
