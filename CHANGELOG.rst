@@ -9,7 +9,7 @@ NOTE: major code changes!
 * replaced Celery with dask
 * moved CLI functionality and api module into separate ``mapchete_hub_cli`` package
 * replaced ``flask`` with ``FastAPI``
-* 
+* deactivated xarray and Sentinel-1 support/tests(!) for now
 
 
 -----------------
