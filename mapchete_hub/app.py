@@ -384,6 +384,7 @@ def job_wrapper(
         )
 
         logger.debug(f"job {job_id} starting mapchete {job_config.command}")
+        logger.debug(f"dask dashboard: {dask_client.dashboard_link}")
 
         # relative output paths are not useful, so raise exception
         out_path = config.get("output", {}).get("path", {})
