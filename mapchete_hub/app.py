@@ -391,7 +391,7 @@ def job_wrapper(
         if not path_is_remote(out_path) and not os.path.isabs(out_path):  # pragma: no cover
             raise ValueError(f"process output path must be absolute: {out_path}")
 
-        backend_db.set(job_id, state="running")
+        backend_db.set(job_id, state="running", dask_dashboard_link=dask_client.dashboard_link)
 
         # Mapchete now will initialize the process and prepare all the tasks required.
         job = MAPCHETE_COMMANDS[job_config.command](

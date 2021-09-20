@@ -99,3 +99,4 @@ class Job(Model, BaseModel):
     worker_specs: Optional[str] = "default"
     command: Optional[MapcheteCommand] = MapcheteCommand.execute
     job_name: Optional[str] = None
+    dask_dashboard_link: Optional[str] = None
