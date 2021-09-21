@@ -168,7 +168,8 @@ class MongoDBStatusHandler():
         current_progress: NonNegativeInt = None,
         total_progress: NonNegativeInt= None,
         exception: str = None,
-        traceback: str = None
+        traceback: str = None,
+        dask_dashboard_link: str = None
     ):
         entry = {"job_id": job_id}
         timestamp = datetime.utcnow()
@@ -189,6 +190,8 @@ class MongoDBStatusHandler():
             entry.update(exception=str(exception))
         if traceback is not None:
             entry.update(traceback=traceback)
+        if dask_dashboard_link is not None:
+            entry.update(dask_dashboard_link=dask_dashboard_link)
         # add timestamp to entry
         entry.update(updated=timestamp)
         logger.debug(f"upsert entry: {entry}")

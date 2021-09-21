@@ -328,3 +328,15 @@ def test_process_custom_params(client, test_process_id, example_config_json):
     # make sure custom parameter was passed on
     response = client.get(f"/jobs/{job_id}")
     assert "foo" in response.json()["properties"]["mapchete"]["config"]
+
+
+def test_dask_dashboard_link(client, test_process_id, example_config_json):
+    response = client.post(
+        f"/processes/{test_process_id}/execution",
+        data=json.dumps(example_config_json)
+    )
+    job_id = response.json()["id"]
+
+    # make sure custom parameter was passed on
+    response = client.get(f"/jobs/{job_id}")
+    assert response.json()["properties"].get("dask_dashboard_link")
