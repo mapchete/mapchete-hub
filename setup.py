@@ -44,10 +44,7 @@ setup(
     license="MIT",
     packages=find_packages(),
     install_requires=install_requires,
-    extras_require={
-        "complete": install_requires,
-        "test": test_requires
-    },
+    extras_require={"complete": install_requires, "test": test_requires},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
@@ -57,5 +54,5 @@ setup(
         "Programming Language :: Python :: 3.8",
     ],
     setup_requires=["pytest-runner"],
-    tests_require=["pytest", "pytest-flask"]
+    tests_require=["pytest", "pytest-flask"],
 )

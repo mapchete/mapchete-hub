@@ -229,7 +229,7 @@ animals = [
     "Worm",
     "Wren",
     "Yak",
-    "Zebra"
+    "Zebra",
 ]
 
 adjectives = [
@@ -610,8 +610,7 @@ adjectives = [
     "yummy",
     "zany",
     "zealous",
-    "zippy"
-    "adorable",
+    "zippy" "adorable",
     "acrobatic",
     "adaptable",
     "adventurous",

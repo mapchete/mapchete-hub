@@ -10,6 +10,7 @@ from mapchete_hub.timetools import str_to_date, date_to_str
 
 TEST_ENDPOINT = os.environ.get("MHUB_HOST", "http://0.0.0.0:5000")
 
+
 def _endpoint_available():
     try:
         response = requests.get(TEST_ENDPOINT)
@@ -21,7 +22,10 @@ def _endpoint_available():
 ENDPOINT_AVAILABLE = _endpoint_available()
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_get_root():
     response = requests.get(f"{TEST_ENDPOINT}/")
     assert response.status_code == 200
@@ -35,14 +39,20 @@ def test_get_root():
 #         response = requests.get(f"{TEST_ENDPOINT}/conformance")
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_get_processes():
     response = requests.get(f"{TEST_ENDPOINT}/processes")
     assert response.status_code == 200
     assert len(response.json()) > 0
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_get_process():
     response = requests.get(f"{TEST_ENDPOINT}/processes/mapchete.processes.convert")
     assert response.status_code == 200
@@ -59,11 +69,14 @@ def test_get_process():
 #         response = requests.post(f"{TEST_ENDPOINT}/processes/{test_process_id}")
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_post_job(test_process_id, example_config_json):
     response = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
-        data=json.dumps(example_config_json)
+        data=json.dumps(example_config_json),
     )
     assert response.status_code == 201
 
@@ -75,11 +88,14 @@ def test_post_job(test_process_id, example_config_json):
     assert response.status_code == 200
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_post_job_custom_process(test_process_id, example_config_custom_process_json):
     response = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
-        data=json.dumps(example_config_custom_process_json)
+        data=json.dumps(example_config_custom_process_json),
     )
     assert response.status_code == 201
 
@@ -92,7 +108,10 @@ def test_post_job_custom_process(test_process_id, example_config_custom_process_
     assert response.json()["properties"]["state"] == "running"
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_list_jobs(test_process_id, example_config_json):
     # this should be empty
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
@@ -106,9 +125,9 @@ def test_list_jobs(test_process_id, example_config_json):
             data=json.dumps(
                 dict(
                     example_config_json,
-                    params=dict(example_config_json["params"], zoom=2)
+                    params=dict(example_config_json["params"], zoom=2),
                 )
-            )
+            ),
         )
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
@@ -118,7 +137,10 @@ def test_list_jobs(test_process_id, example_config_json):
     assert after > before
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_list_jobs_bounds(test_process_id, example_config_json):
     # this should be empty
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
@@ -127,10 +149,9 @@ def test_list_jobs_bounds(test_process_id, example_config_json):
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=1)
+                example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
@@ -143,7 +164,10 @@ def test_list_jobs_bounds(test_process_id, example_config_json):
     assert job_id not in jobs
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_list_jobs_output_path(test_process_id, example_config_json):
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
     assert response.status_code == 200
@@ -151,14 +175,16 @@ def test_list_jobs_output_path(test_process_id, example_config_json):
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=1)
+                example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
-    response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"output_path": example_config_json["config"]["output"]["path"]})
+    response = requests.get(
+        f"{TEST_ENDPOINT}/jobs",
+        params={"output_path": example_config_json["config"]["output"]["path"]},
+    )
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
@@ -167,7 +193,10 @@ def test_list_jobs_output_path(test_process_id, example_config_json):
     assert job_id not in jobs
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_list_jobs_state(test_process_id, example_config_json):
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
     assert response.status_code == 200
@@ -175,10 +204,9 @@ def test_list_jobs_state(test_process_id, example_config_json):
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=1)
+                example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
@@ -201,7 +229,10 @@ def test_list_jobs_state(test_process_id, example_config_json):
     assert job_id not in jobs
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_list_jobs_job_name(test_process_id, example_config_json):
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
     assert response.status_code == 200
@@ -210,9 +241,9 @@ def test_list_jobs_job_name(test_process_id, example_config_json):
         data=json.dumps(
             dict(
                 example_config_json,
-                params=dict(example_config_json["params"], zoom=1, job_name="foo")
+                params=dict(example_config_json["params"], zoom=1, job_name="foo"),
             )
-        )
+        ),
     )
 
     job_id = response.json()["id"]
@@ -226,7 +257,10 @@ def test_list_jobs_job_name(test_process_id, example_config_json):
     assert job_id not in jobs
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_list_jobs_from_date(test_process_id, example_config_json):
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
     assert response.status_code == 200
@@ -234,10 +268,9 @@ def test_list_jobs_from_date(test_process_id, example_config_json):
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=1)
+                example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
-        )
+        ),
     )
 
     job_id = response.json()["id"]
@@ -253,7 +286,10 @@ def test_list_jobs_from_date(test_process_id, example_config_json):
     assert job_id not in jobs
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_list_jobs_to_date(test_process_id, example_config_json):
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
     assert response.status_code == 200
@@ -261,10 +297,9 @@ def test_list_jobs_to_date(test_process_id, example_config_json):
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=1)
+                example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
-        )
+        ),
     )
 
     job_id = response.json()["id"]
@@ -280,18 +315,19 @@ def test_list_jobs_to_date(test_process_id, example_config_json):
     assert job_id not in jobs
 
 
-
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_cancel_job(test_process_id, example_config_json):
     # make one long running job
     response = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=8)
+                example_config_json, params=dict(example_config_json["params"], zoom=8)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
@@ -315,12 +351,17 @@ def test_cancel_job(test_process_id, example_config_json):
         if state == "cancelled":
             break
         elif time.time() - start > 120:
-            raise RuntimeError(f"job not cancelled in time, last state was '{state}' {traceback}")
+            raise RuntimeError(
+                f"job not cancelled in time, last state was '{state}' {traceback}"
+            )
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
     assert response.json()["properties"]["state"] == "cancelled"
 
 
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_cancel_jobs(test_process_id, example_config_json):
     # make one long running job
     jobs = [
@@ -329,10 +370,10 @@ def test_cancel_jobs(test_process_id, example_config_json):
             data=json.dumps(
                 dict(
                     example_config_json,
-                    params=dict(example_config_json["params"], zoom=8)
+                    params=dict(example_config_json["params"], zoom=8),
                 )
             ),
-            timeout=3
+            timeout=3,
         ).json()["id"]
         for _ in range(2)
     ]
@@ -359,24 +400,27 @@ def test_cancel_jobs(test_process_id, example_config_json):
         if state == "cancelled":
             break
         elif time.time() - start > 120:
-            raise RuntimeError(f"job not cancelled in time, last state was '{state}' {traceback}")
+            raise RuntimeError(
+                f"job not cancelled in time, last state was '{state}' {traceback}"
+            )
 
     # make sure other job has not failed
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{jobs[1]}", timeout=3)
     assert response.json()["properties"]["state"] in ["running", "done"]
 
 
-
-@pytest.mark.skipif(not ENDPOINT_AVAILABLE, reason="requires up and running endpoint using docker-compose")
+@pytest.mark.skipif(
+    not ENDPOINT_AVAILABLE,
+    reason="requires up and running endpoint using docker-compose",
+)
 def test_job_result(test_process_id, example_config_json):
     result = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=2)
+                example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
-        )
+        ),
     )
     job_id = result.json()["id"]
 

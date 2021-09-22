@@ -109,6 +109,7 @@ MHUB_WORKER_EVENT_RATE_LIMIT = os.environ.get("MHUB_WORKER_EVENT_RATE_LIMIT", 0.
 
 app = FastAPI()
 
+
 # dependencies
 def get_backend_db():  # pragma: no cover
     url = os.environ.get("MHUB_MONGODB_URL")
@@ -129,24 +130,20 @@ def get_dask():  # pragma: no cover
             },
             "cluster_kwargs": {
                 "minimum": 0,
-                "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000))
-            }
+                "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)),
+            },
         }
     elif os.environ.get("MHUB_DASK_SCHEDULER_URL"):
-        return {
-            "flavor": "scheduler",
-            "url": os.environ.get("MHUB_DASK_SCHEDULER_URL")
-        }
+        return {"flavor": "scheduler", "url": os.environ.get("MHUB_DASK_SCHEDULER_URL")}
     else:  # pragma: no cover
         logger.warning(
             "Either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set. For now, a local cluster is being used."
         )
-        return {
-            "flavor" : "local_cluster",
-            "cluster": LocalCluster()
-        }
+        return {"flavor": "local_cluster", "cluster": LocalCluster()}
+
 
 # REST endpoints
+
 
 @app.get("/")
 def root():
@@ -159,10 +156,10 @@ def root():
                 "rel": "service",
                 "type": "application/json",
                 "hreflang": "en",
-                "title": "string"
+                "title": "string",
             }
-        ]
-}
+        ],
+    }
 
 
 @app.get("/conformance")
@@ -209,18 +206,14 @@ async def post_job(
     background_tasks: BackgroundTasks,
     backend_db: BackendDB = Depends(get_backend_db),
     dask_opts: dict = Depends(get_dask),
-    response: Response = None
+    response: Response = None,
 ):
     """Executes a process, i.e. creates a new job."""
     try:
         job = backend_db.new(job_config=job_config)
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
-            job_wrapper,
-            job["id"],
-            job_config,
-            backend_db,
-            dask_opts
+            job_wrapper, job["id"], job_config, backend_db, dask_opts
         )
         response.headers["Location"] = f"/jobs/{job['id']}"
         # return job
@@ -257,10 +250,7 @@ def list_jobs(
         "from_date": from_date,
         "to_date": to_date,
     }
-    return {
-        "type": "FeatureCollection",
-        "features": backend_db.jobs(**kwargs)
-    }
+    return {"type": "FeatureCollection", "features": backend_db.jobs(**kwargs)}
 
 
 @app.get("/jobs/{job_id}")
@@ -300,14 +290,14 @@ def get_dask_cluster(
     gateway_kwargs=None,
     cluster=None,
     dask_specs=None,
-    **kwargs
+    **kwargs,
 ):
     logger.debug(
         {
             "flavor": flavor,
             "url": url,
             "gateway_kwargs": gateway_kwargs,
-            "cluster": cluster
+            "cluster": cluster,
         }
     )
     if flavor == "local_cluster" and isinstance(cluster, LocalCluster):
@@ -317,14 +307,13 @@ def get_dask_cluster(
         logger.debug(f"connected to gateway {gateway}")
         if dask_specs is not None:
             return gateway.new_cluster(
-                cluster_options=_get_cluster_specs(
-                    gateway, dask_specs=dask_specs
-                )
+                cluster_options=_get_cluster_specs(gateway, dask_specs=dask_specs)
             )
         else:
             return gateway.new_cluster()
     else:  # pragma: no cover
         raise TypeError("cannot get cluster")
+
 
 def get_dask_client(
     flavor=None,
@@ -341,14 +330,9 @@ def get_dask_client(
         raise TypeError("cannot get client")
 
 
-def job_wrapper(
-    job_id: str,
-    job_config: dict,
-    backend_db: BackendDB,
-    dask_opts: dict
-):
-    """ Create a Job iterator through the mapchete_execute function. On every new finished task,
-        check whether the task already got the abort status.
+def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts: dict):
+    """Create a Job iterator through the mapchete_execute function. On every new finished task,
+    check whether the task already got the abort status.
     """
     cluster = None
     try:
@@ -363,8 +347,7 @@ def job_wrapper(
             if "dask_specs" not in job_config.params.keys():
                 job_config.params["dask_specs"] = None
             cluster = get_dask_cluster(
-                **dask_opts,
-                dask_specs=job_config.params["dask_specs"]
+                **dask_opts, dask_specs=job_config.params["dask_specs"]
             )
             logger.debug(f"cluster: {cluster}")
             cluster_kwargs = dask_opts.get("cluster_kwargs")
@@ -378,9 +361,7 @@ def job_wrapper(
 
         logger.debug("determining dask client")
         dask_client = get_dask_client(
-            flavor=dask_opts.get("flavor"),
-            url=dask_opts.get("url"),
-            cluster=cluster
+            flavor=dask_opts.get("flavor"), url=dask_opts.get("url"), cluster=cluster
         )
 
         logger.debug(f"job {job_id} starting mapchete {job_config.command}")
@@ -388,27 +369,32 @@ def job_wrapper(
 
         # relative output paths are not useful, so raise exception
         out_path = config.get("output", {}).get("path", {})
-        if not path_is_remote(out_path) and not os.path.isabs(out_path):  # pragma: no cover
+        if not path_is_remote(out_path) and not os.path.isabs(
+            out_path
+        ):  # pragma: no cover
             raise ValueError(f"process output path must be absolute: {out_path}")
 
-        backend_db.set(job_id, state="running", dask_dashboard_link=dask_client.dashboard_link)
+        backend_db.set(
+            job_id, state="running", dask_dashboard_link=dask_client.dashboard_link
+        )
 
         # Mapchete now will initialize the process and prepare all the tasks required.
         job = MAPCHETE_COMMANDS[job_config.command](
             config,
             **{
-                k: v for k, v in job_config.params.items()
+                k: v
+                for k, v in job_config.params.items()
                 if k not in ["job_name", "dask_specs"]
             },
             as_iterator=True,
             concurrency="dask",
-            dask_client=dask_client
+            dask_client=dask_client,
         )
         backend_db.set(job_id, current_progress=0, total_progress=len(job))
         logger.debug(f"job {job_id} created")
         # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
         # yield the results.
-        last_event = 0.
+        last_event = 0.0
         for i, t in enumerate(job):
             i += 1
             logger.debug(f"job {job_id} task {i}/{len(job)} finished")
@@ -432,7 +418,7 @@ def job_wrapper(
             job_id=job_id,
             state="failed",
             exception=repr(exc),
-            traceback="".join(traceback.format_tb(exc.__traceback__))
+            traceback="".join(traceback.format_tb(exc.__traceback__)),
         )
         logger.exception(exc)
     finally:  # pragma: no cover

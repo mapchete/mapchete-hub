@@ -7,11 +7,7 @@ from shapely.geometry import box, mapping, shape
 from mapchete_hub import models
 
 
-def process_area_from_config(
-    job_config: models.MapcheteJob,
-    dst_crs=None,
-    **kwargs
-):
+def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwargs):
     """
     Calculate process area from mapchete configuration and process parameters.
 
@@ -39,7 +35,9 @@ def process_area_from_config(
     (geometry, geometry_process_crs) : tuple of shapely.Polygon
         Geometry in mhub CRS (which is defined in status_gpkg_profile) and in process CRS.
     """
-    job_config = models.MapcheteJob(**job_config) if isinstance(job_config, dict) else job_config
+    job_config = (
+        models.MapcheteJob(**job_config) if isinstance(job_config, dict) else job_config
+    )
     config = job_config.dict().get("config") or {}
     params = job_config.dict().get("params") or {}
 
@@ -49,7 +47,7 @@ def process_area_from_config(
     tp = BufferedTilePyramid(
         config["pyramid"]["grid"],
         metatiling=config["pyramid"].get("metatiling", 1),
-        pixelbuffer=config["pyramid"].get("pixelbuffer", 0)
+        pixelbuffer=config["pyramid"].get("pixelbuffer", 0),
     )
 
     # bounds
@@ -63,7 +61,7 @@ def process_area_from_config(
         x, y = params.get("point")
         zoom_levels = get_zoom_levels(
             process_zoom_levels=config["zoom_levels"],
-            init_zoom_levels=params.get("zoom")
+            init_zoom_levels=params.get("zoom"),
         )
         geometry = tp.tile_from_xy(x, y, max(zoom_levels)).bbox
     # tile
@@ -84,9 +82,8 @@ def process_area_from_config(
             reproject_geometry(
                 geometry,
                 src_crs=tp.crs,
-                dst_crs=CRS.from_user_input(dst_crs) if dst_crs else tp.crs
+                dst_crs=CRS.from_user_input(dst_crs) if dst_crs else tp.crs,
             )
         ),
-        mapping(geometry)
+        mapping(geometry),
     )
-
