@@ -304,6 +304,7 @@ def test_list_jobs_to_date(test_process_id, example_config_json):
 
     job_id = response.json()["id"]
 
+    time.sleep(5)
     now = date_to_str(datetime.datetime.utcfromtimestamp(time.time()))
     response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"to_date": now})
     jobs = [j["id"] for j in response.json()["features"]]
