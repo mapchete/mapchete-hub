@@ -74,7 +74,7 @@ from typing import Union
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 from mapchete_hub.timetools import str_to_date
-from mapchete_hub.settings import _get_cluster_specs, WORKER_DEFAULT_SPECS
+from mapchete_hub.settings import _get_cluster_specs, DASK_DEFAULT_SPECS
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
@@ -170,9 +170,9 @@ def get_conformance():
     raise NotImplementedError()
 
 
-@app.get("/worker_specs")
-def get_worker_specs():
-    return WORKER_DEFAULT_SPECS
+@app.get("/dask_specs")
+def get_dask_specs():
+    return DASK_DEFAULT_SPECS
 
 
 @app.get("/processes")
@@ -299,7 +299,7 @@ def get_dask_cluster(
     url=None,
     gateway_kwargs=None,
     cluster=None,
-    worker_specs=None,
+    dask_specs=None,
     **kwargs
 ):
     logger.debug(
@@ -315,10 +315,10 @@ def get_dask_cluster(
     elif flavor == "gateway":  # pragma: no cover
         gateway = Gateway(url, **gateway_kwargs or {})
         logger.debug(f"connected to gateway {gateway}")
-        if worker_specs is not None:
+        if dask_specs is not None:
             return gateway.new_cluster(
                 cluster_options=_get_cluster_specs(
-                    gateway, worker_specs=worker_specs
+                    gateway, dask_specs=dask_specs
                 )
             )
         else:
@@ -360,11 +360,11 @@ def job_wrapper(
         config["config_dir"] = config.get("config_dir")
 
         try:
-            if "worker_specs" not in job_config.params.keys():
-                job_config.params["worker_specs"] = None
+            if "dask_specs" not in job_config.params.keys():
+                job_config.params["dask_specs"] = None
             cluster = get_dask_cluster(
                 **dask_opts,
-                worker_specs=job_config.params["worker_specs"]
+                dask_specs=job_config.params["dask_specs"]
             )
             logger.debug(f"cluster: {cluster}")
             cluster_kwargs = dask_opts.get("cluster_kwargs")
@@ -398,7 +398,7 @@ def job_wrapper(
             config,
             **{
                 k: v for k, v in job_config.params.items()
-                if k not in ["job_name", "worker_specs"]
+                if k not in ["job_name", "dask_specs"]
             },
             as_iterator=True,
             concurrency="dask",

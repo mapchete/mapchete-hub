@@ -96,7 +96,7 @@ class Job(Model, BaseModel):
     finished: Optional[datetime.datetime] = None
     updated: Optional[datetime.datetime] = None
     runtime: Optional[float] = None
-    worker_specs: Optional[str] = "default"
+    dask_specs: Optional[str] = "default"
     command: Optional[MapcheteCommand] = MapcheteCommand.execute
     job_name: Optional[str] = None
     dask_dashboard_link: Optional[str] = None
