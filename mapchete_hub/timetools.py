@@ -17,4 +17,4 @@ def str_to_date(date_str):
         except ValueError:
             return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S" + add_zulu)
     else:
-        return datetime(*map(int, date_str.split('-')))
+        return datetime(*map(int, date_str.split("-")))

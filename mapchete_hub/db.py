@@ -16,7 +16,7 @@ from mapchete_hub.timetools import str_to_date
 logger = logging.getLogger(__name__)
 
 
-class BackendDB():
+class BackendDB:
     """Class to communicate with backend database."""
 
     def __new__(self, src=None):
@@ -31,7 +31,7 @@ class BackendDB():
             raise NotImplementedError(f"backend {src} of type {type(src)}")
 
 
-class MongoDBStatusHandler():
+class MongoDBStatusHandler:
     """Abstraction layer over MongoDB backend."""
 
     def __init__(self, db_uri=None, client=None, database=None):
@@ -100,14 +100,19 @@ class MongoDBStatusHandler():
         # convert from_date and to_date kwargs to updated query
         if query.get("from_date") or query.get("to_date"):
             for i in ["from_date", "to_date"]:
-                query[i] = str_to_date(query.get(i)) if isinstance(query.get(i), str) else query.get(i)
+                query[i] = (
+                    str_to_date(query.get(i))
+                    if isinstance(query.get(i), str)
+                    else query.get(i)
+                )
             query.update(
                 updated={
-                    k: v for k, v in zip(
+                    k: v
+                    for k, v in zip(
                         # don't know wy "$lte", "$gte" and not the other way round, but the test passes
                         # ["$lte", "$gte"],
                         ["$gte", "$lte"],
-                        [query.get("from_date"), query.get("to_date")]
+                        [query.get("from_date"), query.get("to_date")],
                     )
                     if v is not None
                 }
@@ -142,18 +147,19 @@ class MongoDBStatusHandler():
         Create new job entry in database.
         """
         job_id = uuid4().hex
-        logger.debug(f"got new job with config {job_config} and assigning job ID {job_id}")
+        logger.debug(
+            f"got new job with config {job_config} and assigning job ID {job_id}"
+        )
         entry = models.Job(
             job_id=job_id,
             state=models.State["pending"],
             geometry=process_area_from_config(
-                job_config,
-                dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
+                job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
             )[0],
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"],
             started=datetime.utcnow(),
-            job_name=job_config.params.get("job_name", random_name())
+            job_name=job_config.params.get("job_name", random_name()),
         )
         result = self._jobs.insert_one(entry.dict())
         if result.acknowledged:
@@ -166,10 +172,10 @@ class MongoDBStatusHandler():
         job_id: str = None,
         state: models.State = None,
         current_progress: NonNegativeInt = None,
-        total_progress: NonNegativeInt= None,
+        total_progress: NonNegativeInt = None,
         exception: str = None,
         traceback: str = None,
-        dask_dashboard_link: str = None
+        dask_dashboard_link: str = None,
     ):
         entry = {"job_id": job_id}
         timestamp = datetime.utcnow()
@@ -179,8 +185,10 @@ class MongoDBStatusHandler():
             if state == "done":
                 logger.debug(self.job(job_id)["properties"]["started"])
                 entry.update(
-                    runtime=(timestamp - self.job(job_id)["properties"]["started"]).total_seconds(),
-                    finished=timestamp
+                    runtime=(
+                        timestamp - self.job(job_id)["properties"]["started"]
+                    ).total_seconds(),
+                    finished=timestamp,
                 )
         if current_progress is not None:
             entry.update(current_progress=current_progress)
@@ -200,7 +208,7 @@ class MongoDBStatusHandler():
                 {"job_id": job_id},
                 {"$set": entry},
                 upsert=True,
-                return_document=pymongo.ReturnDocument.AFTER
+                return_document=pymongo.ReturnDocument.AFTER,
             )
         )
 
@@ -213,7 +221,7 @@ class MongoDBStatusHandler():
                 k: entry.get(k)
                 for k in entry.keys()
                 if k not in ["job_id", "geometry", "id", "_id"]
-            }
+            },
         }
 
     def __enter__(self):

@@ -13,7 +13,7 @@ def test_get_root(client):
 def test_get_conformance(client):
     # TODO
     with pytest.raises(NotImplementedError):
-        response = client.get("/conformance")
+        client.get("/conformance")
 
 
 def test_get_processes(client):
@@ -34,19 +34,18 @@ def test_get_process(client):
 def test_post_process(client, test_process_id):
     # TODO
     with pytest.raises(NotImplementedError):
-        response = client.post(f"/processes/{test_process_id}")
+        client.post(f"/processes/{test_process_id}")
 
 
 def test_post_job(client, test_process_id, example_config_json):
     # response = client.get("/jobs")
     response = client.post(
         f"/processes/{test_process_id}/execution",
-            data=json.dumps(
-                dict(
-                    example_config_json,
-                    params=dict(example_config_json["params"], zoom=2)
-                )
+        data=json.dumps(
+            dict(
+                example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
+        ),
     )
     assert response.status_code == 201
     assert client.get("/jobs/").json()
@@ -57,15 +56,17 @@ def test_post_job(client, test_process_id, example_config_json):
     assert response.status_code == 200
 
 
-def test_post_job_custom_process(client, test_process_id, example_config_custom_process_json):
+def test_post_job_custom_process(
+    client, test_process_id, example_config_custom_process_json
+):
     response = client.post(
         f"/processes/{test_process_id}/execution",
-            data=json.dumps(
-                dict(
-                    example_config_custom_process_json,
-                    params=dict(example_config_custom_process_json["params"], zoom=2)
-                )
+        data=json.dumps(
+            dict(
+                example_config_custom_process_json,
+                params=dict(example_config_custom_process_json["params"], zoom=2),
             )
+        ),
     )
     assert response.status_code == 201
     assert client.get("/jobs/").json()
@@ -90,9 +91,9 @@ def test_list_jobs(client, test_process_id, example_config_json):
             data=json.dumps(
                 dict(
                     example_config_json,
-                    params=dict(example_config_json["params"], zoom=2)
+                    params=dict(example_config_json["params"], zoom=2),
                 )
-            )
+            ),
         )
 
     response = client.get("/jobs")
@@ -108,10 +109,9 @@ def test_list_jobs_bounds(client, test_process_id, example_config_json):
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=2)
+                example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
@@ -133,14 +133,15 @@ def test_list_jobs_output_path(client, test_process_id, example_config_json):
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=2)
+                example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
-    response = client.get("/jobs", params={"output_path": example_config_json["config"]["output"]["path"]})
+    response = client.get(
+        "/jobs", params={"output_path": example_config_json["config"]["output"]["path"]}
+    )
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
@@ -156,10 +157,9 @@ def test_list_jobs_state(client, test_process_id, example_config_json):
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=2)
+                example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
@@ -180,9 +180,9 @@ def test_list_jobs_job_name(client, test_process_id, example_config_json):
         data=json.dumps(
             dict(
                 example_config_json,
-                params=dict(example_config_json["params"], zoom=2, job_name="foo")
+                params=dict(example_config_json["params"], zoom=2, job_name="foo"),
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
@@ -203,10 +203,9 @@ def test_list_jobs_from_date(client, test_process_id, example_config_json):
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=2)
+                example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
@@ -215,7 +214,9 @@ def test_list_jobs_from_date(client, test_process_id, example_config_json):
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
-    future = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime("%Y-%m-%dT%H:%M:%SZ")
+    future = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
     response = client.get("/jobs", params={"from_date": future})
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
@@ -229,19 +230,22 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=2)
+                example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
-    now = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
     response = client.get("/jobs", params={"to_date": now})
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
-    past = datetime.datetime.utcfromtimestamp(time.time() - 60).strftime("%Y-%m-%dT%H:%M:%SZ")
+    past = datetime.datetime.utcfromtimestamp(time.time() - 60).strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
     response = client.get("/jobs", params={"to_date": past})
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
@@ -254,10 +258,9 @@ def test_send_cancel_signal(client, test_process_id, example_config_json):
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=2)
+                example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
-        )
+        ),
     )
     job_id = response.json()["id"]
 
@@ -277,10 +280,9 @@ def test_job_result(client, test_process_id, example_config_json):
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json,
-                params=dict(example_config_json["params"], zoom=2)
+                example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
-        )
+        ),
     )
     job_id = result.json()["id"]
 
@@ -303,10 +305,12 @@ def test_errors(client, example_config_json):
     assert response.status_code == 404
 
 
-def test_process_exception(client, test_process_id, example_config_process_exception_json):
+def test_process_exception(
+    client, test_process_id, example_config_process_exception_json
+):
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(example_config_process_exception_json)
+        data=json.dumps(example_config_process_exception_json),
     )
     job_id = response.json()["id"]
 
@@ -320,8 +324,7 @@ def test_process_custom_params(client, test_process_id, example_config_json):
     conf = dict(example_config_json)
     conf["config"].update(foo="bar")
     response = client.post(
-        f"/processes/{test_process_id}/execution",
-        data=json.dumps(conf)
+        f"/processes/{test_process_id}/execution", data=json.dumps(conf)
     )
     job_id = response.json()["id"]
 
@@ -332,8 +335,7 @@ def test_process_custom_params(client, test_process_id, example_config_json):
 
 def test_dask_dashboard_link(client, test_process_id, example_config_json):
     response = client.post(
-        f"/processes/{test_process_id}/execution",
-        data=json.dumps(example_config_json)
+        f"/processes/{test_process_id}/execution", data=json.dumps(example_config_json)
     )
     job_id = response.json()["id"]
 

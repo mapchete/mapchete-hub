@@ -33,13 +33,7 @@ class MapcheteProcessConfig(BaseModel):
 
 class MapcheteJob(BaseModel):
     command: MapcheteCommand = Field(None, example="execute")
-    params: dict = Field(
-        None,
-        example={
-            "zoom": 8,
-            "bounds": [0, 1, 2, 3]
-        }
-    )
+    params: dict = Field(None, example={"zoom": 8, "bounds": [0, 1, 2, 3]})
     # TODO: fix https://github.com/ungarj/mapchete/issues/356
     # before mapchete config validation works again
     # config: MapcheteProcessConfig = Field(
@@ -54,17 +48,11 @@ class MapcheteJob(BaseModel):
                 "format": "GTiff",
                 "bands": 4,
                 "dtype": "uint16",
-                "path": "/tmp/mhub/"
+                "path": "/tmp/mhub/",
             },
-            "pyramid": {
-                "grid": "geodetic",
-                "metatiling": 2
-            },
-            "zoom_levels": {
-                "min": 0,
-                "max": 13
-            }
-        }
+            "pyramid": {"grid": "geodetic", "metatiling": 2},
+            "zoom_levels": {"min": 0, "max": 13},
+        },
     )
 
 
