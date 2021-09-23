@@ -371,7 +371,9 @@ def test_cancel_jobs(test_process_id, example_config_json):
             data=json.dumps(
                 dict(
                     example_config_json,
-                    params=dict(example_config_json["params"], zoom=8),
+                    params=dict(
+                        example_config_json["params"], zoom=8, bounds=[0, 1, 10, 11]
+                    ),
                 )
             ),
             timeout=3,
