@@ -1,7 +1,9 @@
 import os
 
+from mapchete_hub import __version__
+
 WORKER_DEFAULT_IMAGE = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
-WORKER_DEFAULT_TAG = os.environ.get("MHUB_IMAGE_TAG", "0.20")
+WORKER_DEFAULT_TAG = os.environ.get("MHUB_IMAGE_TAG", __version__)
 
 DASK_DEFAULT_SPECS = {
     "default": {
@@ -30,7 +32,7 @@ DASK_DEFAULT_SPECS = {
         "worker_memory": 16.0,
         "scheduler_cores": 1,
         "scheduler_memory": 2.0,
-        "image": "registry.gitlab.eox.at/maps/mapchete_hub/mhub-s1:{WORKER_DEFAULT_TAG}",
+        "image": f"registry.gitlab.eox.at/maps/mapchete_hub/mhub-s1:{WORKER_DEFAULT_TAG}",
     },
     "custom": {
         "worker_cores": os.environ.get("MHUB_WORKER_CORES", 1),
