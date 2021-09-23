@@ -3,6 +3,15 @@ Changelog
 #########
 
 -----------------
+0.21 - 2021-09-23
+-----------------
+* add ``dask_dashboard_link`` to job metadata
+* enable configuration of dask scheduler & workers via env variables when using dask gateway
+* use black & flake8 for code
+* re-enable full integration tests
+
+
+-----------------
 0.20 - 2021-09-17
 -----------------
 NOTE: major code changes!

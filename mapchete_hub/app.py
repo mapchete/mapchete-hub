@@ -61,7 +61,7 @@ from dask_gateway import Gateway, BasicAuth
 import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
 import logging
-from mapchete import commands
+from mapchete import commands, Timer
 from mapchete.io import path_is_remote
 from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings, registered_processes
@@ -351,7 +351,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             )
             logger.debug(f"cluster: {cluster}")
             cluster_kwargs = dask_opts.get("cluster_kwargs")
-            if cluster_kwargs:
+            if cluster_kwargs:  # pragma: no cover
                 logger.debug(f"adapt cluster: {cluster_kwargs}")
                 cluster.adapt(**cluster_kwargs)
         except TypeError as exc:  # pragma: no cover
@@ -374,45 +374,47 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
         ):  # pragma: no cover
             raise ValueError(f"process output path must be absolute: {out_path}")
 
-        backend_db.set(
-            job_id, state="running", dask_dashboard_link=dask_client.dashboard_link
-        )
+        with Timer() as t:
+            backend_db.set(
+                job_id, state="running", dask_dashboard_link=dask_client.dashboard_link
+            )
 
-        # Mapchete now will initialize the process and prepare all the tasks required.
-        job = MAPCHETE_COMMANDS[job_config.command](
-            config,
-            **{
-                k: v
-                for k, v in job_config.params.items()
-                if k not in ["job_name", "dask_specs"]
-            },
-            as_iterator=True,
-            concurrency="dask",
-            dask_client=dask_client,
-        )
-        backend_db.set(job_id, current_progress=0, total_progress=len(job))
-        logger.debug(f"job {job_id} created")
-        # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
-        # yield the results.
-        last_event = 0.0
-        for i, t in enumerate(job):
-            i += 1
-            logger.debug(f"job {job_id} task {i}/{len(job)} finished")
+            # Mapchete now will initialize the process and prepare all the tasks required.
+            job = MAPCHETE_COMMANDS[job_config.command](
+                config,
+                **{
+                    k: v
+                    for k, v in job_config.params.items()
+                    if k not in ["job_name", "dask_specs"]
+                },
+                as_iterator=True,
+                concurrency="dask",
+                dask_client=dask_client,
+            )
+            backend_db.set(job_id, current_progress=0, total_progress=len(job))
+            logger.debug(f"job {job_id} created")
+            # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
+            # yield the results.
+            last_event = 0.0
+            for i, task in enumerate(job):
+                i += 1
+                logger.debug(f"job {job_id} task {i}/{len(job)} finished")
 
-            event_time_passed = time.time() - last_event
-            if event_time_passed > MHUB_WORKER_EVENT_RATE_LIMIT or i == len(job):
-                last_event = time.time()
-                # determine if there is a cancel signal for this task
-                backend_db.set(job_id, current_progress=i)
-                state = backend_db.job(job_id)["properties"]["state"]
-                if state == "aborting":  # pragma: no cover
-                    logger.debug(f"job {job_id} abort state caught: {state}")
-                    # By calling the job's cancel method, all pending futures will be cancelled.
-                    job.cancel()
-                    backend_db.set(job_id, state="cancelled")
-                    return
+                event_time_passed = time.time() - last_event
+                if event_time_passed > MHUB_WORKER_EVENT_RATE_LIMIT or i == len(job):
+                    last_event = time.time()
+                    # determine if there is a cancel signal for this task
+                    backend_db.set(job_id, current_progress=i)
+                    state = backend_db.job(job_id)["properties"]["state"]
+                    if state == "aborting":  # pragma: no cover
+                        logger.debug(f"job {job_id} abort state caught: {state}")
+                        # By calling the job's cancel method, all pending futures will be cancelled.
+                        job.cancel()
+                        backend_db.set(job_id, state="cancelled")
+                        return
         # job finished successfully
         backend_db.set(job_id, state="done")
+        logger.debug(f"job {job_id} finished in {t}")
     except Exception as exc:
         backend_db.set(
             job_id=job_id,

@@ -45,7 +45,7 @@ DASK_DEFAULT_SPECS = {
 }
 
 
-def _get_cluster_specs(gateway, dask_specs):
+def _get_cluster_specs(gateway, dask_specs):  # pragma: no cover
     options = gateway.cluster_options()
     options.worker_cores = DASK_DEFAULT_SPECS[dask_specs]["worker_cores"]
     options.worker_memory = DASK_DEFAULT_SPECS[dask_specs]["worker_memory"]

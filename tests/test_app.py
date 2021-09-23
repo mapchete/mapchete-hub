@@ -16,6 +16,11 @@ def test_get_conformance(client):
         client.get("/conformance")
 
 
+def test_get_dask_specs(client):
+    response = client.get("/dask_specs")
+    assert "default" in response.json()
+
+
 def test_get_processes(client):
     response = client.get("/processes")
     assert response.status_code == 200
