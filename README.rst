@@ -21,8 +21,7 @@ A fully functional mapchete Hub instance needs the following services:
 
 * mhub server
 * mongodb
-* dask scheduler
-* one or more dask workers
+* either a dask scheduler with one or more dask workers or a dask gateway providing a dask cluster upon request
 
 Please consult the ``docker-compose.yml`` file to gather details.
 
@@ -31,6 +30,11 @@ A mapchete process can be used in mapchete Hub if its inputs and outputs are not
 
 Configuration options
 ---------------------
+
+MHUB_ADD_MAPCHETE_LOGGER
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Add mapchete logger to log output.
 
 MHUB_BACKEND_CRS
 ~~~~~~~~~~~~~~~~
@@ -42,22 +46,45 @@ MHUB_MONGODB_URL
 
 URL to MongoDB instance used as backend to store job metadata, e.g.: `mongodb://mhub:REDACTED_API_KEY@mongodb:27017`
 
+MHUB_DASK_GATEWAY_URL
+~~~~~~~~~~~~~~~~~~~~~
+
+URL to dask gateway if available.
+
 MHUB_DASK_SCHEDULER_URL
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-URL to dask scheduler.
+URL to dask scheduler if available.
 
+MHUB_IMAGE_TAG
+~~~~~~~~~~~~~~
 
-MHUB_ADD_MAPCHETE_LOGGER
-~~~~~~~~~~~~~~~~~~~~~~~~
+Image tag to be used when spawning new workers using dask gateway. (default: current mhub version)
 
-Add mapchete logger to log output.
+MHUB_SCHEDULER_CORES
+~~~~~~~~~~~~~~~~~~~~
 
+Number of CPU cores of new scheduler spawned by dask gateway. (default: 1)
+
+MHUB_SCHEDULER_MEMORY
+~~~~~~~~~~~~~~~~~~~~~
+
+RAM of new scheduler spawned by dask gateway. (default: 2)
+
+MHUB_WORKER_CORES
+~~~~~~~~~~~~~~~~~
+
+Number of CPU cores of new worker spawned by dask gateway. (default: 1)
+
+MHUB_WORKER_MEMORY
+~~~~~~~~~~~~~~~~~~
+
+RAM of new scheduler spawned by dask gateway. (default: 2)
 
 MHUB_WORKER_EVENT_RATE_LIMIT
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Limit frequency in seconds to send job updates to metadatabase. This eases the DB traffic especially for jobs with short running tasks. Defaults to 0.2.
+Limit frequency in seconds to send job updates to metadatabase. This eases the DB traffic especially for jobs with short running tasks. (default: 0.2)
 
 ------
 Docker
