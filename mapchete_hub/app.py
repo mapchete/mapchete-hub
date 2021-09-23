@@ -396,7 +396,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
             # yield the results.
             last_event = 0.0
-            for i, t in enumerate(job):
+            for i, task in enumerate(job):
                 i += 1
                 logger.debug(f"job {job_id} task {i}/{len(job)} finished")
 
