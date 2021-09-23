@@ -351,7 +351,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             )
             logger.debug(f"cluster: {cluster}")
             cluster_kwargs = dask_opts.get("cluster_kwargs")
-            if cluster_kwargs:
+            if cluster_kwargs:  # pragma: no cover
                 logger.debug(f"adapt cluster: {cluster_kwargs}")
                 cluster.adapt(**cluster_kwargs)
         except TypeError as exc:  # pragma: no cover
