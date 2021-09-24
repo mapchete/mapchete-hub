@@ -25,8 +25,9 @@ services:
       - db
       - dask_scheduler
     environment:
-      - AWS_ACCESS_KEY_ID=REDACTED_API_KEY
-      - AWS_SECRET_ACCESS_KEY=REDACTED_API_KEY
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REQUEST_PAYER=${AWS_REQUEST_PAYER}
       - MHUB_DASK_SCHEDULER_URL=tcp://dask_scheduler:8786
       - MHUB_MONGODB_URL=mongodb://mhub:REDACTED_API_KEY@db:27017
     networks:
@@ -55,6 +56,10 @@ services:
       - dask_scheduler
     networks:
       - backend
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REQUEST_PAYER=${AWS_REQUEST_PAYER}
     command: ["dask-worker", "--nthreads", "2", "--nprocs", "8", "tcp://dask_scheduler:8786"]
 
 volumes:
