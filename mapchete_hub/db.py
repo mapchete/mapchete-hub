@@ -4,7 +4,7 @@ import mongomock
 import os
 from pydantic import NonNegativeInt
 import pymongo
-from shapely.geometry import box, mapping, Polygon
+from shapely.geometry import box, mapping, shape, Polygon
 import time
 from uuid import uuid4
 
@@ -150,12 +150,14 @@ class MongoDBStatusHandler:
         logger.debug(
             f"got new job with config {job_config} and assigning job ID {job_id}"
         )
+        process_area = process_area_from_config(
+            job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
+        )[0]
         entry = models.Job(
             job_id=job_id,
             state=models.State["pending"],
-            geometry=process_area_from_config(
-                job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
-            )[0],
+            geometry=process_area,
+            bounds=shape(process_area).bounds,
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"],
             started=datetime.utcnow(),
@@ -217,10 +219,11 @@ class MongoDBStatusHandler:
             "type": "Feature",
             "id": str(entry["job_id"]),
             "geometry": entry["geometry"],
+            "bounds": entry["bounds"],
             "properties": {
                 k: entry.get(k)
                 for k in entry.keys()
-                if k not in ["job_id", "geometry", "id", "_id"]
+                if k not in ["job_id", "geometry", "id", "_id", "bounds"]
             },
         }
 
