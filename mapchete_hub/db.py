@@ -162,6 +162,7 @@ class MongoDBStatusHandler:
             output_path=job_config.dict()["config"]["output"]["path"],
             started=datetime.utcnow(),
             job_name=job_config.params.get("job_name") or random_name(),
+            dask_specs=job_config.params.get("dask_specs"),
         )
         result = self._jobs.insert_one(entry.dict())
         if result.acknowledged:

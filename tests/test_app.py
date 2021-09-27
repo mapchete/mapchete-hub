@@ -48,7 +48,10 @@ def test_post_job(client, test_process_id, example_config_json):
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json, params=dict(example_config_json["params"], zoom=2)
+                example_config_json,
+                params=dict(
+                    example_config_json["params"], zoom=2, dask_specs="s2_16bit_regular"
+                ),
             )
         ),
     )
@@ -59,6 +62,9 @@ def test_post_job(client, test_process_id, example_config_json):
     job_id = response.json()["id"]
     response = client.get(f"/jobs/{job_id}")
     assert response.status_code == 200
+
+    # make sure dask_specs were passed on
+    assert response.json()["properties"]["dask_specs"] == "s2_16bit_regular"
 
 
 def test_post_job_custom_process(
