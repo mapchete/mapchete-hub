@@ -3,6 +3,15 @@ Changelog
 #########
 
 -----------------
+0.22 - 2021-09-29
+-----------------
+* dependencies
+    * ``mapchete_satellite`` version to ``0.17``
+    * ``dask`` version to ``2021.9.1``
+    * ``distributed`` version to ``2021.9.1``
+
+
+-----------------
 0.21 - 2021-09-23
 -----------------
 * add ``dask_dashboard_link`` to job metadata
