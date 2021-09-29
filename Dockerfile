@@ -68,8 +68,8 @@ RUN pip install --upgrade pip setuptools wheel && \
         boto3 \
         botocore \
         click \
-        dask \
-        distributed \
+#        dask \
+#        distributed \
         fiona \
         fsspec \
         gdal \
