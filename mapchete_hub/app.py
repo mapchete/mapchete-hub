@@ -292,20 +292,13 @@ def get_dask_cluster(
     dask_specs=None,
     **kwargs,
 ):
-    logger.debug(
-        {
-            "flavor": flavor,
-            "url": url,
-            "gateway_kwargs": gateway_kwargs,
-            "cluster": cluster,
-        }
-    )
     if flavor == "local_cluster" and isinstance(cluster, LocalCluster):
         return cluster
     elif flavor == "gateway":  # pragma: no cover
         gateway = Gateway(url, **gateway_kwargs or {})
         logger.debug(f"connected to gateway {gateway}")
         if dask_specs is not None:
+            logger.debug(f"use cluster with {dask_specs} specs")
             return gateway.new_cluster(
                 cluster_options=_get_cluster_specs(gateway, dask_specs=dask_specs)
             )
@@ -344,10 +337,8 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
         config["config_dir"] = config.get("config_dir")
 
         try:
-            if "dask_specs" not in job_config.params.keys():
-                job_config.params["dask_specs"] = None
             cluster = get_dask_cluster(
-                **dask_opts, dask_specs=job_config.params["dask_specs"]
+                **dask_opts, dask_specs=job_config.params.get("dask_specs")
             )
             logger.debug(f"cluster: {cluster}")
             cluster_kwargs = dask_opts.get("cluster_kwargs")

@@ -20,6 +20,8 @@ def test_mongodb_backend_job(example_config_json, mongodb):
         assert geom.is_valid
         assert not geom.is_empty
 
+        assert list(geom.bounds) == current["bounds"]
+
         # write pending event
         db.set(job_id, state="pending")
         current = db.job(job_id)
