@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=0.23
+ARG BASE_IMAGE_TAG=0.24
 
 # use builder to build python wheels #
 ######################################
