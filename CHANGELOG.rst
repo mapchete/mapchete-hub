@@ -3,6 +3,18 @@ Changelog
 #########
 
 -----------------
+0.23 - 2021-10-01
+-----------------
+* fix default random job names
+* fix dask specs write into metadata
+* add ``bounds`` to GeoJSON
+* Docker
+    * update base image ``docker-base``
+        * ``mapchete:0:24`` for mhub
+        * ``snap-mapchete-ost:0:24`` for mhub-s1
+
+
+-----------------
 0.22 - 2021-09-29
 -----------------
 * dependencies
