@@ -220,7 +220,7 @@ class MongoDBStatusHandler:
             "type": "Feature",
             "id": str(entry["job_id"]),
             "geometry": entry["geometry"],
-            "bounds": entry["bounds"],
+            "bounds": entry.get("bounds", shape(entry["geometry"]).bounds),
             "properties": {
                 k: entry.get(k)
                 for k in entry.keys()
