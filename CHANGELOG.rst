@@ -2,6 +2,19 @@
 Changelog
 #########
 
+----------------------
+2021.10.0 - 2021-10-01
+----------------------
+
+* packaging
+  * change version numbering scheme to ``YYYY.MM.x``
+
+* Docker
+    * update base image ``docker-base``
+        * ``mapchete:2021.10.1`` for mhub
+        * ``snap-mapchete-ost:2021.10.1`` for mhub-s1
+
+
 -----------------
 0.24 - 2021-10-01
 -----------------
@@ -16,8 +29,8 @@ Changelog
 * add ``bounds`` to GeoJSON
 * Docker
     * update base image ``docker-base``
-        * ``mapchete:0:24`` for mhub
-        * ``snap-mapchete-ost:0:24`` for mhub-s1
+        * ``mapchete:0.24`` for mhub
+        * ``snap-mapchete-ost:0.24`` for mhub-s1
 
 
 -----------------
