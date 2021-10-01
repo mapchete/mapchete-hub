@@ -149,7 +149,7 @@ def get_dask():  # pragma: no cover
 def root():
     return {
         "title": f"Mapchete Hub processing server version {__version__}",
-        "description": "Example server implementing the OGC API - Processes 1.0",
+        "description": "Example server implementing an adaption of OGC API - Processes",
         "links": [
             {
                 "href": "string",
