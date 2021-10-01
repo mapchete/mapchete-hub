@@ -3,6 +3,12 @@ Changelog
 #########
 
 -----------------
+0.24 - 2021-10-01
+-----------------
+* fix GeoJSON creation if ``bounds`` field is not available.
+
+
+-----------------
 0.23 - 2021-10-01
 -----------------
 * fix default random job names
