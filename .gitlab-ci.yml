@@ -33,7 +33,7 @@ build_mhub:
       docker run \
         --rm \
         -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
-        /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
+        /bin/bash -c "mkdir pip && pip freeze" > pip/${IMAGE_NAME}_installed.txt
 
 build_mhub-s1:
   stage: build
@@ -55,7 +55,7 @@ build_mhub-s1:
       docker run \
         --rm \
         -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
-        /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
+        /bin/bash -c "mkdir pip && pip freeze" > pip/${IMAGE_NAME}_installed.txt
 
 # test mapchete_hub package in built images
 test_mhub:

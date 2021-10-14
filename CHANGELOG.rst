@@ -3,6 +3,18 @@ Changelog
 #########
 
 ----------------------
+2021.10.1 - 2021-10-14
+----------------------
+
+* core
+    * set worker threads to 1 in default dask specs
+
+* dependencies
+    * ``mapchete_satellite`` version to ``2021.10.0``
+    * ``mapchete`` version to ``2021.10.1``
+
+
+----------------------
 2021.10.0 - 2021-10-01
 ----------------------
 

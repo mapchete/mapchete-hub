@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=2021.10.0
+ARG BASE_IMAGE_TAG=2021.10.1
 
 # use builder to build python wheels #
 ######################################
@@ -59,7 +59,7 @@ COPY pypi_dont_update.sh $MHUB_DIR/
 COPY requirements.in $MHUB_DIR/
 
 # install wheels first and then everything else
-RUN pip install --upgrade pip setuptools wheel && \
+RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
     pip install $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
