@@ -17,7 +17,7 @@ build_mhub:
   stage: build
   artifacts:
     paths:
-      - pip/
+      - pip_installed/
   variables:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
@@ -33,13 +33,13 @@ build_mhub:
       docker run \
         --rm \
         -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
-        /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
+        /bin/bash -c "mkdir pip_installed && pip freeze" > pip_installed/${IMAGE_NAME}_installed.txt
 
 build_mhub-s1:
   stage: build
   artifacts:
     paths:
-      - pip/
+      - pip_installed/
   variables:
     IMAGE_NAME: mhub-s1
     BASE_IMAGE_NAME: snap-mapchete-ost
@@ -55,7 +55,7 @@ build_mhub-s1:
       docker run \
         --rm \
         -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
-        /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
+        /bin/bash -c "mkdir pip_installed && pip freeze" > pip_installed/${IMAGE_NAME}_installed.txt
 
 # test mapchete_hub package in built images
 test_mhub:
