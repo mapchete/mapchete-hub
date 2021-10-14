@@ -17,14 +17,13 @@ build_mhub:
   stage: build
   artifacts:
     paths:
-      - pip_installed/
+      - pip/
   variables:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
   script:
     - >
       docker build \
-        --no-cache \
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
@@ -34,20 +33,19 @@ build_mhub:
       docker run \
         --rm \
         -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
-        /bin/bash -c "mkdir pip_installed && pip freeze" > pip_installed/${IMAGE_NAME}_installed.txt
+        /bin/bash -c "mkdir pip && pip freeze" > pip/${IMAGE_NAME}_installed.txt
 
 build_mhub-s1:
   stage: build
   artifacts:
     paths:
-      - pip_installed/
+      - pip/
   variables:
     IMAGE_NAME: mhub-s1
     BASE_IMAGE_NAME: snap-mapchete-ost
   script:
     - >
       docker build \
-        --no-cache \
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} .
@@ -57,7 +55,7 @@ build_mhub-s1:
       docker run \
         --rm \
         -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
-        /bin/bash -c "mkdir pip_installed && pip freeze" > pip_installed/${IMAGE_NAME}_installed.txt
+        /bin/bash -c "mkdir pip && pip freeze" > pip/${IMAGE_NAME}_installed.txt
 
 # test mapchete_hub package in built images
 test_mhub:
