@@ -7,7 +7,7 @@ Changelog
 ----------------------
 
 * dependencies
-    * ``mapchete`` version to ``2021.10.2``
+    * ``mapchete`` version to ``2021.10.3``
 
 
 ----------------------
