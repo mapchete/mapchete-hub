@@ -153,6 +153,7 @@ class MongoDBStatusHandler:
         process_area = process_area_from_config(
             job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
         )[0]
+        started = datetime.utcnow()
         entry = models.Job(
             job_id=job_id,
             state=models.State["pending"],
@@ -160,7 +161,8 @@ class MongoDBStatusHandler:
             bounds=shape(process_area).bounds,
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"],
-            started=datetime.utcnow(),
+            started=started,
+            updated=started,
             job_name=job_config.params.get("job_name") or random_name(),
             dask_specs=job_config.params.get("dask_specs"),
         )
