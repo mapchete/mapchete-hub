@@ -3,11 +3,23 @@ Changelog
 #########
 
 ----------------------
+2021.10.5 - 2021-10-22
+----------------------
+
+* core
+    * add updated timestamp also on new job
+
+* dependencies
+    * ``mapchete_satellite`` version to ``2021.10.3``
+
+
+----------------------
 2021.10.4 - 2021-10-20
 ----------------------
 
 * dependencies
     * ``mapchete_satellite`` version to ``2021.10.2``
+
 
 ----------------------
 2021.10.3 - 2021-10-19
