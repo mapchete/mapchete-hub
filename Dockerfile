@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=2021.10.3
+ARG BASE_IMAGE_TAG=2021.11.0
 
 # use builder to build python wheels #
 ######################################
@@ -68,8 +68,6 @@ RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
         boto3 \
         botocore \
         click \
-#        dask \
-#        distributed \
         fiona \
         fsspec \
         gdal \
@@ -101,6 +99,11 @@ RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
 
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR
-RUN pip install -e $MHUB_DIR[complete]
+
+# install xarray dependencies only on mhub image, not mhub-s1
+RUN if [[ $BASE_IMAGE_NAME = "mapchete" ]]; \
+    then pip install -e $MHUB_DIR[xarray]; \
+    else pip install -e $MHUB_DIR; \
+    fi
 
 WORKDIR $MHUB_DIR
