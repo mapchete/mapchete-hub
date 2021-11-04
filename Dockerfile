@@ -102,8 +102,8 @@ COPY . $MHUB_DIR
 
 # install xarray dependencies only on mhub image, not mhub-s1
 RUN if [[ $BASE_IMAGE_NAME = "mapchete" ]]; \
-    then echo pip install -e $MHUB_DIR[xarray]; \
-    else echo pip install -e $MHUB_DIR; \
+    then pip install -e $MHUB_DIR[xarray]; \
+    else pip install -e $MHUB_DIR; \
     fi
 
 WORKDIR $MHUB_DIR
