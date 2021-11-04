@@ -33,6 +33,8 @@ test_requires = [
     "pytest-mongodb",
     "requests",
 ]
+xarray_requires = ["mapchete_xarray>=2021.11.0"]
+complete_requires = install_requires + xarray_requires
 
 setup(
     name="mapchete_hub",
@@ -44,7 +46,11 @@ setup(
     license="MIT",
     packages=find_packages(),
     install_requires=install_requires,
-    extras_require={"complete": install_requires, "test": test_requires},
+    extras_require={
+        "complete": complete_requires,
+        "test": test_requires,
+        "xarray": xarray_requires,
+    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",

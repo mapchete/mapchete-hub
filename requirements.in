@@ -8,9 +8,8 @@ distributed==2021.9.1
 eox_preprocessing
 fastapi==0.66
 lz4
-mapchete>=2021.10.3
+mapchete>=2021.11.0
 mapchete_satellite[brdf,cli,stac]>=2021.10.3
-mapchete_xarray>=2021.10.0
 mongomock
 odmantic
 prometheus-client
