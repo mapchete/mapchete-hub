@@ -129,9 +129,10 @@ def get_dask_opts():  # pragma: no cover
                 "auth": BasicAuth(password=os.environ.get("MHUB_DASK_GATEWAY_PASS"))
             },
             "cluster_kwargs": {
-                "minimum": 0,
+                "minimum": int(os.environ.get("MHUB_DASK_MIN_WORKERS", 10)),
                 "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)),
-                "interval": os.environ.get("MHUB_DASK_SCALE_INTERVAL", "15000ms"),
+                "active": os.environ.get("MHUB_DASK_ADAPTIVE_SCALING", "TRUE")
+                == "TRUE",
             },
         }
     elif os.environ.get("MHUB_DASK_SCHEDULER_URL"):
@@ -341,7 +342,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
         config["bounds"] = config.get("bounds")
         config["config_dir"] = config.get("config_dir")
 
-        try:
+        if dask_opts.get("flavor") in ["local_cluster", "gateway"]:
             cluster = get_dask_cluster(
                 **dask_opts, dask_specs=job_config.params.get("dask_specs")
             )
@@ -350,9 +351,8 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             if cluster_kwargs:  # pragma: no cover
                 logger.debug(f"adapt cluster: {cluster_kwargs}")
                 cluster.adapt(**cluster_kwargs)
-        except TypeError as exc:  # pragma: no cover
-            logger.exception(exc)
-            logger.debug("no cluster available")
+        else:  # pragma: no cover
+            logger.debug("no cluster available for flavor %s", dask_opts.get("flavor"))
             cluster = None
 
         logger.debug("determining dask client")

@@ -51,10 +51,10 @@ MHUB_DASK_GATEWAY_URL
 
 URL to dask gateway if available.
 
-MHUB_DASK_SCALE_INTERVAL
+MHUB_DASK_ADAPTIVE_SCALING
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-Interval where dasks checks whether to scale up or down cluster. (default: 15000ms)
+Activate adaptive cluster scaling. (default: True)
 
 MHUB_DASK_SCHEDULER_URL
 ~~~~~~~~~~~~~~~~~~~~~~~
