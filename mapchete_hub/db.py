@@ -121,7 +121,13 @@ class MongoDBStatusHandler:
             query.pop("to_date", None)
 
         logger.debug(f"MongoDB query: {query}")
-        return [self._entry_to_geojson(e) for e in self._jobs.find(query)]
+        jobs = []
+        for e in self._jobs.find(query):
+            try:
+                jobs.append(self._entry_to_geojson(e))
+            except Exception as e:
+                logger.exception("cannot create GeoJSON from entry: %s", e)
+        return jobs
 
     def job(self, job_id):
         """
@@ -174,13 +180,14 @@ class MongoDBStatusHandler:
 
     def set(
         self,
-        job_id: str = None,
+        job_id: str,
         state: models.State = None,
         current_progress: NonNegativeInt = None,
         total_progress: NonNegativeInt = None,
         exception: str = None,
         traceback: str = None,
         dask_dashboard_link: str = None,
+        dask_specs: dict = None,
     ):
         entry = {"job_id": job_id}
         timestamp = datetime.utcnow()
@@ -205,6 +212,8 @@ class MongoDBStatusHandler:
             entry.update(traceback=traceback)
         if dask_dashboard_link is not None:
             entry.update(dask_dashboard_link=dask_dashboard_link)
+        if dask_specs:
+            entry.update(dask_specs=dask_specs)
         # add timestamp to entry
         entry.update(updated=timestamp)
         logger.debug(f"upsert entry: {entry}")

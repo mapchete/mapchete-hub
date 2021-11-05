@@ -1,6 +1,10 @@
+import logging
 import os
 
 from mapchete_hub import __version__
+
+
+logger = logging.getLogger(__name__)
 
 WORKER_DEFAULT_IMAGE = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
 WORKER_DEFAULT_TAG = os.environ.get("MHUB_IMAGE_TAG", __version__)
@@ -50,13 +54,17 @@ DASK_DEFAULT_SPECS = {
 }
 
 
-def _get_cluster_specs(gateway, dask_specs):  # pragma: no cover
+def get_dask_specs(dask_specs="default"):
+    """
+    Merge user-defined with default specs.
+    """
+    if isinstance(dask_specs, dict):
+        return dict(DASK_DEFAULT_SPECS["default"], **dask_specs)
+    return dict(DASK_DEFAULT_SPECS[dask_specs])
+
+
+def _get_cluster_specs(gateway, dask_specs="default"):  # pragma: no cover
     options = gateway.cluster_options()
-    options.worker_cores = DASK_DEFAULT_SPECS[dask_specs]["worker_cores"]
-    options.worker_memory = DASK_DEFAULT_SPECS[dask_specs]["worker_memory"]
-    # Fix to 1 as we only want to run 1 tasks per worker at a time
-    options.worker_threads = DASK_DEFAULT_SPECS[dask_specs]["worker_threads"]
-    options.scheduler_cores = DASK_DEFAULT_SPECS[dask_specs]["scheduler_cores"]
-    options.scheduler_memory = DASK_DEFAULT_SPECS[dask_specs]["scheduler_memory"]
-    options.image = DASK_DEFAULT_SPECS[dask_specs]["image"]
+    options.update(get_dask_specs(dask_specs))
+    logger.debug("using cluster specs: %s", dict(options))
     return options

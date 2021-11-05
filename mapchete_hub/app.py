@@ -74,7 +74,7 @@ from typing import Union
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 from mapchete_hub.timetools import str_to_date
-from mapchete_hub.settings import _get_cluster_specs, DASK_DEFAULT_SPECS
+from mapchete_hub.settings import _get_cluster_specs, DASK_DEFAULT_SPECS, get_dask_specs
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
@@ -119,7 +119,7 @@ def get_backend_db():  # pragma: no cover
     return BackendDB(src=url)
 
 
-def get_dask():  # pragma: no cover
+def get_dask_opts():  # pragma: no cover
     """This allows lazily loading either a LocalCluster, a GatewayCluster or connection to a running scheduler."""
     if os.environ.get("MHUB_DASK_GATEWAY_URL"):  # pragma: no cover
         return {
@@ -131,6 +131,7 @@ def get_dask():  # pragma: no cover
             "cluster_kwargs": {
                 "minimum": 0,
                 "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)),
+                "interval": os.environ.get("MHUB_DASK_SCALE_INTERVAL", "15000ms"),
             },
         }
     elif os.environ.get("MHUB_DASK_SCHEDULER_URL"):
@@ -168,7 +169,7 @@ def get_conformance():
 
 
 @app.get("/dask_specs")
-def get_dask_specs():
+def get_dask_specs_presets():
     return DASK_DEFAULT_SPECS
 
 
@@ -205,17 +206,25 @@ async def post_job(
     job_config: models.MapcheteJob,
     background_tasks: BackgroundTasks,
     backend_db: BackendDB = Depends(get_backend_db),
-    dask_opts: dict = Depends(get_dask),
+    dask_opts: dict = Depends(get_dask_opts),
     response: Response = None,
 ):
     """Executes a process, i.e. creates a new job."""
     try:
+        # get dask specs and extract to dictionary
+        job_config.params["dask_specs"] = get_dask_specs(
+            job_config.params.get("dask_specs", {})
+        )
+
+        # create new entry in database
         job = backend_db.new(job_config=job_config)
+
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper, job["id"], job_config, backend_db, dask_opts
         )
         response.headers["Location"] = f"/jobs/{job['id']}"
+
         # return job
         job = backend_db.job(job["id"])
         logger.debug(f"submitted job {job}")
@@ -308,11 +317,7 @@ def get_dask_cluster(
         raise TypeError("cannot get cluster")
 
 
-def get_dask_client(
-    flavor=None,
-    url=None,
-    cluster=None,
-):
+def get_dask_client(flavor=None, url=None, cluster=None):
     if flavor == "local_cluster":
         return Client(cluster)
     elif flavor == "gateway":  # pragma: no cover
@@ -352,9 +357,8 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
 
         logger.debug("determining dask client")
         dask_client = get_dask_client(
-            flavor=dask_opts.get("flavor"), url=dask_opts.get("url"), cluster=cluster
+            dask_opts.get("flavor"), url=dask_opts.get("url"), cluster=cluster
         )
-
         logger.debug(f"job {job_id} starting mapchete {job_config.command}")
         logger.debug(f"dask dashboard: {dask_client.dashboard_link}")
 
@@ -387,8 +391,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
             # yield the results.
             last_event = 0.0
-            for i, task in enumerate(job):
-                i += 1
+            for i, task in enumerate(job, 1):
                 logger.debug(f"job {job_id} task {i}/{len(job)} finished")
 
                 event_time_passed = time.time() - last_event

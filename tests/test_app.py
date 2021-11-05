@@ -64,7 +64,34 @@ def test_post_job(client, test_process_id, example_config_json):
     assert response.status_code == 200
 
     # make sure dask_specs were passed on
-    assert response.json()["properties"]["dask_specs"] == "s2_16bit_regular"
+    assert response.json()["properties"]["dask_specs"]["worker_cores"] == 1
+
+
+def test_post_job_custom_dask_specs(client, test_process_id, example_config_json):
+    # response = client.get("/jobs")
+    response = client.post(
+        f"/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json,
+                params=dict(
+                    example_config_json["params"],
+                    zoom=2,
+                    dask_specs={"worker_threads": 8},
+                ),
+            )
+        ),
+    )
+    assert response.status_code == 201
+    assert client.get("/jobs/").json()
+
+    # check if job is submitted
+    job_id = response.json()["id"]
+    response = client.get(f"/jobs/{job_id}")
+    assert response.status_code == 200
+
+    # make sure dask_specs were passed on
+    assert response.json()["properties"]["dask_specs"].get("worker_threads") == 8
 
 
 def test_post_job_custom_process(
