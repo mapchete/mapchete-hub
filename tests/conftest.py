@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 import pytest
 import mongomock.database
 
-from mapchete_hub.app import app, get_backend_db, get_dask
+from mapchete_hub.app import app, get_backend_db, get_dask_opts
 from mapchete_hub.db import BackendDB
 
 _fake_backend_db = BackendDB(mongomock.MongoClient())
@@ -19,7 +19,7 @@ def local_dask_cluster():
 
 
 app.dependency_overrides[get_backend_db] = fake_backend_db
-app.dependency_overrides[get_dask] = local_dask_cluster
+app.dependency_overrides[get_dask_opts] = local_dask_cluster
 
 
 @pytest.fixture
