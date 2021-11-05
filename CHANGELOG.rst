@@ -3,6 +3,20 @@ Changelog
 #########
 
 ----------------------
+2021.11.0 - 2021-11-05
+----------------------
+
+* core
+
+    * enable posting custom dask specs as JSON
+
+* packaging
+
+    * re-enable ``mapchete_xarray``
+    * ure base image ``2021.11.0``
+
+
+----------------------
 2021.10.5 - 2021-10-22
 ----------------------
 
