@@ -19,6 +19,7 @@ docker-compose \
     -f docker-compose.yml \
     -f docker-compose.test.yml \
     up \
+    --build \
     --exit-code-from mhub_tester
 docker-compose \
     -p $CI_JOB_ID \
