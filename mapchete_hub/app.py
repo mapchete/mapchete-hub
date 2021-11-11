@@ -349,7 +349,6 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
                 **dask_opts, dask_specs=job_config.params.get("dask_specs")
             )
             logger.debug(f"cluster: {cluster}")
-            cluster_kwargs = dask_opts.get("cluster_kwargs")
         else:  # pragma: no cover
             logger.debug("no cluster available for flavor %s", dask_opts.get("flavor"))
             cluster = None
@@ -389,19 +388,21 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             # if it makes sense to avoid asking for more workers than could be possible used
             # this can be refined once we expose a more detailed information on the types of
             # job tasks: https://github.com/ungarj/mapchete/issues/383
-            if dask_opts.get("flavor") in [
+            if cluster is not None and dask_opts.get("flavor") in [
                 "local_cluster",
                 "gateway",
             ]:  # pragma: no cover
-                adapted_kwargs = dict(
-                    cluster_kwargs,
-                    # the minimum should not be larger than the expected number of job tasks
-                    minimum=min([cluster_kwargs.get("minimum", 10), len(job)]),
-                    # the maximum should also not be larger than the expected number of job tasks
-                    maximum=min([cluster_kwargs.get("maximum", 1000), len(job)]),
-                )
-                logger.debug(f"adapt cluster: {adapted_kwargs}")
-                cluster.adapt(**adapted_kwargs)
+                cluster_kwargs = dask_opts.get("cluster_kwargs")
+                if cluster_kwargs:
+                    adapted_kwargs = dict(
+                        cluster_kwargs,
+                        # the minimum should not be larger than the expected number of job tasks
+                        minimum=min([cluster_kwargs.get("minimum", 10), len(job)]),
+                        # the maximum should also not be larger than the expected number of job tasks
+                        maximum=min([cluster_kwargs.get("maximum", 1000), len(job)]),
+                    )
+                    logger.debug(f"adapt cluster: {adapted_kwargs}")
+                    cluster.adapt(**adapted_kwargs)
             backend_db.set(job_id, current_progress=0, total_progress=len(job))
             logger.debug(f"job {job_id} created")
             # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
