@@ -1,12 +1,16 @@
-from datetime import datetime, timezone
+"""
+Abstraction classes for database.
+"""
+
 import logging
-import mongomock
 import os
+from uuid import uuid4
+
+from datetime import datetime
+import mongomock
 from pydantic import NonNegativeInt
 import pymongo
-from shapely.geometry import box, mapping, shape, Polygon
-import time
-from uuid import uuid4
+from shapely.geometry import box, mapping, shape
 
 from mapchete_hub import models
 from mapchete_hub.geometry import process_area_from_config
@@ -37,12 +41,12 @@ class MongoDBStatusHandler:
     def __init__(self, db_uri=None, client=None, database=None):
         """Initialize."""
         if db_uri:  # pragma: no cover
-            logger.debug(f"connect to MongoDB: {db_uri}")
+            logger.debug("connect to MongoDB: %s", db_uri)
             self._client = pymongo.MongoClient(db_uri, tz_aware=False)
             self._db = self._client["mhub"]
             self._jobs = self._db["jobs"]
         elif client:
-            logger.debug(f"use existing PyMongo client instance: {client}")
+            logger.debug("use existing PyMongo client instance: %s", client)
             self._client = client
             self._db = self._client["mhub"]
             self._jobs = self._db["jobs"]
@@ -50,7 +54,7 @@ class MongoDBStatusHandler:
             self._client = None
             self._db = database
             self._jobs = self._db["jobs"]
-        logger.debug(f"active client {self._client}")
+        logger.debug("active client %s", self._client)
 
     def jobs(self, **kwargs):
         """
@@ -80,7 +84,7 @@ class MongoDBStatusHandler:
         GeoJSON features : list of dict
         """
         query = {k: v for k, v in kwargs.items() if v is not None}
-        logger.debug(f"raw query: {query}")
+        logger.debug("raw query: %s", query)
 
         # parsing job state groups and job states
         if query.get("state") is not None:
@@ -120,13 +124,13 @@ class MongoDBStatusHandler:
             query.pop("from_date", None)
             query.pop("to_date", None)
 
-        logger.debug(f"MongoDB query: {query}")
+        logger.debug("MongoDB query: %s", query)
         jobs = []
-        for e in self._jobs.find(query):
+        for entry in self._jobs.find(query):
             try:
-                jobs.append(self._entry_to_geojson(e))
-            except Exception as e:  # pragma: no cover
-                logger.exception("cannot create GeoJSON from entry: %s", e)
+                jobs.append(self._entry_to_geojson(entry))
+            except Exception as exc:  # pragma: no cover
+                logger.exception("cannot create GeoJSON from entry: %s", exc)
         return jobs
 
     def job(self, job_id):
@@ -191,7 +195,7 @@ class MongoDBStatusHandler:
     ):
         entry = {"job_id": job_id}
         timestamp = datetime.utcnow()
-        logger.debug(f"update timestamp: {timestamp}")
+        logger.debug("update timestamp: %s", timestamp)
         if state is not None:
             entry.update(state=models.State[state])
             if state == "done":
@@ -216,7 +220,7 @@ class MongoDBStatusHandler:
             entry.update(dask_specs=dask_specs)
         # add timestamp to entry
         entry.update(updated=timestamp)
-        logger.debug(f"upsert entry: {entry}")
+        logger.debug("upsert entry: %s", entry)
         return self._entry_to_geojson(
             self._jobs.find_one_and_update(
                 {"job_id": job_id},
@@ -245,4 +249,4 @@ class MongoDBStatusHandler:
 
     def __exit__(self, *args):
         """Exit context."""
-        pass
+        return

@@ -1,3 +1,6 @@
+"""
+Timestamp handling.
+"""
 from datetime import datetime
 
 
