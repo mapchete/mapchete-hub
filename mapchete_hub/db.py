@@ -125,7 +125,7 @@ class MongoDBStatusHandler:
         for e in self._jobs.find(query):
             try:
                 jobs.append(self._entry_to_geojson(e))
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 logger.exception("cannot create GeoJSON from entry: %s", e)
         return jobs
 
@@ -212,7 +212,7 @@ class MongoDBStatusHandler:
             entry.update(traceback=traceback)
         if dask_dashboard_link is not None:
             entry.update(dask_dashboard_link=dask_dashboard_link)
-        if dask_specs:
+        if dask_specs:  # pragma: no cover
             entry.update(dask_specs=dask_specs)
         # add timestamp to entry
         entry.update(updated=timestamp)
