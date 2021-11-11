@@ -1,3 +1,6 @@
+"""
+Settings.
+"""
 import logging
 import os
 

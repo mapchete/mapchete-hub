@@ -1,7 +1,11 @@
+"""
+Random job name generator.
+"""
 import random
 
 
 def random_name():
+    """Generate random name."""
     return f"{random.choice(adjectives)}-{random.choice(animals)}".lower()
 
 

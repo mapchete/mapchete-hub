@@ -1,3 +1,6 @@
+"""
+Geometry functions.
+"""
 from mapchete.config import get_zoom_levels
 from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTilePyramid

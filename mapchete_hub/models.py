@@ -1,8 +1,12 @@
+"""
+Models and schemas.
+"""
 import datetime
 from enum import Enum
+from typing import Optional, Union
+
 from odmantic import Model
 from pydantic import BaseModel, Field
-from typing import Optional, Union
 
 
 class State(str, Enum):

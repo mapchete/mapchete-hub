@@ -56,20 +56,18 @@ POST /processes/{process_id}/execution
 Trigger a job using a given process_id. This returns a job ID.
 """
 
+import logging
+import os
+import time
+import traceback
+
 from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import Gateway, BasicAuth
-import datetime
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
-import logging
 from mapchete import commands, Timer
 from mapchete.io import path_is_remote
 from mapchete.log import all_mapchete_packages
-from mapchete.processes import process_names_docstrings, registered_processes
-import os
-from pydantic import Field
-import time
-import traceback
-from typing import Union
+from mapchete.processes import process_names_docstrings
 
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
@@ -117,7 +115,7 @@ def get_backend_db():  # pragma: no cover
     url = os.environ.get("MHUB_MONGODB_URL")
     if not url:
         raise ValueError("MHUB_MONGODB_URL must be provided")
-    logger.debug(f"connect to {url}")
+    logger.debug("connect to %s", url)
     return BackendDB(src=url)
 
 
@@ -230,8 +228,8 @@ async def post_job(
 
         # return job
         job = backend_db.job(job["id"])
-        logger.debug(f"submitted job {job}")
-        logger.debug(f"currently running {len(backend_db.jobs(state='running'))} jobs")
+        logger.debug("submitted job %s", job)
+        logger.debug("currently running %s jobs", len(backend_db.jobs(state="running")))
         return job
     except Exception as exc:  # pragma: no cover
         logger.exception(exc)
@@ -308,9 +306,9 @@ def get_dask_cluster(
         return cluster
     elif flavor == "gateway":  # pragma: no cover
         gateway = Gateway(url, **gateway_kwargs or {})
-        logger.debug(f"connected to gateway {gateway}")
+        logger.debug("connected to gateway %s", gateway)
         if dask_specs is not None:
-            logger.debug(f"use cluster with {dask_specs} specs")
+            logger.debug("use cluster with %s specs", dask_specs)
             return gateway.new_cluster(
                 cluster_options=_get_cluster_specs(gateway, dask_specs=dask_specs)
             )
@@ -348,7 +346,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             cluster = get_dask_cluster(
                 **dask_opts, dask_specs=job_config.params.get("dask_specs")
             )
-            logger.debug(f"cluster: {cluster}")
+            logger.debug("cluster: %s", cluster)
         else:  # pragma: no cover
             logger.debug("no cluster available for flavor %s", dask_opts.get("flavor"))
             cluster = None
@@ -357,8 +355,8 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
         dask_client = get_dask_client(
             dask_opts.get("flavor"), url=dask_opts.get("url"), cluster=cluster
         )
-        logger.debug(f"job {job_id} starting mapchete {job_config.command}")
-        logger.debug(f"dask dashboard: {dask_client.dashboard_link}")
+        logger.debug("job %s starting mapchete %s", job_id, job_config.command)
+        logger.debug("dask dashboard: %s", dask_client.dashboard_link)
 
         # relative output paths are not useful, so raise exception
         out_path = config.get("output", {}).get("path", {})
@@ -401,15 +399,15 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
                         # the maximum should also not be larger than the expected number of job tasks
                         maximum=min([cluster_kwargs.get("maximum", 1000), len(job)]),
                     )
-                    logger.debug(f"adapt cluster: {adapted_kwargs}")
+                    logger.debug("adapt cluster: %s", adapted_kwargs)
                     cluster.adapt(**adapted_kwargs)
             backend_db.set(job_id, current_progress=0, total_progress=len(job))
-            logger.debug(f"job {job_id} created")
+            logger.debug("job %s created", job_id)
             # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
             # yield the results.
             last_event = 0.0
-            for i, task in enumerate(job, 1):
-                logger.debug(f"job {job_id} task {i}/{len(job)} finished")
+            for i, _ in enumerate(job, 1):
+                logger.debug("job %s task %s/{len(job)} finished", job_id, i)
 
                 event_time_passed = time.time() - last_event
                 if event_time_passed > MHUB_WORKER_EVENT_RATE_LIMIT or i == len(job):
@@ -418,14 +416,14 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
                     backend_db.set(job_id, current_progress=i)
                     state = backend_db.job(job_id)["properties"]["state"]
                     if state == "aborting":  # pragma: no cover
-                        logger.debug(f"job {job_id} abort state caught: {state}")
+                        logger.debug("job %s abort state caught: %s", job_id, state)
                         # By calling the job's cancel method, all pending futures will be cancelled.
                         job.cancel()
                         backend_db.set(job_id, state="cancelled")
                         return
         # job finished successfully
         backend_db.set(job_id, state="done")
-        logger.debug(f"job {job_id} finished in {t}")
+        logger.debug("job %s finished in %s", job_id, t)
     except Exception as exc:
         backend_db.set(
             job_id=job_id,
@@ -437,8 +435,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
     finally:  # pragma: no cover
         try:
             if cluster:
-                logger.debug(f"try to shutdown cluster {cluster}")
+                logger.debug("try to shutdown cluster %s", cluster)
                 cluster.shutdown()
         except Exception as exc:
-            logger.error(f"cluster shutdown threw exception {exc}")
-            pass
+            logger.error("cluster shutdown threw exception %s", exc)
