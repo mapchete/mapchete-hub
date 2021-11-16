@@ -3,6 +3,21 @@ Changelog
 #########
 
 ----------------------
+2021.11.2 - 2021-11-16
+----------------------
+
+* core
+
+    * set cluster worker maximum as maximum of preprocessing and tiles tasks
+    * large jobs now start earlier and use less ressources (https://github.com/ungarj/mapchete/pull/384)
+
+* packaging
+
+    * set minimum mapchete version to ``2021.11.1``
+    * use base image ``2021.11.0``
+
+
+----------------------
 2021.11.1 - 2021-11-05
 ----------------------
 
@@ -22,7 +37,7 @@ Changelog
 * packaging
 
     * re-enable ``mapchete_xarray``
-    * ure base image ``2021.11.0``
+    * use base image ``2021.11.0``
 
 
 ----------------------
