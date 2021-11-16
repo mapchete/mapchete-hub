@@ -397,7 +397,12 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
                         # the minimum should not be larger than the expected number of job tasks
                         minimum=min([cluster_kwargs.get("minimum", 10), len(job)]),
                         # the maximum should also not be larger than the expected number of job tasks
-                        maximum=min([cluster_kwargs.get("maximum", 1000), len(job)]),
+                        maximum=min(
+                            [
+                                cluster_kwargs.get("maximum", 1000),
+                                max([job.preprocessing_tasks, job.tiles_tasks]),
+                            ]
+                        ),
                     )
                     logger.debug("adapt cluster: %s", adapted_kwargs)
                     cluster.adapt(**adapted_kwargs)
