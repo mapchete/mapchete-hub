@@ -75,6 +75,7 @@ class GeoJSON(BaseModel):
 
 class Job(Model, BaseModel):
     job_id: str
+    url: str
     state: State
     geometry: dict
     bounds: list

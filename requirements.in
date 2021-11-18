@@ -14,5 +14,6 @@ mongomock
 odmantic
 prometheus-client
 pymongo
+Slacker
 sqlalchemy
 uvicorn

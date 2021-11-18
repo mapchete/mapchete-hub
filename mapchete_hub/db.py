@@ -19,6 +19,8 @@ from mapchete_hub.timetools import str_to_date
 
 logger = logging.getLogger(__name__)
 
+MHUB_SELF_URL = os.environ.get("MHUB_SELF_URL", "/")
+
 
 class BackendDB:
     """Class to communicate with backend database."""
@@ -166,6 +168,7 @@ class MongoDBStatusHandler:
         started = datetime.utcnow()
         entry = models.Job(
             job_id=job_id,
+            url=os.path.join(MHUB_SELF_URL, "jobs", job_id),
             state=models.State["pending"],
             geometry=process_area,
             bounds=shape(process_area).bounds,

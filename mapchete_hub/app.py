@@ -73,6 +73,7 @@ from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 from mapchete_hub.timetools import str_to_date
 from mapchete_hub.settings import _get_cluster_specs, DASK_DEFAULT_SPECS, get_dask_specs
+from mapchete_hub.slack import send_slack_message
 
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
@@ -105,9 +106,15 @@ MAPCHETE_COMMANDS = {
 MHUB_WORKER_EVENT_RATE_LIMIT = float(
     os.environ.get("MHUB_WORKER_EVENT_RATE_LIMIT", 0.2)
 )
+MHUB_SELF_URL = os.environ.get("MHUB_SELF_URL", "/")
 
 
 app = FastAPI()
+
+# mhub online message
+send_slack_message(
+    f"*mapchete Hub version {__version__} awaiting orders on {MHUB_SELF_URL}*"
+)
 
 
 # dependencies
@@ -229,7 +236,14 @@ async def post_job(
         # return job
         job = backend_db.job(job["id"])
         logger.debug("submitted job %s", job)
-        logger.debug("currently running %s jobs", len(backend_db.jobs(state="running")))
+
+        running = len(backend_db.jobs(state="running"))
+        logger.debug("currently running %s jobs", running)
+
+        # send message to Slack
+        send_slack_message(
+            f"*job submitted ({running} running)*\n" f"{job['properties']['url']}"
+        )
         return job
     except Exception as exc:  # pragma: no cover
         logger.exception(exc)
@@ -279,6 +293,9 @@ def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
         job = backend_db.job(job_id)
         if job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
+            send_slack_message(
+                f"*aborting job {job_id}*\n" f"{job['properties']['url']}"
+            )
         return backend_db.job(job_id)
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
@@ -369,6 +386,11 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             backend_db.set(
                 job_id, state="running", dask_dashboard_link=dask_client.dashboard_link
             )
+            send_slack_message(
+                f"*job started*\n"
+                f"{dask_client.dashboard_link}\n"
+                f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
+            )
 
             # Mapchete now will initialize the process and prepare all the tasks required.
             job = MAPCHETE_COMMANDS[job_config.command](
@@ -414,23 +436,32 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             # yield the results.
             last_event = 0.0
             for i, _ in enumerate(job, 1):
-                logger.debug("job %s task %s/{len(job)} finished", job_id, i)
-
                 event_time_passed = time.time() - last_event
                 if event_time_passed > MHUB_WORKER_EVENT_RATE_LIMIT or i == len(job):
                     last_event = time.time()
                     # determine if there is a cancel signal for this task
                     backend_db.set(job_id, current_progress=i)
+                    logger.debug(
+                        "job %s %s tasks from %s finished", job_id, i, len(job)
+                    )
                     state = backend_db.job(job_id)["properties"]["state"]
                     if state == "aborting":  # pragma: no cover
                         logger.debug("job %s abort state caught: %s", job_id, state)
                         # By calling the job's cancel method, all pending futures will be cancelled.
                         job.cancel()
                         backend_db.set(job_id, state="cancelled")
+                        send_slack_message(
+                            "*job cancelled*\n"
+                            f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
+                        )
                         return
         # job finished successfully
         backend_db.set(job_id, state="done")
         logger.debug("job %s finished in %s", job_id, t)
+        send_slack_message(
+            f"*job finished in {t}*\n" f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
+        )
+
     except Exception as exc:
         backend_db.set(
             job_id=job_id,
@@ -439,6 +470,12 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             traceback="".join(traceback.format_tb(exc.__traceback__)),
         )
         logger.exception(exc)
+        send_slack_message(
+            "*job failed*\n"
+            f"{exc}\n"
+            f"{''.join(traceback.format_tb(exc.__traceback__))}\n"
+            f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
+        )
     finally:  # pragma: no cover
         try:
             if cluster:

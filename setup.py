@@ -26,6 +26,7 @@ install_requires = [
     "pymongo",
     "uvicorn",
 ]
+slack_requires = ["Slacker"]
 test_requires = [
     "pytest",
     "pytest-cov",
