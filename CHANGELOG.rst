@@ -3,6 +3,21 @@ Changelog
 #########
 
 ----------------------
+2021.11.3 - 2021-11-18
+----------------------
+
+* core
+
+    * set cluster worker minimum as either default or tiles tasks
+    * submit tasks in chunks, not one by one (see https://github.com/ungarj/mapchete/pull/387)
+
+* packaging
+
+    * set minimum mapchete version to ``2021.11.2``
+    * use base image ``2021.11.2``
+
+
+----------------------
 2021.11.2 - 2021-11-16
 ----------------------
 
@@ -14,7 +29,7 @@ Changelog
 * packaging
 
     * set minimum mapchete version to ``2021.11.1``
-    * use base image ``2021.11.0``
+    * use base image ``2021.11.1``
 
 
 ----------------------
