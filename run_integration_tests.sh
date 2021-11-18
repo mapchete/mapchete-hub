@@ -30,10 +30,10 @@ docker-compose \
     --rmi all \
     --remove-orphans \
 || true
-docker-compose \
-    -p $CI_JOB_ID \
-    -f docker-compose.yml \
-    -f docker-compose.test.yml \
-    rm \
-    -fv \
-|| true
+# docker-compose \
+#     -p $CI_JOB_ID \
+#     -f docker-compose.yml \
+#     -f docker-compose.test.yml \
+#     rm \
+#     -fv \
+# || true

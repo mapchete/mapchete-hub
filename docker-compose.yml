@@ -30,6 +30,7 @@ services:
       - AWS_REQUEST_PAYER=${AWS_REQUEST_PAYER}
       - MHUB_DASK_SCHEDULER_URL=tcp://dask_scheduler:8786
       - MHUB_MONGODB_URL=mongodb://mhub:REDACTED_API_KEY@db:27017
+      # - SLACK_WEBHOOK_URL=REDACTED_API_KEY
     networks:
       - backend
     ports:
