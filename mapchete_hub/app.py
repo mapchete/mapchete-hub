@@ -113,7 +113,7 @@ app = FastAPI()
 
 # mhub online message
 send_slack_message(
-    f"mapchete Hub version {__version__} awaiting orders on {MHUB_SELF_URL}"
+    f"*mapchete Hub version {__version__} awaiting orders on {MHUB_SELF_URL}*"
 )
 
 
@@ -242,7 +242,7 @@ async def post_job(
 
         # send message to Slack
         send_slack_message(
-            f"job submitted ({running} running)\n" f"{job['properties']['url']}"
+            f"*job submitted ({running} running)*\n" f"{job['properties']['url']}"
         )
         return job
     except Exception as exc:  # pragma: no cover
@@ -293,7 +293,9 @@ def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
         job = backend_db.job(job_id)
         if job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
-            send_slack_message(f"aborting job {job_id}\n" f"{job['properties']['url']}")
+            send_slack_message(
+                f"*aborting job {job_id}*\n" f"{job['properties']['url']}"
+            )
         return backend_db.job(job_id)
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
@@ -385,7 +387,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
                 job_id, state="running", dask_dashboard_link=dask_client.dashboard_link
             )
             send_slack_message(
-                f"job started\n"
+                f"*job started*\n"
                 f"{dask_client.dashboard_link}\n"
                 f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
             )
@@ -449,7 +451,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
                         job.cancel()
                         backend_db.set(job_id, state="cancelled")
                         send_slack_message(
-                            "cancelled job\n"
+                            "*job cancelled*\n"
                             f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
                         )
                         return
@@ -457,7 +459,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
         backend_db.set(job_id, state="done")
         logger.debug("job %s finished in %s", job_id, t)
         send_slack_message(
-            f"job finished in {t}\n" f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
+            f"*job finished in {t}*\n" f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
         )
 
     except Exception as exc:
@@ -469,7 +471,8 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
         )
         logger.exception(exc)
         send_slack_message(
-            f"job failed with {exc}\n"
+            "*job failed*\n"
+            f"{exc}\n"
             f"{''.join(traceback.format_tb(exc.__traceback__))}\n"
             f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
         )
