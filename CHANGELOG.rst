@@ -3,6 +3,20 @@ Changelog
 #########
 
 ----------------------
+2021.11.4 - 2021-11-18
+----------------------
+
+* core
+
+    * add slack notifications
+
+* packaging
+
+    * set dask and distributed versions to ``2021.11.1``
+    * set dask-kubernetes to ``2021.10.0``
+
+
+----------------------
 2021.11.3 - 2021-11-18
 ----------------------
 
