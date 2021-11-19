@@ -113,17 +113,24 @@ app = FastAPI()
 
 # mhub online message
 send_slack_message(
-    f"*mapchete Hub version {__version__} awaiting orders on {MHUB_SELF_URL}*"
+    f"*mapchete Hub version {__version__} awaiting orders on* {MHUB_SELF_URL}"
 )
 
 
 # dependencies
-def get_backend_db():  # pragma: no cover
+def _get_backend_db():  # pragma: no cover
     url = os.environ.get("MHUB_MONGODB_URL")
     if not url:
         raise ValueError("MHUB_MONGODB_URL must be provided")
     logger.debug("connect to %s", url)
     return BackendDB(src=url)
+
+
+backend_db = _get_backend_db()
+
+
+def get_backend_db():  # pragma: no cover
+    return backend_db
 
 
 def get_dask_opts():  # pragma: no cover
