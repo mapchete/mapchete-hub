@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=2021.11.2
+ARG BASE_IMAGE_TAG=2021.11.3
 
 # use builder to build python wheels #
 ######################################
@@ -30,14 +30,14 @@ RUN mkdir -p $MHUB_DIR $WHEEL_DIR
 # under current development and where a specific branch is required.
 RUN pip install --upgrade pip setuptools wheel && \
     pip wheel \
-        --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-        # git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master \
-        # git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@master \
-        # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
-        # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
-        jenkspy==0.2.0 \
-        --wheel-dir $WHEEL_DIR \
-        --no-deps
+    --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+    # git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master \
+    # git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@master \
+    # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
+    # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
+    jenkspy==0.2.0 \
+    --wheel-dir $WHEEL_DIR \
+    --no-deps
 
 # build image using pre-built libraries and wheels #
 ####################################################
@@ -63,37 +63,37 @@ RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
     pip install $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
-        affine \
-        aiohttp \
-        boto3 \
-        botocore \
-        click \
-        fiona \
-        fsspec \
-        gdal \
-        jenkspy \
-        mapchete \
-        numcodecs \
-        numpy \
-        psutil \
-        rasterio \
-        shapely \
-        snuggs \
-        s3fs \
-        tblib \
-        tqdm \
-        tilematrix \
-        zipp \
+    affine \
+    aiohttp \
+    boto3 \
+    botocore \
+    click \
+    fiona \
+    fsspec \
+    gdal \
+    jenkspy \
+    mapchete \
+    numcodecs \
+    numpy \
+    psutil \
+    rasterio \
+    shapely \
+    snuggs \
+    s3fs \
+    tblib \
+    tqdm \
+    tilematrix \
+    zipp \
     >> ${MHUB_DIR}/requirements.in && \
     cat $MHUB_DIR/requirements.in && \
     pip install pip-tools && \
     pip-compile \
-        -v \
-        --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-        $MHUB_DIR/requirements.in -o $MHUB_DIR/requirements.txt && \
+    -v \
+    --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+    $MHUB_DIR/requirements.in -o $MHUB_DIR/requirements.txt && \
     pip install \
-        --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-        -r $MHUB_DIR/requirements.txt && \
+    --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+    -r $MHUB_DIR/requirements.txt && \
     pip uninstall -y pip-tools && \
     rm -r $WHEEL_DIR
 
