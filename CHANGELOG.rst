@@ -3,6 +3,17 @@ Changelog
 #########
 
 ----------------------
+2021.11.6 - 2021-11-26
+----------------------
+* dockerfile
+
+    * add step with `go` to build wheels of `dask-gateway` packages
+
+* packaging
+
+    * use `latest/main` `dask-gateway` version
+
+----------------------
 2021.11.5 - 2021-11-24
 ----------------------
 

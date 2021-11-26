@@ -11,6 +11,28 @@ ARG BASE_IMAGE_TAG=2021.11.3
 # If your test branch needs new requirements, add them here under the following pip wheel
 # command. This also applies to dependencies which require building (like jenkspy) which
 # should be added here as build dependencies are not available in the runner stage.
+FROM golang:1.12.17 as go_builder
+
+ENV BUILD_DIR /usr/local
+ENV WHEEL_DIR /usr/local/wheels
+
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends build-essential gcc g++ git python3 python3-pip python3-setuptools && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p $BUILD_DIR $WHEEL_DIR
+
+RUN pip3 install --upgrade pip setuptools wheel
+
+RUN cd $BUILD_DIR && git clone https://github.com/dask/dask-gateway.git
+
+RUN cd $BUILD_DIR/dask-gateway/dask-gateway-server && \
+    pip3 wheel -e . --wheel-dir $WHEEL_DIR --no-deps
+
+RUN cd $BUILD_DIR/dask-gateway/dask-gateway && \
+    pip3 wheel -e . --wheel-dir $WHEEL_DIR --no-deps
+
+
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
 MAINTAINER Joachim Ungar
 ARG EOX_PYPI_TOKEN
@@ -54,6 +76,7 @@ ENV WHEEL_DIR /usr/local/wheels
 
 # get wheels from builder
 COPY --from=builder $WHEEL_DIR $WHEEL_DIR
+COPY --from=go_builder $WHEEL_DIR $WHEEL_DIR
 # get requirements from mhub
 COPY pypi_dont_update.sh $MHUB_DIR/
 COPY requirements.in $MHUB_DIR/
@@ -63,6 +86,8 @@ RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
     pip install $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
+    dask-gateway \
+    dask-gateway-server \
     affine \
     aiohttp \
     boto3 \
