@@ -3,6 +3,15 @@ Changelog
 #########
 
 ----------------------
+2021.12.0 - 2021-12-01
+----------------------
+
+* packaging
+
+    * use `latest/main` `dask-gateway` version
+
+
+----------------------
 2021.11.6 - 2021-11-26
 ----------------------
 * dockerfile
@@ -11,7 +20,7 @@ Changelog
 
 * packaging
 
-    * use `latest/main` `dask-gateway` version
+    * set ``mapchete_satellite`` to ``2021.12.0``
 
 ----------------------
 2021.11.5 - 2021-11-24
