@@ -78,6 +78,7 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REQUEST_PAYER=${AWS_REQUEST_PAYER}
+      - DASK_LOGGING__MAPCHETE="debug"
     command:
       [
         "dask-worker",

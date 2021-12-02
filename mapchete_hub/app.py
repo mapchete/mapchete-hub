@@ -470,7 +470,7 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
         )
 
     except Exception as exc:
-        backend_db.set(
+        job_meta = backend_db.set(
             job_id=job_id,
             state="failed",
             exception=repr(exc),
