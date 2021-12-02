@@ -246,7 +246,8 @@ async def post_job(
 
         # send message to Slack
         send_slack_message(
-            f"*job submitted ({running} running)*\n" f"{job['properties']['url']}"
+            f"*job '{job['properties']['job_name']}' with ID {job['id']} submitted ({running} running)*\n"
+            f"{job['properties']['url']}"
         )
         return job
     except Exception as exc:  # pragma: no cover
@@ -298,7 +299,8 @@ def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
         if job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
             send_slack_message(
-                f"*aborting job {job_id}*\n" f"{job['properties']['url']}"
+                f"*aborting {job['properties']['job_name']}*\n"
+                f"{job['properties']['url']}"
             )
         return backend_db.job(job_id)
     except KeyError as exc:
@@ -387,13 +389,13 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             raise ValueError(f"process output path must be absolute: {out_path}")
 
         with Timer() as t:
-            backend_db.set(
+            job_meta = backend_db.set(
                 job_id, state="running", dask_dashboard_link=dask_client.dashboard_link
             )
             send_slack_message(
-                f"*job started*\n"
+                f"*{job_meta['properties']['job_name']} started*\n"
                 f"{dask_client.dashboard_link}\n"
-                f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
+                f"{job_meta['properties']['url']}"
             )
 
             # Mapchete now will initialize the process and prepare all the tasks required.
@@ -455,19 +457,20 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
                         job.cancel()
                         backend_db.set(job_id, state="cancelled")
                         send_slack_message(
-                            "*job cancelled*\n"
-                            f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
+                            f"*{job_meta['properties']['job_name']} cancelled*\n"
+                            f"{job_meta['properties']['url']}"
                         )
                         return
         # job finished successfully
         backend_db.set(job_id, state="done")
         logger.debug("job %s finished in %s", job_id, t)
         send_slack_message(
-            f"*job finished in {t}*\n" f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
+            f"*{job_meta['properties']['job_name']} finished in {t}*\n"
+            f"{job_meta['properties']['url']}"
         )
 
     except Exception as exc:
-        backend_db.set(
+        job_meta = backend_db.set(
             job_id=job_id,
             state="failed",
             exception=repr(exc),
@@ -475,10 +478,10 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
         )
         logger.exception(exc)
         send_slack_message(
-            "*job failed*\n"
+            f"*{job_meta['properties']['job_name']} failed*\n"
             f"{exc}\n"
             f"{''.join(traceback.format_tb(exc.__traceback__))}\n"
-            f"{os.path.join(MHUB_SELF_URL, 'jobs', job_id)}"
+            f"{job_meta['properties']['url']}"
         )
     finally:  # pragma: no cover
         try:
