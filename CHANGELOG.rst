@@ -3,13 +3,27 @@ Changelog
 #########
 
 ----------------------
+2021.12.1 - 2021-12-02
+----------------------
+
+* core
+
+    * improve slack messages
+
+* packaging
+
+    * use base image ``2021.12.0``
+    * set ``mapchete`` to ``2021.12.0``
+    * set ``mapchete_satellite`` to ``2021.12.1``
+
+
+----------------------
 2021.12.0 - 2021-12-01
 ----------------------
 
 * packaging
 
-    * use `latest/main` `dask-gateway` version
-
+    * set ``mapchete_satellite`` to ``2021.12.0``
 
 ----------------------
 2021.11.6 - 2021-11-26
@@ -20,7 +34,8 @@ Changelog
 
 * packaging
 
-    * set ``mapchete_satellite`` to ``2021.12.0``
+    * use `latest/main` `dask-gateway` version
+   
 
 ----------------------
 2021.11.5 - 2021-11-24
