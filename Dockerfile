@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=2021.11.3
+ARG BASE_IMAGE_TAG=2021.12.0
 
 # use builder to build python wheels #
 ######################################
@@ -34,7 +34,6 @@ RUN cd $BUILD_DIR/dask-gateway/dask-gateway && \
 
 
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
-MAINTAINER Joachim Ungar
 ARG EOX_PYPI_TOKEN
 
 ENV BUILD_DIR /usr/local
@@ -64,7 +63,6 @@ RUN pip install --upgrade pip setuptools wheel && \
 # build image using pre-built libraries and wheels #
 ####################################################
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as runner
-MAINTAINER Joachim Ungar
 ARG EOX_PYPI_TOKEN
 
 ENV C_FORCE_ROOT "yes"
