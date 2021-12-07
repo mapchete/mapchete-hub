@@ -3,6 +3,18 @@ Changelog
 #########
 
 ----------------------
+2021.12.3 - 2021-12-07
+----------------------
+
+* core
+
+    * use 8 worker 2 threads (on an 8 core machine) default specification for dask workers
+
+* packaging
+
+    * set ``eox_preprocessing`` to ``2021.12.0``
+
+----------------------
 2021.12.2 - 2021-12-02
 ----------------------
 
