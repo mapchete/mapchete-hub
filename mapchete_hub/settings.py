@@ -14,11 +14,14 @@ WORKER_DEFAULT_TAG = os.environ.get("MHUB_IMAGE_TAG", __version__)
 
 DASK_DEFAULT_SPECS = {
     "default": {
-        "worker_cores": 1,
+        "worker_cores": 0.85,
+        "worker_cores_limit": 1.0,
         "worker_memory": 2.0,
-        "worker_threads": 1,
+        "worker_memory_limit": 8.0,
+        "worker_threads": 2,
         "scheduler_cores": 1,
-        "scheduler_memory": 2.0,
+        "scheduler_cores_limit": 1.0,
+        "scheduler_memory": 1.0,
         "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
     },
     "s2_16bit_regular": {
