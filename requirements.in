@@ -8,7 +8,7 @@ distributed==2021.12.0
 eox_preprocessing==2021.12.0
 fastapi==0.66
 lz4
-mapchete>=2021.12.1
+mapchete>=2021.12.2
 mapchete_satellite[brdf,cli,stac]>=2021.12.4
 mongomock
 odmantic
