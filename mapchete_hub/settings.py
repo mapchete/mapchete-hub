@@ -23,6 +23,11 @@ DASK_DEFAULT_SPECS = {
         "scheduler_cores_limit": 1.0,
         "scheduler_memory": 1.0,
         "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
+        "adapt_options": {
+            "minimum": int(os.environ.get("MHUB_DASK_MIN_WORKERS", 10)),
+            "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)),
+            "active": os.environ.get("MHUB_DASK_ADAPTIVE_SCALING", "TRUE") == "TRUE",
+        },
     },
     "s2_16bit_regular": {
         "worker_cores": 1,
@@ -66,11 +71,17 @@ def get_dask_specs(dask_specs="default"):
     """
     if isinstance(dask_specs, dict):
         return dict(DASK_DEFAULT_SPECS["default"], **dask_specs)
-    return dict(DASK_DEFAULT_SPECS[dask_specs])
+    return dict(DASK_DEFAULT_SPECS["default"], **DASK_DEFAULT_SPECS[dask_specs])
 
 
-def _get_cluster_specs(gateway, dask_specs="default"):  # pragma: no cover
+def get_gateway_cluster_options(gateway, dask_specs="default"):  # pragma: no cover
     options = gateway.cluster_options()
-    options.update(get_dask_specs(dask_specs))
+    options.update(
+        {
+            k: v
+            for k, v in get_dask_specs(dask_specs).items()
+            if k not in ["adapt_options"]
+        }
+    )
     logger.debug("using cluster specs: %s", dict(options))
     return options

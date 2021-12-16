@@ -27,7 +27,6 @@ docker-compose \
     -f docker-compose.test.yml \
     down \
     -v \
-    --rmi all \
     --remove-orphans \
 || true
 # docker-compose \
