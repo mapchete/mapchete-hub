@@ -72,7 +72,11 @@ from mapchete.processes import process_names_docstrings
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 from mapchete_hub.timetools import str_to_date
-from mapchete_hub.settings import _get_cluster_specs, DASK_DEFAULT_SPECS, get_dask_specs
+from mapchete_hub.settings import (
+    get_gateway_cluster_options,
+    DASK_DEFAULT_SPECS,
+    get_dask_specs,
+)
 from mapchete_hub.slack import send_slack_message
 
 
@@ -130,7 +134,7 @@ def get_backend_db():  # pragma: no cover
     return CACHE["backendb"]
 
 
-def get_dask_opts():  # pragma: no cover
+def get_dask_cluster_setup():  # pragma: no cover
     """This allows lazily loading either a LocalCluster, a GatewayCluster or connection to a running scheduler."""
     if os.environ.get("MHUB_DASK_GATEWAY_URL"):  # pragma: no cover
         return {
@@ -138,12 +142,6 @@ def get_dask_opts():  # pragma: no cover
             "url": os.environ.get("MHUB_DASK_GATEWAY_URL"),
             "gateway_kwargs": {
                 "auth": BasicAuth(password=os.environ.get("MHUB_DASK_GATEWAY_PASS"))
-            },
-            "cluster_kwargs": {
-                "minimum": int(os.environ.get("MHUB_DASK_MIN_WORKERS", 10)),
-                "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)),
-                "active": os.environ.get("MHUB_DASK_ADAPTIVE_SCALING", "TRUE")
-                == "TRUE",
             },
         }
     elif os.environ.get("MHUB_DASK_SCHEDULER_URL"):
@@ -218,7 +216,7 @@ async def post_job(
     job_config: models.MapcheteJob,
     background_tasks: BackgroundTasks,
     backend_db: BackendDB = Depends(get_backend_db),
-    dask_opts: dict = Depends(get_dask_opts),
+    dask_cluster_setup: dict = Depends(get_dask_cluster_setup),
     response: Response = None,
 ):
     """Executes a process, i.e. creates a new job."""
@@ -233,7 +231,7 @@ async def post_job(
 
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
-            job_wrapper, job["id"], job_config, backend_db, dask_opts
+            job_wrapper, job["id"], job_config, backend_db, dask_cluster_setup
         )
         response.headers["Location"] = f"/jobs/{job['id']}"
 
@@ -333,7 +331,9 @@ def get_dask_cluster(
         if dask_specs is not None:
             logger.debug("use cluster with %s specs", dask_specs)
             return gateway.new_cluster(
-                cluster_options=_get_cluster_specs(gateway, dask_specs=dask_specs)
+                cluster_options=get_gateway_cluster_options(
+                    gateway, dask_specs=dask_specs
+                )
             )
         else:
             return gateway.new_cluster()
@@ -352,7 +352,9 @@ def get_dask_client(flavor=None, url=None, cluster=None):
         raise TypeError("cannot get client")
 
 
-def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts: dict):
+def job_wrapper(
+    job_id: str, job_config: dict, backend_db: BackendDB, dask_cluster_setup: dict
+):
     """Create a Job iterator through the mapchete_execute function. On every new finished task,
     check whether the task already got the abort status.
     """
@@ -365,18 +367,21 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
         config["bounds"] = config.get("bounds")
         config["config_dir"] = config.get("config_dir")
 
-        if dask_opts.get("flavor") in ["local_cluster", "gateway"]:
-            cluster = get_dask_cluster(
-                **dask_opts, dask_specs=job_config.params.get("dask_specs")
-            )
+        dask_specs = job_config.params.get("dask_specs")
+        if dask_cluster_setup.get("flavor") in ["local_cluster", "gateway"]:
+            cluster = get_dask_cluster(**dask_cluster_setup, dask_specs=dask_specs)
             logger.debug("cluster: %s", cluster)
         else:  # pragma: no cover
-            logger.debug("no cluster available for flavor %s", dask_opts.get("flavor"))
+            logger.debug(
+                "no cluster available for flavor %s", dask_cluster_setup.get("flavor")
+            )
             cluster = None
 
         logger.debug("determining dask client")
         dask_client = get_dask_client(
-            dask_opts.get("flavor"), url=dask_opts.get("url"), cluster=cluster
+            dask_cluster_setup.get("flavor"),
+            url=dask_cluster_setup.get("url"),
+            cluster=cluster,
         )
         logger.debug("job %s starting mapchete %s", job_id, job_config.command)
         logger.debug("dask dashboard: %s", dask_client.dashboard_link)
@@ -414,28 +419,25 @@ def job_wrapper(job_id: str, job_config: dict, backend_db: BackendDB, dask_opts:
             # if it makes sense to avoid asking for more workers than could be possible used
             # this can be refined once we expose a more detailed information on the types of
             # job tasks: https://github.com/ungarj/mapchete/issues/383
-            if cluster is not None and dask_opts.get("flavor") in [
+            if cluster is not None and dask_cluster_setup.get("flavor") in [
                 "local_cluster",
                 "gateway",
             ]:  # pragma: no cover
-                cluster_kwargs = dask_opts.get("cluster_kwargs")
-                if cluster_kwargs:
-                    adapted_kwargs = dict(
-                        cluster_kwargs,
+                adapt_options = dask_specs.get("adapt_options")
+                if adapt_options:
+                    adapt_options.update(
                         # the minimum should not be larger than the expected number of job tasks
-                        minimum=min(
-                            [cluster_kwargs.get("minimum", 10), job.tiles_tasks]
-                        ),
+                        minimum=min([adapt_options["minimum"], job.tiles_tasks]),
                         # the maximum should also not be larger than the expected number of job tasks
                         maximum=min(
                             [
-                                cluster_kwargs.get("maximum", 1000),
+                                adapt_options["maximum"],
                                 max([job.preprocessing_tasks, job.tiles_tasks]),
                             ]
                         ),
                     )
-                    logger.debug("adapt cluster: %s", adapted_kwargs)
-                    cluster.adapt(**adapted_kwargs)
+                    logger.debug("adapt cluster: %s", adapt_options)
+                    cluster.adapt(**adapt_options)
             backend_db.set(job_id, current_progress=0, total_progress=len(job))
             logger.debug("job %s created", job_id)
             # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
