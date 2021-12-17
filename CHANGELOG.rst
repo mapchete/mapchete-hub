@@ -2,6 +2,19 @@
 Changelog
 #########
 
+-----------------------
+2021.12.10 - 2021-12-16
+-----------------------
+
+* core
+
+    * pass on cluster.adapt() kwargs via 'adapt_options' section in dask specs JSON
+
+* packaging
+
+    * use base image ``2021.12.3``
+    * set ``mapchete`` to ``2021.12.3``
+
 
 ----------------------
 2021.12.9 - 2021-12-15
