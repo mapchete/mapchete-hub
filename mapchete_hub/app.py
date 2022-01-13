@@ -157,7 +157,7 @@ def get_dask_cluster_setup():  # pragma: no cover
 
 
 @app.get("/")
-def root():
+async def root():
     return {
         "title": f"Mapchete Hub processing server version {__version__}",
         "description": "Example server implementing an adaption of OGC API - Processes",
@@ -174,17 +174,17 @@ def root():
 
 
 @app.get("/conformance")
-def get_conformance():
+async def get_conformance():
     raise NotImplementedError()
 
 
 @app.get("/dask_specs")
-def get_dask_specs_presets():
+async def get_dask_specs_presets():
     return DASK_DEFAULT_SPECS
 
 
 @app.get("/processes")
-def get_processes():
+async def get_processes():
     """Lists the processes this API offers."""
     return {
         "processes": [
@@ -195,7 +195,7 @@ def get_processes():
 
 
 @app.get("/processes/{process_id}")
-def get_process(process_id: str):
+async def get_process(process_id: str):
     """Returns a detailed description of a process."""
     try:
         title, description = process_names_docstrings(process_id)[0]
@@ -205,7 +205,7 @@ def get_process(process_id: str):
 
 
 @app.post("/processes/{process_id}")
-def post_process(process_id: str):
+async def post_process(process_id: str):
     """Returns a detailed description of a process."""
     raise NotImplementedError()
 
@@ -254,7 +254,7 @@ async def post_job(
 
 
 @app.get("/jobs")
-def list_jobs(
+async def list_jobs(
     output_path: str = None,
     state: str = None,
     command: str = None,
@@ -281,7 +281,7 @@ def list_jobs(
 
 
 @app.get("/jobs/{job_id}")
-def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
+async def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Returns the status of a job."""
     try:
         return backend_db.job(job_id)
@@ -290,7 +290,7 @@ def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
 
 
 @app.delete("/jobs/{job_id}")
-def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
+async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Cancel a job execution."""
     try:
         job = backend_db.job(job_id)
@@ -306,7 +306,7 @@ def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
 
 
 @app.get("/jobs/{job_id}/result")
-def get_job_result(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
+async def get_job_result(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
     """Returns the result of a job."""
     try:
         return backend_db.job(job_id)["properties"]["output_path"]
