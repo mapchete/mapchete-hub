@@ -358,13 +358,13 @@ def dask_cluster(
 def dask_client(dask_cluster_setup=None, cluster=None):
     flavor = dask_cluster_setup.get("flavor")
     if flavor == "local_cluster":
-        with Client(cluster) as client:
+        with Client(cluster, set_as_default=False) as client:
             logger.info("started client %s", client)
             yield client
             logger.info("closing client %s", client)
         logger.info("closed client %s", client)
     elif flavor == "gateway":  # pragma: no cover
-        with cluster.get_client() as client:
+        with cluster.get_client(set_as_default=False) as client:
             logger.info("started client %s", client)
             yield client
             logger.info("closing client %s", client)
