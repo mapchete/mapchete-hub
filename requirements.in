@@ -5,8 +5,8 @@ dask-gateway
 dask-gateway-server
 dask-kubernetes==2021.10.0
 distributed==2021.12.0
-eox_preprocessing==2021.12.0
-fastapi==0.66
+eox_preprocessing==2022.1.0
+fastapi==0.72.0
 lz4
 mapchete>=2021.12.3
 mapchete_satellite[brdf,cli,stac]>=2021.12.4
