@@ -3,6 +3,16 @@ Changelog
 #########
 
 ---------------------
+2021.1.2 - 2022-01-17
+---------------------
+
+* core
+
+    * use context managers for all dask Client and Cluster instances
+    * add more meaningful logger.info messages
+
+
+---------------------
 2021.1.1 - 2022-01-17
 ---------------------
 
