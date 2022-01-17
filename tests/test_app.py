@@ -305,10 +305,6 @@ def test_send_cancel_signal(client, test_process_id, example_config_json):
     # send cancel signal
     response = client.delete(f"/jobs/{job_id}")
 
-    time.sleep(1)
-    response = client.get(f"/jobs/{job_id}")
-    assert response.json()["properties"]["state"] in ["aborting", "cancelled"]
-
 
 def test_job_result(client, test_process_id, example_config_json):
     result = client.post(
