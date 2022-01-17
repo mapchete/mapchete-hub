@@ -302,15 +302,16 @@ def test_send_cancel_signal(client, test_process_id, example_config_json):
     )
     job_id = response.json()["id"]
 
-    # # make sure job is running
-    # response = client.get(f"/jobs/{job_id}")
-    # assert response.json()["properties"]["state"] == "running"
+    # make sure job is running
+    response = client.get(f"/jobs/{job_id}")
+    assert response.json()["properties"]["state"] in ["pending", "running"]
 
     # send cancel signal
     response = client.delete(f"/jobs/{job_id}")
 
-    # response = client.get(f"/jobs/{job_id}")
-    # assert response.json()["properties"]["state"] == "aborting"
+    time.sleep(1)
+    response = client.get(f"/jobs/{job_id}")
+    assert response.json()["properties"]["state"] in ["aborting", "cancelled"]
 
 
 def test_job_result(client, test_process_id, example_config_json):

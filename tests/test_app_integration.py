@@ -105,7 +105,7 @@ def test_post_job_custom_process(test_process_id, example_config_custom_process_
     job_id = response.json()["id"]
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
     assert response.status_code == 200
-    assert response.json()["properties"]["state"] == "running"
+    assert response.json()["properties"]["state"] in ["pending", "running"]
 
 
 @pytest.mark.skipif(
@@ -334,7 +334,7 @@ def test_cancel_job(test_process_id, example_config_json):
 
     # make sure job is running
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
-    assert response.json()["properties"]["state"] == "running"
+    assert response.json()["properties"]["state"] in ["pending", "running"]
 
     # send cancel signal
     response = requests.delete(f"{TEST_ENDPOINT}/jobs/{job_id}")
@@ -384,7 +384,7 @@ def test_cancel_jobs(test_process_id, example_config_json):
     for job_id in jobs:
         # make sure jobs are running
         response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
-        assert response.json()["properties"]["state"] == "running"
+        assert response.json()["properties"]["state"] in ["pending", "running"]
 
     # send cancel signal
     response = requests.delete(f"{TEST_ENDPOINT}/jobs/{jobs[0]}", timeout=3)
