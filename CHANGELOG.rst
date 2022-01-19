@@ -8,7 +8,7 @@ Changelog
 
 * packaging
 
-    * use base image ``2021.1.0``
+    * use base image ``2022.1.0``
     * set ``mapchete_satellite`` to ``2022.1.0``
 
 
