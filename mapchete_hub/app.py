@@ -112,6 +112,7 @@ MHUB_WORKER_EVENT_RATE_LIMIT = float(
     os.environ.get("MHUB_WORKER_EVENT_RATE_LIMIT", 0.2)
 )
 MHUB_SELF_URL = os.environ.get("MHUB_SELF_URL", "/")
+MHUB_SELF_INSTANCE_NAME = os.environ.get("MHUB_SELF_INSTANCE_NAME", "mapchete Hub")
 
 
 app = FastAPI()
@@ -120,7 +121,7 @@ CACHE = {}
 
 # mhub online message
 send_slack_message(
-    f"*mapchete Hub version {__version__} awaiting orders on* {MHUB_SELF_URL}"
+    f"*{MHUB_SELF_INSTANCE_NAME} version {__version__} awaiting orders on* {MHUB_SELF_URL}"
 )
 
 
@@ -245,7 +246,7 @@ async def post_job(
 
         # send message to Slack
         send_slack_message(
-            f"*job '{job['properties']['job_name']}' with ID {job['id']} submitted ({running} running)*\n"
+            f"*{MHUB_SELF_INSTANCE_NAME}: job '{job['properties']['job_name']}' with ID {job['id']} submitted ({running} running)*\n"
             f"{job['properties']['url']}"
         )
         return job
@@ -298,7 +299,7 @@ async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db
         if job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
             send_slack_message(
-                f"*aborting {job['properties']['job_name']}*\n"
+                f"*{MHUB_SELF_INSTANCE_NAME}: aborting {job['properties']['job_name']}*\n"
                 f"{job['properties']['url']}"
             )
         return backend_db.job(job_id)
@@ -431,7 +432,7 @@ def job_wrapper(
                         dask_dashboard_link=client.dashboard_link,
                     )
                     send_slack_message(
-                        f"*{job_meta['properties']['job_name']} started*\n"
+                        f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} started*\n"
                         f"{client.dashboard_link}\n"
                         f"{job_meta['properties']['url']}"
                     )
@@ -499,7 +500,7 @@ def job_wrapper(
                                 job.cancel()
                                 backend_db.set(job_id, state="cancelled")
                                 send_slack_message(
-                                    f"*{job_meta['properties']['job_name']} cancelled*\n"
+                                    f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} cancelled*\n"
                                     f"{job_meta['properties']['url']}"
                                 )
                                 return
@@ -507,7 +508,7 @@ def job_wrapper(
                 backend_db.set(job_id, state="done")
                 logger.info("job %s finished in %s", job_id, t)
                 send_slack_message(
-                    f"*{job_meta['properties']['job_name']} finished in {t}*\n"
+                    f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {t}*\n"
                     f"{job_meta['properties']['url']}"
                 )
 
@@ -521,7 +522,7 @@ def job_wrapper(
         )
         logger.exception(exc)
         send_slack_message(
-            f"*{job_meta['properties']['job_name']} failed*\n"
+            f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} failed*\n"
             f"{exc}\n"
             f"{''.join(traceback.format_tb(exc.__traceback__))}\n"
             f"{job_meta['properties']['url']}"

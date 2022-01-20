@@ -76,6 +76,16 @@ MHUB_SCHEDULER_MEMORY
 
 RAM of new scheduler spawned by dask gateway. (default: 2)
 
+MHUB_SELF_INSTANCE_NAME
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Instance name used for Slack messages.
+
+MHUB_SELF_URL
+~~~~~~~~~~~~~
+
+Instance root URL.
+
 MHUB_WORKER_CORES
 ~~~~~~~~~~~~~~~~~
 
