@@ -425,7 +425,7 @@ def job_wrapper(
                         f"process output path must be absolute: {out_path}"
                     )
 
-                with Timer() as t:
+                with Timer() as timer_job:
                     job_meta = backend_db.set(
                         job_id,
                         state="running",
@@ -438,7 +438,7 @@ def job_wrapper(
                     )
 
                     # Mapchete now will initialize the process and prepare all the tasks required.
-                    with Timer() as t:
+                    with Timer() as timer_initialize:
                         job = MAPCHETE_COMMANDS[job_config.command](
                             config,
                             **{
@@ -450,7 +450,7 @@ def job_wrapper(
                             concurrency="dask",
                             dask_client=client,
                         )
-                    logger.info("job %s initialized in %s", job_id, t)
+                    logger.info("job %s initialized in %s", job_id, timer_initialize)
 
                     # override the MHUB_DASK_MIN_WORKERS and MHUB_DASK_MAX_WORKERS default settings
                     # if it makes sense to avoid asking for more workers than could be possible used
@@ -506,9 +506,9 @@ def job_wrapper(
                                 return
                 # job finished successfully
                 backend_db.set(job_id, state="done")
-                logger.info("job %s finished in %s", job_id, t)
+                logger.info("job %s finished in %s", job_id, timer_job)
                 send_slack_message(
-                    f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {t}*\n"
+                    f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {timer_job}*\n"
                     f"{job_meta['properties']['url']}"
                 )
 
