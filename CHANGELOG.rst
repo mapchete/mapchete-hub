@@ -2,6 +2,16 @@
 Changelog
 #########
 
+2021.1.6 - 2022-01-31
+---------------------
+
+* packaging
+
+    * set ``dask`` and `distributed` to ``2022.1.1``
+    * set ``dask-kubernetes`` to ``2022.1.0``
+    * set ``mapchete`` to ``2022.1.2``
+
+
 2021.1.5 - 2022-01-26
 ---------------------
 
