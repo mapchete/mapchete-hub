@@ -8,6 +8,7 @@ Changelog
 * packaging
 
     * set ``mapchete`` to ``2022.2.0``
+    * freeze ``dask-gateway`` to commit ``bee9255e5ea0d77f456985cd91b2622bb3776dbb``
 
 
 2021.1.6 - 2022-01-31

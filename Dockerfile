@@ -24,14 +24,15 @@ RUN mkdir -p $BUILD_DIR $WHEEL_DIR
 
 RUN pip3 install --upgrade pip setuptools wheel
 
-RUN cd $BUILD_DIR && git clone https://github.com/dask/dask-gateway.git
-
-RUN cd $BUILD_DIR/dask-gateway/dask-gateway-server && \
+# checkout specific commit of dask-gateway
+RUN cd $BUILD_DIR && \
+    git clone https://github.com/dask/dask-gateway.git && \
+    cd $BUILD_DIR/dask-gateway && \
+    git checkout bee9255e5ea0d77f456985cd91b2622bb3776dbb && \
+    cd $BUILD_DIR/dask-gateway/dask-gateway-server && \
+    pip3 wheel -e . --wheel-dir $WHEEL_DIR --no-deps && \
+    cd $BUILD_DIR/dask-gateway/dask-gateway && \
     pip3 wheel -e . --wheel-dir $WHEEL_DIR --no-deps
-
-RUN cd $BUILD_DIR/dask-gateway/dask-gateway && \
-    pip3 wheel -e . --wheel-dir $WHEEL_DIR --no-deps
-
 
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
 ARG EOX_PYPI_TOKEN
