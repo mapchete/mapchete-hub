@@ -463,40 +463,37 @@ def job_wrapper(
                     if adapt_options:
                         logger.debug("default adapt options: %s", adapt_options)
                         if job_config.params.get("dask_compute_graph", True):
-                            adapt_options.update(
-                                # the minimum should not be larger than the expected number of job tasks
-                                minimum=min(
-                                    [adapt_options["minimum"], job.tiles_tasks]
-                                ),
-                                # the maximum should also not be larger than one eigth of the expected number of tasks
-                                maximum=min(
-                                    [
-                                        adapt_options["maximum"],
-                                        len(job) // 8,
-                                    ]
-                                ),
+                            # the minimum should not be larger than the expected number of job tasks
+                            min_workers = min(
+                                [adapt_options["minimum"], job.tiles_tasks]
                             )
+                            # the maximum should also not be larger than one eigth of the expected number of tasks
+                            max_workers = min([adapt_options["maximum"], len(job) // 8])
                         else:
-                            adapt_options.update(
-                                # the minimum should not be larger than the expected number of job tasks
-                                minimum=min(
-                                    [adapt_options["minimum"], job.tiles_tasks]
-                                ),
-                                # the maximum should also not be larger than the expected number of job tasks
-                                maximum=min(
-                                    [
-                                        adapt_options["maximum"],
-                                        max([job.preprocessing_tasks, job.tiles_tasks]),
-                                    ]
-                                ),
+                            # the minimum should not be larger than the expected number of job tasks
+                            min_workers = min(
+                                [adapt_options["minimum"], job.tiles_tasks]
                             )
+                            # the maximum should also not be larger than the expected number of job tasks
+                            max_workers = min(
+                                [
+                                    adapt_options["maximum"],
+                                    max([job.preprocessing_tasks, job.tiles_tasks]),
+                                ]
+                            )
+                        if max_workers < min_workers:
+                            max_workers = min_workers
+                        adapt_options.update(
+                            minimum=min_workers,
+                            maximum=max_workers,
+                        )
                     logger.debug("set cluster adapt to %s", adapt_options)
                     cluster_adapt(
                         cluster,
                         flavor=dask_cluster_setup.get("flavor"),
                         adapt_options=adapt_options,
                     )
-                    logger.debug("job %s created", job_id)
+
                     # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
                     # yield the results.
                     last_event = 0.0
@@ -509,7 +506,7 @@ def job_wrapper(
                             last_event = time.time()
                             # determine if there is a cancel signal for this task
                             backend_db.set(job_id, current_progress=i)
-                            logger.info(
+                            logger.debug(
                                 "job %s %s tasks from %s finished", job_id, i, len(job)
                             )
                             state = backend_db.job(job_id)["properties"]["state"]
