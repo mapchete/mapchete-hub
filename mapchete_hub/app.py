@@ -372,8 +372,9 @@ def dask_client(dask_cluster_setup=None, cluster=None):
         logger.info("closed client %s", client)
     elif flavor == "scheduler":  # pragma: no cover
         url = dask_cluster_setup.get("url")
-        logger.debug("connect to scheduler %s", url)
+        logger.info("connect to scheduler %s", url)
         yield get_client(url)
+        logger.info("no client to close")
         # NOTE: we don't close the client afterwards as it would affect other jobs using the same client
     else:  # pragma: no cover
         raise TypeError("cannot get client")
@@ -398,6 +399,8 @@ def job_wrapper(
     """
     try:
         logger.info("start fastAPI background task with job %s", job_id)
+        job_meta = backend_db.set(job_id, state="running")
+
         # TODO: fix https://github.com/ungarj/mapchete/issues/356
         # before mapchete config validation works again
         # config = job_config.config.dict()
@@ -445,7 +448,6 @@ def job_wrapper(
                 with Timer() as timer_job:
                     job_meta = backend_db.set(
                         job_id,
-                        state="running",
                         dask_dashboard_link=client.dashboard_link,
                     )
                     send_slack_message(
@@ -459,6 +461,7 @@ def job_wrapper(
                     # job tasks: https://github.com/ungarj/mapchete/issues/383
                     adapt_options = dask_specs.get("adapt_options")
                     if adapt_options:
+                        logger.debug("default adapt options: %s", adapt_options)
                         if job_config.params.get("dask_compute_graph", True):
                             adapt_options.update(
                                 # the minimum should not be larger than the expected number of job tasks
@@ -521,14 +524,15 @@ def job_wrapper(
                                     f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} cancelled*\n"
                                     f"{job_meta['properties']['url']}"
                                 )
-                                return
-                # job finished successfully
-                backend_db.set(job_id, state="done")
-                logger.info("job %s finished in %s", job_id, timer_job)
-                send_slack_message(
-                    f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {timer_job}*\n"
-                    f"{job_meta['properties']['url']}"
-                )
+                                break
+                    else:
+                        # job finished successfully
+                        backend_db.set(job_id, state="done")
+                        logger.info("job %s finished in %s", job_id, timer_job)
+                        send_slack_message(
+                            f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {timer_job}*\n"
+                            f"{job_meta['properties']['url']}"
+                        )
 
     except Exception as exc:
         logger.info("job %s raised an Exception: %s", job_id, exc)
