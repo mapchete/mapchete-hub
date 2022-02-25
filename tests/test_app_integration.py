@@ -339,6 +339,7 @@ def test_cancel_job(test_process_id, example_config_json):
     # send cancel signal
     response = requests.delete(f"{TEST_ENDPOINT}/jobs/{job_id}")
 
+    # make sure cancel signal was received
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
     assert response.json()["properties"]["state"] in ["aborting", "cancelled"]
 
@@ -351,7 +352,9 @@ def test_cancel_job(test_process_id, example_config_json):
         traceback = response.json()["properties"]["traceback"] or ""
         if state == "cancelled":
             break
-        elif time.time() - start > 120:
+        elif state == "done":
+            raise RuntimeError("job should not have 'done' state!")
+        elif time.time() - start > 30:
             raise RuntimeError(
                 f"job not cancelled in time, last state was '{state}' {traceback}"
             )

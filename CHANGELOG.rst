@@ -2,6 +2,21 @@
 Changelog
 #########
 
+2021.2.1 - 2022-02-25
+---------------------
+
+* core
+
+    * request dask cluster after job was initialized
+    * process dask task graph per default
+    * use different adapt_options if dask task graph is used
+
+* packaging
+
+    * set ``mapchete`` to ``2022.2.2``
+    * set ``mapchete_satellite`` to ``2022.2.0``
+
+
 2021.2.0 - 2022-02-03
 ---------------------
 

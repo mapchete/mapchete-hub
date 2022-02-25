@@ -372,8 +372,9 @@ def dask_client(dask_cluster_setup=None, cluster=None):
         logger.info("closed client %s", client)
     elif flavor == "scheduler":  # pragma: no cover
         url = dask_cluster_setup.get("url")
-        logger.debug("connect to scheduler %s", url)
+        logger.info("connect to scheduler %s", url)
         yield get_client(url)
+        logger.info("no client to close")
         # NOTE: we don't close the client afterwards as it would affect other jobs using the same client
     else:  # pragma: no cover
         raise TypeError("cannot get client")
@@ -398,6 +399,8 @@ def job_wrapper(
     """
     try:
         logger.info("start fastAPI background task with job %s", job_id)
+        job_meta = backend_db.set(job_id, state="running")
+
         # TODO: fix https://github.com/ungarj/mapchete/issues/356
         # before mapchete config validation works again
         # config = job_config.config.dict()
@@ -407,28 +410,44 @@ def job_wrapper(
 
         dask_specs = job_config.params.get("dask_specs")
 
+        # relative output paths are not useful, so raise exception
+        out_path = config.get("output", {}).get("path", {})
+        if not path_is_remote(out_path) and not os.path.isabs(
+            out_path
+        ):  # pragma: no cover
+            raise ValueError(f"process output path must be absolute: {out_path}")
+
+        # Mapchete now will initialize the process and prepare all the tasks required.
+        logger.info("initializing job %s with mapchete %s", job_id, job_config.command)
+        with Timer() as timer_initialize:
+            job = MAPCHETE_COMMANDS[job_config.command](
+                config,
+                **{
+                    k: v
+                    for k, v in job_config.params.items()
+                    if k not in ["job_name", "dask_specs"]
+                },
+                as_iterator=True,
+                concurrency="dask",
+            )
+        backend_db.set(job_id, current_progress=0, total_progress=len(job))
+        logger.info("job %s initialized in %s", job_id, timer_initialize)
+
+        logger.info("requesting dask cluster and dask client...")
         with dask_cluster(**dask_cluster_setup, dask_specs=dask_specs) as cluster:
             logger.info("job %s cluster: %s", job_id, cluster)
             with dask_client(
                 dask_cluster_setup=dask_cluster_setup, cluster=cluster
             ) as client:
                 logger.info("job %s client: %s", job_id, client)
-                logger.info("job %s starting mapchete %s", job_id, job_config.command)
-                logger.debug("dask dashboard: %s", client.dashboard_link)
 
-                # relative output paths are not useful, so raise exception
-                out_path = config.get("output", {}).get("path", {})
-                if not path_is_remote(out_path) and not os.path.isabs(
-                    out_path
-                ):  # pragma: no cover
-                    raise ValueError(
-                        f"process output path must be absolute: {out_path}"
-                    )
+                logger.debug("set %s as job executor", client)
+                job.set_executor_kwargs(dict(dask_client=client))
+                logger.debug("dask dashboard: %s", client.dashboard_link)
 
                 with Timer() as timer_job:
                     job_meta = backend_db.set(
                         job_id,
-                        state="running",
                         dask_dashboard_link=client.dashboard_link,
                     )
                     send_slack_message(
@@ -436,46 +455,45 @@ def job_wrapper(
                         f"{client.dashboard_link}\n"
                         f"{job_meta['properties']['url']}"
                     )
-
-                    # Mapchete now will initialize the process and prepare all the tasks required.
-                    with Timer() as timer_initialize:
-                        job = MAPCHETE_COMMANDS[job_config.command](
-                            config,
-                            **{
-                                k: v
-                                for k, v in job_config.params.items()
-                                if k not in ["job_name", "dask_specs"]
-                            },
-                            as_iterator=True,
-                            concurrency="dask",
-                            dask_client=client,
-                        )
-                    logger.info("job %s initialized in %s", job_id, timer_initialize)
-
                     # override the MHUB_DASK_MIN_WORKERS and MHUB_DASK_MAX_WORKERS default settings
                     # if it makes sense to avoid asking for more workers than could be possible used
                     # this can be refined once we expose a more detailed information on the types of
                     # job tasks: https://github.com/ungarj/mapchete/issues/383
                     adapt_options = dask_specs.get("adapt_options")
                     if adapt_options:
-                        adapt_options.update(
+                        logger.debug("default adapt options: %s", adapt_options)
+                        if job_config.params.get("dask_compute_graph", True):
                             # the minimum should not be larger than the expected number of job tasks
-                            minimum=min([adapt_options["minimum"], job.tiles_tasks]),
+                            min_workers = min(
+                                [adapt_options["minimum"], job.tiles_tasks]
+                            )
+                            # the maximum should also not be larger than one eigth of the expected number of tasks
+                            max_workers = min([adapt_options["maximum"], len(job) // 8])
+                        else:
+                            # the minimum should not be larger than the expected number of job tasks
+                            min_workers = min(
+                                [adapt_options["minimum"], job.tiles_tasks]
+                            )
                             # the maximum should also not be larger than the expected number of job tasks
-                            maximum=min(
+                            max_workers = min(
                                 [
                                     adapt_options["maximum"],
                                     max([job.preprocessing_tasks, job.tiles_tasks]),
                                 ]
-                            ),
+                            )
+                        if max_workers < min_workers:
+                            max_workers = min_workers
+                        adapt_options.update(
+                            minimum=min_workers,
+                            maximum=max_workers,
                         )
+                    logger.debug("set cluster adapt to %s", adapt_options)
                     cluster_adapt(
                         cluster,
                         flavor=dask_cluster_setup.get("flavor"),
                         adapt_options=adapt_options,
                     )
-                    backend_db.set(job_id, current_progress=0, total_progress=len(job))
-                    logger.debug("job %s created", job_id)
+
                     # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
                     # yield the results.
                     last_event = 0.0
@@ -488,7 +506,7 @@ def job_wrapper(
                             last_event = time.time()
                             # determine if there is a cancel signal for this task
                             backend_db.set(job_id, current_progress=i)
-                            logger.info(
+                            logger.debug(
                                 "job %s %s tasks from %s finished", job_id, i, len(job)
                             )
                             state = backend_db.job(job_id)["properties"]["state"]
@@ -503,14 +521,15 @@ def job_wrapper(
                                     f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} cancelled*\n"
                                     f"{job_meta['properties']['url']}"
                                 )
-                                return
-                # job finished successfully
-                backend_db.set(job_id, state="done")
-                logger.info("job %s finished in %s", job_id, timer_job)
-                send_slack_message(
-                    f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {timer_job}*\n"
-                    f"{job_meta['properties']['url']}"
-                )
+                                break
+                    else:
+                        # job finished successfully
+                        backend_db.set(job_id, state="done")
+                        logger.info("job %s finished in %s", job_id, timer_job)
+                        send_slack_message(
+                            f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {timer_job}*\n"
+                            f"{job_meta['properties']['url']}"
+                        )
 
     except Exception as exc:
         logger.info("job %s raised an Exception: %s", job_id, exc)
