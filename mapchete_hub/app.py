@@ -407,23 +407,40 @@ def job_wrapper(
 
         dask_specs = job_config.params.get("dask_specs")
 
+        # relative output paths are not useful, so raise exception
+        out_path = config.get("output", {}).get("path", {})
+        if not path_is_remote(out_path) and not os.path.isabs(
+            out_path
+        ):  # pragma: no cover
+            raise ValueError(f"process output path must be absolute: {out_path}")
+
+        # Mapchete now will initialize the process and prepare all the tasks required.
+        logger.info("initializing job %s with mapchete %s", job_id, job_config.command)
+        with Timer() as timer_initialize:
+            job = MAPCHETE_COMMANDS[job_config.command](
+                config,
+                **{
+                    k: v
+                    for k, v in job_config.params.items()
+                    if k not in ["job_name", "dask_specs"]
+                },
+                as_iterator=True,
+                concurrency="dask",
+            )
+        backend_db.set(job_id, current_progress=0, total_progress=len(job))
+        logger.info("job %s initialized in %s", job_id, timer_initialize)
+
+        logger.info("requesting dask cluster and dask client...")
         with dask_cluster(**dask_cluster_setup, dask_specs=dask_specs) as cluster:
             logger.info("job %s cluster: %s", job_id, cluster)
             with dask_client(
                 dask_cluster_setup=dask_cluster_setup, cluster=cluster
             ) as client:
                 logger.info("job %s client: %s", job_id, client)
-                logger.info("job %s starting mapchete %s", job_id, job_config.command)
-                logger.debug("dask dashboard: %s", client.dashboard_link)
 
-                # relative output paths are not useful, so raise exception
-                out_path = config.get("output", {}).get("path", {})
-                if not path_is_remote(out_path) and not os.path.isabs(
-                    out_path
-                ):  # pragma: no cover
-                    raise ValueError(
-                        f"process output path must be absolute: {out_path}"
-                    )
+                logger.debug("set %s as job executor", client)
+                job.set_executor_kwargs(dict(dask_client=client))
+                logger.debug("dask dashboard: %s", client.dashboard_link)
 
                 with Timer() as timer_job:
                     job_meta = backend_db.set(
@@ -436,45 +453,46 @@ def job_wrapper(
                         f"{client.dashboard_link}\n"
                         f"{job_meta['properties']['url']}"
                     )
-
-                    # Mapchete now will initialize the process and prepare all the tasks required.
-                    with Timer() as timer_initialize:
-                        job = MAPCHETE_COMMANDS[job_config.command](
-                            config,
-                            **{
-                                k: v
-                                for k, v in job_config.params.items()
-                                if k not in ["job_name", "dask_specs"]
-                            },
-                            as_iterator=True,
-                            concurrency="dask",
-                            dask_client=client,
-                        )
-                    logger.info("job %s initialized in %s", job_id, timer_initialize)
-
                     # override the MHUB_DASK_MIN_WORKERS and MHUB_DASK_MAX_WORKERS default settings
                     # if it makes sense to avoid asking for more workers than could be possible used
                     # this can be refined once we expose a more detailed information on the types of
                     # job tasks: https://github.com/ungarj/mapchete/issues/383
                     adapt_options = dask_specs.get("adapt_options")
                     if adapt_options:
-                        adapt_options.update(
-                            # the minimum should not be larger than the expected number of job tasks
-                            minimum=min([adapt_options["minimum"], job.tiles_tasks]),
-                            # the maximum should also not be larger than the expected number of job tasks
-                            maximum=min(
-                                [
-                                    adapt_options["maximum"],
-                                    max([job.preprocessing_tasks, job.tiles_tasks]),
-                                ]
-                            ),
-                        )
+                        if job_config.params.get("dask_compute_graph", True):
+                            adapt_options.update(
+                                # the minimum should not be larger than the expected number of job tasks
+                                minimum=min(
+                                    [adapt_options["minimum"], job.tiles_tasks]
+                                ),
+                                # the maximum should also not be larger than one eigth of the expected number of tasks
+                                maximum=min(
+                                    [
+                                        adapt_options["maximum"],
+                                        len(job) // 8,
+                                    ]
+                                ),
+                            )
+                        else:
+                            adapt_options.update(
+                                # the minimum should not be larger than the expected number of job tasks
+                                minimum=min(
+                                    [adapt_options["minimum"], job.tiles_tasks]
+                                ),
+                                # the maximum should also not be larger than the expected number of job tasks
+                                maximum=min(
+                                    [
+                                        adapt_options["maximum"],
+                                        max([job.preprocessing_tasks, job.tiles_tasks]),
+                                    ]
+                                ),
+                            )
+                    logger.debug("set cluster adapt to %s", adapt_options)
                     cluster_adapt(
                         cluster,
                         flavor=dask_cluster_setup.get("flavor"),
                         adapt_options=adapt_options,
                     )
-                    backend_db.set(job_id, current_progress=0, total_progress=len(job))
                     logger.debug("job %s created", job_id)
                     # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
                     # yield the results.
