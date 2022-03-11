@@ -307,13 +307,71 @@ async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
 
 
-@app.get("/jobs/{job_id}/result")
-async def get_job_result(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
-    """Returns the result of a job."""
+@app.get("/jobs/{job_id}/results")
+async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
+    """
+    Return the results of a job.
+
+    status code    content     condition
+    404            -           Job ID not found.
+    200            JSON        Job done.
+    404            -           Job pending or running.
+    400            JSON        Job aborting or failed.
+
+    Exceptions (http://schemas.opengis.net/ogcapi/processes/part1/1.0/openapi/schemas/exception.yaml):
+        title: Exception Schema
+        description: JSON schema for exceptions based on RFC 7807
+        type: object
+        required:
+        - type
+        properties:
+        type:
+            type: string
+        title:
+            type: string
+        status:
+            type: integer
+        detail:
+            type: string
+        instance:
+            type: string
+        additionalProperties: true
+    """
+    # raise if Job ID not found
     try:
-        return backend_db.job(job_id)["properties"]["output_path"]
+        job = backend_db.job(job_id)
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
+
+    if job["properties"]["state"] == "done":
+        return job["properties"]["results"]
+
+    elif job["properties"]["state"] in ["pending", "running"]:
+        raise HTTPException(404, f"job {job_id} does not yet have a result")
+
+    elif job["properties"]["state"] in ["aborting", "cancelled"]:
+        raise HTTPException(
+            400,
+            {
+                "properties": {
+                    "type": "Cancelled",
+                    "detail": "Job aborted due to user request.",
+                }
+            },
+        )
+
+    elif job["properties"]["state"] == "failed":
+        raise HTTPException(
+            400,
+            {
+                "properties": {
+                    "type": job["properties"]["exception"],
+                    "detail": job["properties"]["traceback"],
+                }
+            },
+        )
+    else:
+        raise ValueError("invalid job state")
 
 
 @contextmanager
@@ -381,14 +439,13 @@ def dask_client(dask_cluster_setup=None, cluster=None):
 
 
 def cluster_adapt(cluster, flavor=None, adapt_options=None):
-    if cluster is not None and flavor in [
-        "local_cluster",
-        "gateway",
-    ]:  # pragma: no cover
+    if cluster is None:  # pragma: no cover
+        logger.debug("cluster does not support adaption")
+    elif cluster == "local_cluster":  # pragma: no cover
+        cluster.adapt(**{k: v for k, v in adapt_options.items() if k not in ["active"]})
+    elif cluster == "gateway":  # pragma: no cover
         logger.debug("adapt cluster: %s", adapt_options)
         cluster.adapt(**adapt_options)
-    else:
-        logger.debug("cluster does not support adaption")
 
 
 def job_wrapper(
@@ -515,7 +572,12 @@ def job_wrapper(
                                     "job %s abort state caught: %s", job_id, state
                                 )
                                 # By calling the job's cancel method, all pending futures will be cancelled.
-                                job.cancel()
+                                try:
+                                    job.cancel()
+                                except Exception:
+                                    # catching possible Exceptions (due to losing scheduler before all futures are
+                                    # cancelled, etc.) makes sure, the job gets the correct cancelled state
+                                    pass
                                 backend_db.set(job_id, state="cancelled")
                                 send_slack_message(
                                     f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} cancelled*\n"
@@ -524,7 +586,16 @@ def job_wrapper(
                                 break
                     else:
                         # job finished successfully
-                        backend_db.set(job_id, state="done")
+                        backend_db.set(
+                            job_id,
+                            state="done",
+                            results={
+                                "imagesOutput": {
+                                    "href": job.stac_item_path,
+                                    "type": "application/json",
+                                }
+                            },
+                        )
                         logger.info("job %s finished in %s", job_id, timer_job)
                         send_slack_message(
                             f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {timer_job}*\n"

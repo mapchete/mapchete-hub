@@ -317,9 +317,10 @@ def test_job_result(client, test_process_id, example_config_json):
     )
     job_id = result.json()["id"]
 
-    result = client.get(f"/jobs/{job_id}/result")
+    result = client.get(f"/jobs/{job_id}/results")
     assert result.status_code == 200
-    assert "tmp" in result.json()
+    assert isinstance(result.json(), dict)
+    assert "tmp" in result.json()["imagesOutput"]["href"]
 
 
 def test_errors(client, example_config_json):
@@ -331,8 +332,8 @@ def test_errors(client, example_config_json):
     response = client.delete(f"/jobs/foo")
     assert response.status_code == 404
 
-    # get job result
-    response = client.get(f"/jobs/foo/result")
+    # get job results
+    response = client.get(f"/jobs/foo/results")
     assert response.status_code == 404
 
 
@@ -349,6 +350,14 @@ def test_process_exception(
     response = client.get(f"/jobs/{job_id}")
     assert response.json()["properties"]["state"] == "failed"
     assert response.json()["properties"]["traceback"]
+
+    # make sure <job_id>/results shows an exception
+    response = client.get(f"/jobs/{job_id}/results")
+    assert response.status_code == 400
+    assert response.json()["detail"]["properties"]["type"].startswith(
+        "MapcheteProcessException"
+    )
+    assert isinstance(response.json()["detail"]["properties"]["detail"], str)
 
 
 def test_process_custom_params(client, test_process_id, example_config_json):
