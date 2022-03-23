@@ -28,7 +28,7 @@ RUN pip3 install --upgrade pip setuptools wheel
 RUN cd $BUILD_DIR && \
     git clone https://github.com/dask/dask-gateway.git && \
     cd $BUILD_DIR/dask-gateway && \
-    git checkout bee9255e5ea0d77f456985cd91b2622bb3776dbb && \
+    git checkout 0a69d3d711a7bd472c724ad5d58c11d5a8ced61d && \
     cd $BUILD_DIR/dask-gateway/dask-gateway-server && \
     pip3 wheel -e . --wheel-dir $WHEEL_DIR --no-deps && \
     cd $BUILD_DIR/dask-gateway/dask-gateway && \
