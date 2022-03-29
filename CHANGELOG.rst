@@ -2,92 +2,97 @@
 Changelog
 #########
 
-2021.2.1 - 2022-02-25
+2022.3.1 - 2022-03-29
+---------------------
+
+* packaging
+    * bump ``dask-gateway`` to ``0a69d3d711a7bd472c724ad5d58c11d5a8ced61d``
+    * bump ``dask`` to ``2022.3.0``
+
+
+2022.3.0 - 2022-03-18
+---------------------
+
+* packaging
+    * use base image ``2022.3.1``
+
+
+2022.2.2 - 2022-02-25
 ---------------------
 
 * core
-
     * request dask cluster after job was initialized
     * process dask task graph per default
     * use different adapt_options if dask task graph is used
 
 * packaging
-
     * set ``mapchete`` to ``2022.2.2``
     * set ``mapchete_satellite`` to ``2022.2.0``
 
 
-2021.2.0 - 2022-02-03
+2022.2.0 - 2022-02-03
 ---------------------
 
 * packaging
-
     * set ``mapchete`` to ``2022.2.0``
     * freeze ``dask-gateway`` to commit ``bee9255e5ea0d77f456985cd91b2622bb3776dbb``
 
 
-2021.1.6 - 2022-01-31
+2022.1.6 - 2022-01-31
 ---------------------
 
 * packaging
-
     * set ``dask`` and `distributed` to ``2022.1.1``
     * set ``dask-kubernetes`` to ``2022.1.0``
     * set ``mapchete`` to ``2022.1.2``
 
 
-2021.1.5 - 2022-01-26
+2022.1.5 - 2022-01-26
 ---------------------
 
 * packaging
-
     * set ``mapchete_satellite`` to ``2022.1.2``
 
 
-2021.1.4 - 2022-01-19
+2022.1.4 - 2022-01-19
 ---------------------
 
 * packaging
-
     * set ``mapchete_satellite`` to ``2022.1.1``
 
 
 ---------------------
-2021.1.3 - 2022-01-19
+2022.1.3 - 2022-01-19
 ---------------------
 
 * packaging
-
     * use base image ``2022.1.0``
     * set ``mapchete_satellite`` to ``2022.1.0``
 
 
 ---------------------
-2021.1.2 - 2022-01-17
+2022.1.2 - 2022-01-17
 ---------------------
 
 * core
-
     * use context managers for all dask Client and Cluster instances
     * add more meaningful logger.info messages
 
 
 ---------------------
-2021.1.1 - 2022-01-17
+2022.1.1 - 2022-01-17
 ---------------------
 
 * packaging
-
     * set ``eox_preprocessing`` to ``2021.1.0``
     * set ``fastAPI`` to ``0.72.0``
 
 
 ---------------------
-2021.1.0 - 2022-01-13
+2022.1.0 - 2022-01-13
 ---------------------
 
 * core
-
     * use async for all fastAPI request functions
 
 
@@ -96,11 +101,9 @@ Changelog
 -----------------------
 
 * core
-
     * pass on cluster.adapt() kwargs via 'adapt_options' section in dask specs JSON
 
 * packaging
-
     * use base image ``2021.12.3``
     * set ``mapchete`` to ``2021.12.3``
 
@@ -110,7 +113,6 @@ Changelog
 ----------------------
 
 * packaging
-
     * use base image ``2021.12.2``
     * set ``mapchete`` to ``2021.12.2``
 
@@ -120,7 +122,6 @@ Changelog
 ----------------------
 
 * packaging
-
     * use base image ``2021.12.1``
     * set ``mapchete`` to ``2021.12.1``
 
@@ -130,7 +131,6 @@ Changelog
 ----------------------
 
 * packaging
-
     * set ``mapchete_satellite`` to ``2021.12.4`` (fix prior release)
 
 
@@ -139,7 +139,6 @@ Changelog
 ----------------------
 
 * packaging
-
     * set ``mapchete_satellite`` to ``2021.12.4``
 
 
@@ -148,7 +147,6 @@ Changelog
 ----------------------
 
 * packaging
-
     * set ``mapchete_satellite`` to ``2021.12.3``
 
 ----------------------
@@ -156,7 +154,6 @@ Changelog
 ----------------------
 
 * packaging
-
     * set ``mapchete_satellite`` to ``2021.12.2``
 
 ----------------------
@@ -164,11 +161,9 @@ Changelog
 ----------------------
 
 * core
-
     * use 8 worker 2 threads (on an 8 core machine) default specification for dask workers
 
 * packaging
-
     * set ``eox_preprocessing`` to ``2021.12.0``
 
 ----------------------
@@ -176,7 +171,6 @@ Changelog
 ----------------------
 
 * packaging
-
     * set ``mapchete_satellite`` to ``2021.12.1``
 
 
@@ -185,11 +179,9 @@ Changelog
 ----------------------
 
 * core
-
     * improve slack messages
 
 * packaging
-
     * use base image ``2021.12.0``
     * set ``mapchete`` to ``2021.12.0``
 
@@ -199,18 +191,15 @@ Changelog
 ----------------------
 
 * packaging
-
     * set ``mapchete_satellite`` to ``2021.12.0``
 
 ----------------------
 2021.11.6 - 2021-11-26
 ----------------------
 * dockerfile
-
     * add step with `go` to build wheels of `dask-gateway` packages
 
 * packaging
-
     * use `latest/main` `dask-gateway` version
    
 
@@ -219,11 +208,9 @@ Changelog
 ----------------------
 
 * core
-
     * cache BackendDB connection
 
 * packaging
-
     * use base image ``2021.11.3``
     * add ``orgonite>=2021.11.0`` to dependencies
 
@@ -233,11 +220,9 @@ Changelog
 ----------------------
 
 * core
-
     * add slack notifications
 
 * packaging
-
     * set dask and distributed versions to ``2021.11.1``
     * set dask-kubernetes to ``2021.10.0``
 
@@ -247,12 +232,10 @@ Changelog
 ----------------------
 
 * core
-
     * set cluster worker minimum as either default or tiles tasks
     * submit tasks in chunks, not one by one (see https://github.com/ungarj/mapchete/pull/387)
 
 * packaging
-
     * set minimum mapchete version to ``2021.11.2``
     * use base image ``2021.11.2``
 
@@ -262,12 +245,10 @@ Changelog
 ----------------------
 
 * core
-
     * set cluster worker maximum as maximum of preprocessing and tiles tasks
     * large jobs now start earlier and use less ressources (https://github.com/ungarj/mapchete/pull/384)
 
 * packaging
-
     * set minimum mapchete version to ``2021.11.1``
     * use base image ``2021.11.1``
 
@@ -277,7 +258,6 @@ Changelog
 ----------------------
 
 * core
-
     * fix cluster initialization
 
 
@@ -286,11 +266,9 @@ Changelog
 ----------------------
 
 * core
-
     * enable posting custom dask specs as JSON
 
 * packaging
-
     * re-enable ``mapchete_xarray``
     * use base image ``2021.11.0``
 
