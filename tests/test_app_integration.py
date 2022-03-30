@@ -430,6 +430,6 @@ def test_job_result(test_process_id, example_config_json):
     )
     job_id = result.json()["id"]
 
-    response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}/result")
+    response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}/results")
     assert response.status_code == 200
     assert "tmp" in response.json()
