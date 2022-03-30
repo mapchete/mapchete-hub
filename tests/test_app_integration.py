@@ -430,6 +430,17 @@ def test_job_result(test_process_id, example_config_json):
     )
     job_id = result.json()["id"]
 
-    response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}/result")
+    # see if job is cancelled
+    start = time.time()
+    while True:
+        time.sleep(1)
+        response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
+        state = response.json()["properties"]["state"]
+        if state == "done":
+            break
+        elif time.time() - start > 120:
+            raise RuntimeError(f"job not finished in time, last state was '{state}'")
+
+    response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}/results")
     assert response.status_code == 200
-    assert "tmp" in response.json()
+    assert "imagesOutput" in response.json()

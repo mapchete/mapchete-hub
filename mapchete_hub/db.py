@@ -195,6 +195,7 @@ class MongoDBStatusHandler:
         traceback: str = None,
         dask_dashboard_link: str = None,
         dask_specs: dict = None,
+        results: str = None,
     ):
         entry = {"job_id": job_id}
         timestamp = datetime.utcnow()
@@ -221,6 +222,8 @@ class MongoDBStatusHandler:
             entry.update(dask_dashboard_link=dask_dashboard_link)
         if dask_specs:  # pragma: no cover
             entry.update(dask_specs=dask_specs)
+        if results is not None:
+            entry.update(results=results)
         # add timestamp to entry
         entry.update(updated=timestamp)
         logger.debug("upsert entry: %s", entry)
