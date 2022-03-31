@@ -2,6 +2,17 @@
 Changelog
 #########
 
+
+2022.3.2 - 2022-03-31
+---------------------
+
+* core
+    * align <job_id>/results with current OAPI standard
+
+* packaging
+    * use base image ``2022.3.2``
+
+
 2022.3.1 - 2022-03-29
 ---------------------
 
