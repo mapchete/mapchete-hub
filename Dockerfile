@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=2022.3.2
+ARG BASE_IMAGE_TAG=2022.4.0
 
 # use builder to build python wheels #
 ######################################
@@ -53,6 +53,7 @@ RUN mkdir -p $MHUB_DIR $WHEEL_DIR
 RUN pip install --upgrade pip setuptools wheel && \
     pip wheel \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+    # git+https://github.com/ungarj/mapchete.git@master#egg=mapchete \
     # git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master \
     # git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@master \
     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
@@ -96,6 +97,7 @@ RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
     fsspec \
     gdal \
     jenkspy \
+    mapchete \
     numcodecs \
     numpy \
     psutil \

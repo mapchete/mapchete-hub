@@ -3,6 +3,16 @@ Changelog
 #########
 
 
+2022.4.0 - 2022-04-01
+---------------------
+
+* core
+    * fix cluster size adaption
+
+* packaging
+    * use base image ``2022.4.0``
+
+
 2022.3.2 - 2022-03-31
 ---------------------
 
