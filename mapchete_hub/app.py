@@ -441,11 +441,13 @@ def dask_client(dask_cluster_setup=None, cluster=None):
 def cluster_adapt(cluster, flavor=None, adapt_options=None):
     if cluster is None:  # pragma: no cover
         logger.debug("cluster does not support adaption")
-    elif cluster == "local_cluster":  # pragma: no cover
+    elif flavor == "local_cluster":  # pragma: no cover
         cluster.adapt(**{k: v for k, v in adapt_options.items() if k not in ["active"]})
-    elif cluster == "gateway":  # pragma: no cover
+    elif flavor == "gateway":  # pragma: no cover
         logger.debug("adapt cluster: %s", adapt_options)
         cluster.adapt(**adapt_options)
+    else:
+        raise TypeError(f"cannot determine cluster type: {cluster}")
 
 
 def job_wrapper(
