@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=2022.3.2
+ARG BASE_IMAGE_TAG=2022.4.0
 
 # use builder to build python wheels #
 ######################################
@@ -97,6 +97,7 @@ RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
     fsspec \
     gdal \
     jenkspy \
+    mapchete \
     numcodecs \
     numpy \
     psutil \

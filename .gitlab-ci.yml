@@ -61,7 +61,7 @@ build_mhub-s1:
 # run unittests
 test_mhub:
   stage: unit_tests
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.3.2
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.4.0
   needs: ["build_mhub"]
   timeout: 30m
   variables:
@@ -80,7 +80,7 @@ test_mhub:
 
 test_mhub-s1:
   stage: unit_tests
-  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete-ost:2022.3.2
+  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete-ost:2022.4.0
   needs: ["build_mhub-s1"]
   timeout: 30m
   variables:
