@@ -2,7 +2,8 @@ image: docker/compose:1.26.0
 
 stages:
   - build
-  - test
+  - unit_tests
+  - docker_integration_tests
   - push
 
 default:
@@ -57,10 +58,43 @@ build_mhub-s1:
         -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG} \
         /bin/bash -c "mkdir pip && pip freeze" > pip/${IMAGE_NAME}_installed.txt
 
-# test mapchete_hub package in built images
+# run unittests
 test_mhub:
-  stage: test
+  stage: unit_tests
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.3.2
   needs: ["build_mhub"]
+  timeout: 30m
+  variables:
+    EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
+  before_script:
+    - pip install --upgrade pip
+    - pip install
+      --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple
+      --upgrade
+      -e .
+  script:
+    - pytest -v --cov=mapchete_hub tests/
+
+test_mhub-s1:
+  stage: unit_tests
+  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete-ost:2022.3.2
+  needs: ["build_mhub-s1"]
+  timeout: 30m
+  variables:
+    EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
+  before_script:
+    - pip install --upgrade pip
+    - pip install
+      --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple
+      --upgrade
+      -e .
+  script:
+    - pytest -v --cov=mapchete_hub tests/
+
+# test mapchete_hub package in built images
+integration_mhub:
+  stage: docker_integration_tests
+  needs: ["build_mhub", "test_mhub"]
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
@@ -104,9 +138,9 @@ test_mhub:
         rm -fv \
       || true
 
-test_mhub-s1:
-  stage: test
-  needs: ["build_mhub-s1"]
+integration_mhub-s1:
+  stage: docker_integration_tests
+  needs: ["build_mhub-s1", "test_mhub-s1"]
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
@@ -149,6 +183,7 @@ test_mhub-s1:
         -f docker-compose.test.yml \
         rm -fv \
       || true
+
 
 # push images to registry
 push_mhub:
