@@ -12,7 +12,7 @@ default:
     - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
     # tag as "latest" if current branch is master, else use branch name
     # - export IMAGE_TAG=`if [ "$CI_COMMIT_REF_NAME" == "master" ]; then echo "latest"; else echo $CI_COMMIT_REF_NAME; fi`
-    - apt install -y git
+    - apk update && apk add git
     - export IMAGE_TAG=`git rev-parse --short HEAD`
 
 # build docker images for mhub and mhub-s1
