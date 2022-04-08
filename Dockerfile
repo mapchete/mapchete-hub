@@ -137,5 +137,6 @@ COPY . $MHUB_DIR
 #     then pip install -e $MHUB_DIR[xarray]; \
 #     else pip install -e $MHUB_DIR; \
 #     fi
+RUN pip install -e $MHUB_DIR
 
 WORKDIR $MHUB_DIR
