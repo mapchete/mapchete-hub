@@ -58,6 +58,8 @@ RUN pip install --upgrade pip setuptools wheel && \
     # git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@master \
     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
     # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
+    git+http://gitlab+deploy-token-114:Z5BGRFqisidtaryTcJoe@gitlab.eox.at/eox/hub/agri/planet-signals-generation.git@layer1_only \
+    git+https://github.com/wankoelias/mapchete_xarray.git@single_zarr_archive \
     jenkspy==0.2.0 \
     --wheel-dir $WHEEL_DIR \
     --no-deps
@@ -82,8 +84,12 @@ COPY pypi_dont_update.sh $MHUB_DIR/
 COPY requirements.in $MHUB_DIR/
 
 # install wheels first and then everything else
-RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
-    pip install $WHEEL_DIR/*.whl && \
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends build-essential git && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip==21.2.4 setuptools wheel && \
+    pip install --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+    $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
     dask-gateway \
@@ -120,15 +126,16 @@ RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
     -r $MHUB_DIR/requirements.txt && \
     pip uninstall -y pip-tools && \
-    rm -r $WHEEL_DIR
+    rm -r $WHEEL_DIR && \
+    apt remove -y git
 
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR
 
 # install xarray dependencies only on mhub image, not mhub-s1
-RUN if [[ $BASE_IMAGE_NAME = "mapchete" ]]; \
-    then pip install -e $MHUB_DIR[xarray]; \
-    else pip install -e $MHUB_DIR; \
-    fi
+# RUN if [[ $BASE_IMAGE_NAME = "mapchete" ]]; \
+#     then pip install -e $MHUB_DIR[xarray]; \
+#     else pip install -e $MHUB_DIR; \
+#     fi
 
 WORKDIR $MHUB_DIR

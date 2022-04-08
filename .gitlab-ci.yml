@@ -11,7 +11,8 @@ default:
     - docker info
     - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
     # tag as "latest" if current branch is master, else use branch name
-    - export IMAGE_TAG=`if [ "$CI_COMMIT_REF_NAME" == "master" ]; then echo "latest"; else echo $CI_COMMIT_REF_NAME; fi`
+    # - export IMAGE_TAG=`if [ "$CI_COMMIT_REF_NAME" == "master" ]; then echo "latest"; else echo $CI_COMMIT_REF_NAME; fi`
+    - export IMAGE_TAG=`git rev-parse --short HEAD`
 
 # build docker images for mhub and mhub-s1
 build_mhub:
@@ -190,7 +191,6 @@ integration_mhub-s1:
         rm -fv \
       || true
 
-
 # push images to registry
 push_mhub:
   stage: push
@@ -209,7 +209,6 @@ push_mhub-s1:
     BASE_IMAGE_NAME: snap-mapchete-ost
   script:
     - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${IMAGE_TAG}
-
 
 # also tag and push a tagged commit, i.e. a new version
 push_tag:
