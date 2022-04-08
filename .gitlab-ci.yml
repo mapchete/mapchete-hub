@@ -124,6 +124,7 @@ integration_mhub:
         -f docker-compose.yml \
         -f docker-compose.test.yml \
         up \
+        --build \
         --exit-code-from mhub_tester
 
   after_script:
@@ -169,6 +170,7 @@ integration_mhub-s1:
         -f docker-compose.yml \
         -f docker-compose.test.yml \
         up \
+        --build \
         --exit-code-from mhub_tester
 
   after_script:
