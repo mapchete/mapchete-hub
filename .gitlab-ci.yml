@@ -112,7 +112,7 @@ integration_mhub:
     - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
   script:
     # run tests
-    - ./run_integration_tests.sh
+    - /bin/bash run_integration_tests.sh
 
 integration_mhub-s1:
   stage: docker_integration_tests
@@ -128,7 +128,7 @@ integration_mhub-s1:
     - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
   script:
     # run tests
-    - ./run_integration_tests.sh
+    - /bin/bash run_integration_tests.sh
 
 # push images to registry
 push_mhub:
