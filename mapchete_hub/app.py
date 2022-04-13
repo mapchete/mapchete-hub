@@ -152,7 +152,10 @@ def get_dask_cluster_setup():  # pragma: no cover
         logger.warning(
             "Either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set. For now, a local cluster is being used."
         )
-        return {"flavor": "local_cluster", "cluster": LocalCluster()}
+        if "cluster" not in CACHE:
+            logger.debug("creating LocalCluster...")
+            CACHE["cluster"] = LocalCluster(processes=False)
+        return {"flavor": "local_cluster", "cluster": CACHE["cluster"]}
 
 
 # REST endpoints
