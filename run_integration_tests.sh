@@ -36,14 +36,14 @@ docker-compose \
     build \
     --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
     --build-arg IMAGE_TAG=${IMAGE_TAG} \
-    --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN}
+    --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} || exit 1
 echo "run mhub on port ${MHUB_PORT}"
 docker-compose \
     -p $CI_JOB_ID \
     -f $COMPFILE \
     -f docker-compose.test.yml \
     up \
-    --exit-code-from mhub_tester
+    --exit-code-from mhub_tester || exit 1
 docker-compose \
     -p $CI_JOB_ID \
     -f $COMPFILE \
