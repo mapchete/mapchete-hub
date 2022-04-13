@@ -22,6 +22,6 @@ def send_slack_message(msg):
                 {"username": "mapchete_hub", "channel": "#mapchete_hub", "text": msg}
             )
         else:  # pragma: no cover
-            logger.error("no SLACK_WEBHOOK_URL env variable set.")
+            logger.warning("no SLACK_WEBHOOK_URL env variable set.")
     except ImportError:
-        logger.error("install 'slack' extra for this feature")
+        logger.warning("install 'slack' extra for this feature")
