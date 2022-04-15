@@ -59,7 +59,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
     # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
     git+http://gitlab+deploy-token-114:Z5BGRFqisidtaryTcJoe@gitlab.eox.at/eox/hub/agri/planet-signals-generation.git@6fc5c90381af40cbfc67eda33c1d0e3203fd6fc1 \
-    git+https://github.com/wankoelias/mapchete_xarray.git@90d457d65eba59268a9c0a5b9d661c7e1c84b5bf \
+    git+https://github.com/wankoelias/mapchete_xarray.git@b1869d2a4d8caa0ef1ab235a587d031c8ff46b3a \
     jenkspy==0.2.0 \
     --wheel-dir $WHEEL_DIR \
     --no-deps
