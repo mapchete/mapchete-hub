@@ -37,7 +37,6 @@ else
     echo "build mhub image registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG:-latest}"
     docker build \
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
-        --build-arg IMAGE_TAG=${IMAGE_TAG} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         -t registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG:-latest} \
         . || exit 1
