@@ -19,7 +19,7 @@ if [ "${CI_COMMIT_REF_NAME:-`git branch --show-current`}" == "master" ]; then
 else
     IMAGE_TAG=${CI_COMMIT_SHORT_SHA:-`git rev-parse --short HEAD`};
 fi
-MHUB_PORT=$(( 5000 + $RANDOM % 1000 ))
+export MHUB_PORT=$(( 5000 + $RANDOM % 1000 ))
 
 if [ "$BUILD" == "TRUE" ]; then
     COMPFILE="docker-compose.yml"
