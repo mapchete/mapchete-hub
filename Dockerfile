@@ -84,10 +84,7 @@ COPY pypi_dont_update.sh $MHUB_DIR/
 COPY requirements.in $MHUB_DIR/
 
 # install wheels first and then everything else
-RUN apt-get update && \
-    apt-get install --yes --no-install-recommends build-essential git && \
-    rm -rf /var/lib/apt/lists/* && \
-    pip install --upgrade pip==21.2.4 setuptools wheel && \
+RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
     pip install --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
     $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
@@ -126,8 +123,7 @@ RUN apt-get update && \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
     -r $MHUB_DIR/requirements.txt && \
     pip uninstall -y pip-tools && \
-    rm -r $WHEEL_DIR && \
-    apt remove -y git
+    rm -r $WHEEL_DIR
 
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR
