@@ -100,7 +100,7 @@ test_mhub-s1:
 # test mapchete_hub package in built images
 integration_mhub:
   stage: docker_integration_tests
-  needs: ["build_mhub", "test_mhub"]
+  needs: ["build_mhub"]
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
@@ -115,7 +115,7 @@ integration_mhub:
 
 integration_mhub-s1:
   stage: docker_integration_tests
-  needs: ["build_mhub-s1", "test_mhub-s1"]
+  needs: ["build_mhub-s1"]
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
