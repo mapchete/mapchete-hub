@@ -24,6 +24,7 @@ build_mhub:
       docker build \
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
+        --no-cache \
         -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
   after_script:
     # dump installed package versions as artefact
@@ -46,6 +47,7 @@ build_mhub-s1:
       docker build \
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
+        --no-cache \
         -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
   after_script:
     # dump installed package versions as artefact
