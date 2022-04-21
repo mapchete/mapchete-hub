@@ -59,7 +59,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
     # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
     git+http://gitlab+deploy-token-114:Z5BGRFqisidtaryTcJoe@gitlab.eox.at/eox/hub/agri/planet-signals-generation.git@6fc5c90381af40cbfc67eda33c1d0e3203fd6fc1 \
-    git+https://github.com/wankoelias/mapchete_xarray.git@b1869d2a4d8caa0ef1ab235a587d031c8ff46b3a \
+    git+https://github.com/wankoelias/mapchete_xarray.git@f8cd654e7746e73bf59ef59abfcbfd296fd1a0f1 \
     git+https://github.com/dask/distributed.git@c9dcbe7ee87be83fde1156f18e88ebe2da992c0c \
     git+https://github.com/dask/dask.git@99e260081f51ce368bf0456c66c9d3c2f20e8c9b \
     jenkspy==0.2.0 \
@@ -86,7 +86,7 @@ COPY pypi_dont_update.sh $MHUB_DIR/
 COPY requirements.in $MHUB_DIR/
 
 # install wheels first and then everything else
-RUN pip install --upgrade pip==21.2.4 setuptools wheel && \
+RUN pip install --upgrade pip setuptools wheel && \
     pip install \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
     --force-reinstall \
