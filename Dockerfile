@@ -59,7 +59,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
     # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
     git+http://gitlab+deploy-token-114:Z5BGRFqisidtaryTcJoe@gitlab.eox.at/eox/hub/agri/planet-signals-generation.git@f261be3a5f80a5e975644397ee8399bee49705f9 \
-    git+https://github.com/wankoelias/mapchete_xarray.git@f8cd654e7746e73bf59ef59abfcbfd296fd1a0f1 \
+    # git+https://github.com/wankoelias/mapchete_xarray.git@foo \
     # git+https://github.com/dask/distributed.git@foo \
     # git+https://github.com/dask/dask.git@foo \
     jenkspy==0.2.0 \
@@ -132,10 +132,9 @@ RUN pip install --upgrade pip setuptools wheel && \
 COPY . $MHUB_DIR
 
 # install xarray dependencies only on mhub image, not mhub-s1
-# RUN if [[ $BASE_IMAGE_NAME = "mapchete" ]]; \
-#     then pip install -e $MHUB_DIR[xarray]; \
-#     else pip install -e $MHUB_DIR; \
-#     fi
-RUN pip install -e $MHUB_DIR
+RUN if [[ $BASE_IMAGE_NAME = "mapchete" ]]; \
+    then pip install -e $MHUB_DIR[xarray]; \
+    else pip install -e $MHUB_DIR; \
+    fi
 
 WORKDIR $MHUB_DIR
