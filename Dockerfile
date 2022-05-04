@@ -53,15 +53,15 @@ RUN mkdir -p $MHUB_DIR $WHEEL_DIR
 RUN pip install --upgrade pip setuptools wheel && \
     pip wheel \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-    # git+https://github.com/ungarj/mapchete.git@<foo> \
+    # git+https://github.com/ungarj/mapchete.git@foo \
     # git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master \
     git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@1abe9a1622ea72e77e6e0cc9bfbf1b172411c42e \
     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
     # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
     git+http://gitlab+deploy-token-114:Z5BGRFqisidtaryTcJoe@gitlab.eox.at/eox/hub/agri/planet-signals-generation.git@f261be3a5f80a5e975644397ee8399bee49705f9 \
     git+https://github.com/wankoelias/mapchete_xarray.git@f8cd654e7746e73bf59ef59abfcbfd296fd1a0f1 \
-    git+https://github.com/dask/distributed.git@c9dcbe7ee87be83fde1156f18e88ebe2da992c0c \
-    git+https://github.com/dask/dask.git@99e260081f51ce368bf0456c66c9d3c2f20e8c9b \
+    # git+https://github.com/dask/distributed.git@foo \
+    # git+https://github.com/dask/dask.git@foo \
     jenkspy==0.2.0 \
     --wheel-dir $WHEEL_DIR \
     --no-deps
