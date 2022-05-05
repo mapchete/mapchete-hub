@@ -90,7 +90,6 @@ COPY requirements.in $MHUB_DIR/
 RUN pip install --upgrade pip && \
     pip install \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-    --force-reinstall \
     $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
