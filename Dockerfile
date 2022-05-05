@@ -132,9 +132,11 @@ RUN pip install --upgrade pip setuptools wheel && \
 COPY . $MHUB_DIR
 
 # install xarray dependencies only on mhub image, not mhub-s1
-RUN if [[ $BASE_IMAGE_NAME = "mapchete" ]]; \
-    then pip install -e $MHUB_DIR[xarray]; \
-    else pip install -e $MHUB_DIR; \
-    fi
+# RUN if [[ $BASE_IMAGE_NAME = "mapchete" ]]; \
+#     then pip install -e $MHUB_DIR[xarray]; \
+#     else exit 1; pip install -e $MHUB_DIR; \
+#     fi
+
+RUN pip install -e $MHUB_DIR[xarray]
 
 WORKDIR $MHUB_DIR
