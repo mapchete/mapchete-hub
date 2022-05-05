@@ -2,6 +2,18 @@
 Changelog
 #########
 
+2022.5.0 - 2022-05-05
+---------------------
+
+* CI/CD
+  * every pushed commit now generates a docker image with the short commit hash as tag
+  * split up into unit and integration tests
+  * dump pip installed packages and versions as build job artefacts
+
+* packaging
+  * update dependencies: `dask==2022.5.0`, `dask-kubernetes==2022.4.1`, `distributed==2022.5.0`, `mapchete_satellite>=2022.5.0`
+  * add `planet-signals-generation`
+
 
 2022.4.0 - 2022-04-01
 ---------------------
