@@ -69,6 +69,7 @@ RUN pip install --upgrade pip setuptools wheel && \
 # build image using pre-built libraries and wheels #
 ####################################################
 FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as runner
+ARG BASE_IMAGE_NAME
 ARG EOX_PYPI_TOKEN
 
 ENV C_FORCE_ROOT "yes"
@@ -86,7 +87,7 @@ COPY pypi_dont_update.sh $MHUB_DIR/
 COPY requirements.in $MHUB_DIR/
 
 # install wheels first and then everything else
-RUN pip install --upgrade pip setuptools wheel && \
+RUN pip install --upgrade pip && \
     pip install \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
     --force-reinstall \
@@ -104,6 +105,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     fsspec \
     gdal \
     jenkspy \
+    mapchete \
     numcodecs \
     numpy \
     psutil \
@@ -132,11 +134,9 @@ RUN pip install --upgrade pip setuptools wheel && \
 COPY . $MHUB_DIR
 
 # install xarray dependencies only on mhub image, not mhub-s1
-# RUN if [[ $BASE_IMAGE_NAME = "mapchete" ]]; \
-#     then pip install -e $MHUB_DIR[xarray]; \
-#     else exit 1; pip install -e $MHUB_DIR; \
-#     fi
-
-RUN pip install -e $MHUB_DIR[xarray]
+RUN if [ "$BASE_IMAGE_NAME" = "mapchete" ]; \
+    then pip install -e $MHUB_DIR[slack,xarray]; \
+    else pip install -e $MHUB_DIR[slack]; \
+    fi
 
 WORKDIR $MHUB_DIR
