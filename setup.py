@@ -49,6 +49,7 @@ setup(
     install_requires=install_requires,
     extras_require={
         "complete": complete_requires,
+        "slack": slack_requires,
         "test": test_requires,
         "xarray": xarray_requires,
     },
