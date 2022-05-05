@@ -33,6 +33,7 @@ build_mhub:
         --rm \
         -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
         /bin/bash -c "mkdir pip && pip freeze" > pip/${IMAGE_NAME}_installed.txt
+    - less pip/${IMAGE_NAME}_installed.txt
 
 build_mhub-s1:
   stage: build
@@ -56,6 +57,7 @@ build_mhub-s1:
         --rm \
         -it ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
         /bin/bash -c "mkdir pip && pip freeze" > pip/${IMAGE_NAME}_installed.txt
+    - less pip/${IMAGE_NAME}_installed.txt
 
 # run unittests
 unit_mhub:
