@@ -16,7 +16,7 @@ if [ "$1" == "-h" ]; then
 fi
 
 # get correct tag
-TAG=${1:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}
+TAG=${1:-$(git rev-parse --short HEAD)}
 if [ "$TAG" == "master" ]; then
     TAG="latest"
 fi
