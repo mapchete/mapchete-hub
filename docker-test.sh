@@ -17,9 +17,6 @@ fi
 
 # get correct tag
 TAG=${1:-$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')}
-if [ "$TAG" == "master" ]; then
-    TAG="latest"
-fi
 
 ./docker-build.sh
 echo "test mhub:$TAG"
