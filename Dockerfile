@@ -58,7 +58,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     # git+http://gitlab+deploy-token-3:SV2HivQ_xiKVxSVEtYCr@gitlab.eox.at/maps/mapchete_satellite.git@master \
     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
     # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
-    git+http://gitlab+deploy-token-114:Z5BGRFqisidtaryTcJoe@gitlab.eox.at/eox/hub/agri/planet-signals-generation.git@f261be3a5f80a5e975644397ee8399bee49705f9 \
+    # git+http://gitlab+deploy-token-114:Z5BGRFqisidtaryTcJoe@gitlab.eox.at/eox/hub/agri/planet-signals-generation.git@master \
     # git+https://github.com/wankoelias/mapchete_xarray.git@master \
     # git+https://github.com/dask/distributed.git@master \
     # git+https://github.com/dask/dask.git@master \
