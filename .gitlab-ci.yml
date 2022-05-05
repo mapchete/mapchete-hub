@@ -27,6 +27,7 @@ build_mhub:
         -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
   after_script:
     # dump installed package versions as artefact
+    - mkdir pip
     - >
       docker run \
         --rm \
@@ -48,6 +49,7 @@ build_mhub-s1:
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
   after_script:
+    - mkdir pip
     # dump installed package versions as artefact
     - >
       docker run \
