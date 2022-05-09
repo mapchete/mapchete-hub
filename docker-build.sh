@@ -17,9 +17,6 @@ fi
 
 # get correct tag
 TAG=${1:-$(git rev-parse --short HEAD)}
-if [ "$TAG" == "master" ]; then
-    TAG="latest"
-fi
 
 echo "build mhub:$TAG"
 docker build --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} -t $REGISTRY_BASEURL/mhub:$TAG .

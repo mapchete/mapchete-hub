@@ -16,7 +16,7 @@ services:
     command: [ "--bind_ip_all" ]
 
   server:
-    image: "registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG:-latest}"
+    image: "registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG}"
     depends_on:
       - db
       - dask_scheduler
@@ -46,7 +46,7 @@ services:
       ]
 
   dask_scheduler:
-    image: "registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG:-latest}"
+    image: "registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG}"
     networks:
       - backend
     command:
@@ -59,7 +59,7 @@ services:
       ]
 
   dask_worker:
-    image: "registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG:-latest}"
+    image: "registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG}"
     depends_on:
       - dask_scheduler
     networks:
