@@ -13,6 +13,8 @@ def date_to_str(date_obj, microseconds=True):
 
 def str_to_date(date_str):
     """Convert string to datetime object."""
+    if isinstance(date_str, datetime):
+        return date_str
     if "T" in date_str:
         add_zulu = "Z" if date_str.endswith("Z") else ""
         try:

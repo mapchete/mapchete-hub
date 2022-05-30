@@ -3,7 +3,9 @@ Abstraction classes for database.
 """
 
 import logging
+from operator import ge, le
 import os
+from unittest.mock import Base
 from uuid import uuid4
 
 from datetime import datetime
@@ -33,11 +35,259 @@ class BackendDB:
             return MongoDBStatusHandler(client=src)
         elif isinstance(src, mongomock.database.Database):
             return MongoDBStatusHandler(database=src)
+        elif isinstance(src, str) and src == "memory":
+            return MemoryStatusHandler()
         else:  # pragma: no cover
             raise NotImplementedError(f"backend {src} of type {type(src)}")
 
 
-class MongoDBStatusHandler:
+class BaseStatusHandler:
+    """Base functions for status handler."""
+
+    def jobs(self, **kwargs):
+        """
+        Return jobs as list of GeoJSON features.
+
+        Parameters
+        ----------
+        output_path : str
+            Filter by output path.
+        state : str
+            Filter by job state.
+        command : str
+            Filter by mapchete Hub command.
+        job_name : str
+            Filter by job name.
+        bounds : list or tuple
+            Filter by spatial bounds.
+        from_date : str
+            Filter by earliest date.
+        to_date : str
+            Filter by latest date.
+
+        Returns
+        -------
+        GeoJSON features : list of dict
+        """
+        raise NotImplementedError()
+
+    def job(self, job_id):
+        """
+        Return job as GeoJSON feature.
+
+        Parameters
+        ----------
+        job_id : str
+            Unique job ID.
+
+        Returns
+        -------
+        GeoJSON feature or None
+        """
+        raise NotImplementedError()
+
+    def new(self, job_config: models.MapcheteJob = None):
+        """
+        Create new job entry in database.
+        """
+        raise NotImplementedError()
+
+    def set(
+        self,
+        job_id: str,
+        state: models.State = None,
+        current_progress: NonNegativeInt = None,
+        total_progress: NonNegativeInt = None,
+        exception: str = None,
+        traceback: str = None,
+        dask_dashboard_link: str = None,
+        dask_specs: dict = None,
+        results: str = None,
+    ):
+        raise NotImplementedError()
+
+    def _entry_to_geojson(self, entry):
+        return {
+            "type": "Feature",
+            "id": str(entry["job_id"]),
+            "geometry": entry["geometry"],
+            "bounds": entry.get("bounds", shape(entry["geometry"]).bounds),
+            "properties": {
+                k: entry.get(k)
+                for k in entry.keys()
+                if k not in ["job_id", "geometry", "id", "_id", "bounds"]
+            },
+        }
+
+    def __enter__(self):
+        """Enter context."""
+        return self
+
+    def __exit__(self, *args):
+        """Exit context."""
+        return
+
+
+class MemoryStatusHandler(BaseStatusHandler):
+    """Abstraction layer over in-memory backend."""
+
+    def __init__(self, *args, **kwargs):
+        self._jobs = {}
+
+    def job(self, job_id):
+        """
+        Return job as GeoJSON feature.
+
+        Parameters
+        ----------
+        job_id : str
+            Unique job ID.
+
+        Returns
+        -------
+        GeoJSON feature or None
+        """
+        return self._entry_to_geojson(self._jobs[job_id])
+
+    def jobs(self, **kwargs):
+        """
+        Return jobs as list of GeoJSON features.
+
+        Parameters
+        ----------
+        output_path : str
+            Filter by output path.
+        state : str
+            Filter by job state.
+        command : str
+            Filter by mapchete Hub command.
+        job_name : str
+            Filter by job name.
+        bounds : list or tuple
+            Filter by spatial bounds.
+        from_date : str
+            Filter by earliest date.
+        to_date : str
+            Filter by latest date.
+
+        Returns
+        -------
+        GeoJSON features : list of dict
+        """
+        query = {k: v for k, v in kwargs.items() if v is not None}
+        logger.debug("raw query: %s", query)
+
+        bbox = box(*query.get("bounds")) if query.get("bounds") else None
+
+        def _intersects_with(job, value, field="geometry"):
+            return shape(job[field]).intersects(value)
+
+        def _updated_since(job, value, field="updated"):
+            return str_to_date(job[field]) >= value
+
+        def _updated_until(job, value, field="updated"):
+            return str_to_date(job[field]) <= value
+
+        def _field_equals(job, value, field=None):
+            return job[field] == value
+
+        result = []
+        for job in self._jobs.values():
+            for field, value in query.items():
+                # skip job if any query field does not match
+                if field == "bounds":
+                    if not _intersects_with(job, bbox):
+                        break
+                elif field == "from_date":
+                    if not _updated_since(job, value):
+                        break
+                elif field == "to_date":
+                    if not _updated_until(job, value):
+                        break
+                elif not _field_equals(job, value, field=field):
+                    break
+            else:
+                try:
+                    result.append(self._entry_to_geojson(job))
+                except Exception as exc:  # pragma: no cover
+                    logger.exception("cannot create GeoJSON from entry: %s", exc)
+        return result
+
+    def new(self, job_config: models.MapcheteJob = None):
+        """
+        Create new job entry in database.
+        """
+        job_id = uuid4().hex
+        logger.debug(
+            f"got new job with config {job_config} and assigning job ID {job_id}"
+        )
+        process_area = process_area_from_config(
+            job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
+        )[0]
+        started = datetime.utcnow()
+        entry = models.Job(
+            job_id=job_id,
+            url=os.path.join(MHUB_SELF_URL, "jobs", job_id),
+            state=models.State["pending"],
+            geometry=process_area,
+            bounds=shape(process_area).bounds,
+            mapchete=job_config,
+            output_path=job_config.dict()["config"]["output"]["path"],
+            started=started,
+            updated=started,
+            job_name=job_config.params.get("job_name") or random_name(),
+            dask_specs=job_config.params.get("dask_specs"),
+        )
+        self._jobs[job_id] = entry.dict()
+        return self.job(job_id)
+
+    def set(
+        self,
+        job_id: str,
+        state: models.State = None,
+        current_progress: NonNegativeInt = None,
+        total_progress: NonNegativeInt = None,
+        exception: str = None,
+        traceback: str = None,
+        dask_dashboard_link: str = None,
+        dask_specs: dict = None,
+        results: str = None,
+    ):
+        entry = self._jobs[job_id]
+        timestamp = datetime.utcnow()
+        logger.debug("update timestamp: %s", timestamp)
+        if state is not None:
+            entry.update(state=models.State[state])
+            if state == "done":
+                logger.debug(self.job(job_id)["properties"]["started"])
+                entry.update(
+                    runtime=(
+                        timestamp - self.job(job_id)["properties"]["started"]
+                    ).total_seconds(),
+                    finished=timestamp,
+                )
+        if current_progress is not None:
+            entry.update(current_progress=current_progress)
+        if total_progress is not None:
+            entry.update(total_progress=total_progress)
+        if exception is not None:
+            entry.update(exception=str(exception))
+        if traceback is not None:
+            entry.update(traceback=traceback)
+        if dask_dashboard_link is not None:
+            entry.update(dask_dashboard_link=dask_dashboard_link)
+        if dask_specs:  # pragma: no cover
+            entry.update(dask_specs=dask_specs)
+        if results is not None:
+            entry.update(results=results)
+        # add timestamp to entry
+        entry.update(updated=timestamp)
+        logger.debug("upsert entry: %s", entry)
+        self._jobs[job_id] = entry
+        return self.job(job_id)
+
+
+class MongoDBStatusHandler(BaseStatusHandler):
     """Abstraction layer over MongoDB backend."""
 
     def __init__(self, db_uri=None, client=None, database=None):
@@ -235,24 +485,3 @@ class MongoDBStatusHandler:
                 return_document=pymongo.ReturnDocument.AFTER,
             )
         )
-
-    def _entry_to_geojson(self, entry):
-        return {
-            "type": "Feature",
-            "id": str(entry["job_id"]),
-            "geometry": entry["geometry"],
-            "bounds": entry.get("bounds", shape(entry["geometry"]).bounds),
-            "properties": {
-                k: entry.get(k)
-                for k in entry.keys()
-                if k not in ["job_id", "geometry", "id", "_id", "bounds"]
-            },
-        }
-
-    def __enter__(self):
-        """Enter context."""
-        return self
-
-    def __exit__(self, *args):
-        """Exit context."""
-        return

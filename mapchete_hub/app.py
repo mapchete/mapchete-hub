@@ -127,12 +127,14 @@ send_slack_message(
 
 # dependencies
 def get_backend_db():  # pragma: no cover
-    url = os.environ.get("MHUB_MONGODB_URL")
-    if not url:
-        raise ValueError("MHUB_MONGODB_URL must be provided")
+    src = os.environ.get("MHUB_MONGODB_URL", "memory")
     if "backendb" not in CACHE:
-        logger.debug("connect to %s", url)
-        CACHE["backendb"] = BackendDB(src=url)
+        if src == "memory":
+            logger.warning(
+                "MHUB_MONGODB_URL not provided; using in-memory metadata store"
+            )
+        logger.debug("use status db: %s", src)
+        CACHE["backendb"] = BackendDB(src=src)
     return CACHE["backendb"]
 
 
@@ -156,7 +158,12 @@ def get_dask_cluster_setup():  # pragma: no cover
             logger.debug("using cached LocalCluster")
         else:
             logger.debug("creating LocalCluster")
-            CACHE["cluster"] = LocalCluster(processes=False)
+            CACHE["cluster"] = LocalCluster(
+                processes=True,
+                n_workers=1,
+                # threads_per_worker=os.cpu_count()
+                threads_per_worker=8,
+            )
         return {"flavor": "local_cluster", "cluster": CACHE["cluster"]}
 
 
@@ -552,11 +559,11 @@ def job_wrapper(
                             maximum=max_workers,
                         )
                     logger.debug("set cluster adapt to %s", adapt_options)
-                    cluster_adapt(
-                        cluster,
-                        flavor=dask_cluster_setup.get("flavor"),
-                        adapt_options=adapt_options,
-                    )
+                    # cluster_adapt(
+                    #     cluster,
+                    #     flavor=dask_cluster_setup.get("flavor"),
+                    #     adapt_options=adapt_options,
+                    # )
 
                     # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
                     # yield the results.

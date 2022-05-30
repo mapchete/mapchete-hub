@@ -46,6 +46,9 @@ setup(
     url="https://gitlab.eox.at/maps/mapchete_hub",
     license="MIT",
     packages=find_packages(),
+    entry_points={
+        "console_scripts": ["mhub-server=mapchete_hub.cli:main"],
+    },
     install_requires=install_requires,
     extras_require={
         "complete": complete_requires,
