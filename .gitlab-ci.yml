@@ -1,8 +1,5 @@
 image: docker/compose:1.26.0
 
-services:
-  - docker:dind
-
 stages:
   - build
   - test
