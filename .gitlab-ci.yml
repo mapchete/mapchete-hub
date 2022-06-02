@@ -1,5 +1,4 @@
-image: docker:latest
-# image: docker/compose:1.26.0
+image: docker/compose:1.26.0
 
 services:
   - docker:dind
@@ -51,6 +50,7 @@ build_mhub-s1:
   script:
     - >
       docker build \
+        --network host \
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
