@@ -31,11 +31,24 @@ def main():
     default=os.environ.get("MHUB_PORT", 5000),
     help="Bind socket to this port. (default: MHUB_PORT evironment variable or 5000)",
 )
-@click.option("--debug", "-d", is_flag=True)
-def start(host=None, port=None, debug=False):
+@click.option(
+    "--add-mapchete-logger",
+    is_flag=True,
+    help="Adds mapchete logger to uvicorn logger.",
+)
+@click.option(
+    "--log-level",
+    type=click.Choice(
+        ["critical", "error", "warning", "info", "debug", "notset"],
+        case_sensitive=False,
+    ),
+    default="error",
+    help="Set log level.",
+)
+def start(host=None, port=None, log_level="error", add_mapchete_logger=False):
 
     # set up logging
-    log_level = "debug" if debug else "error"
+    log_level = log_level.upper()
     log_config = uvicorn.config.LOGGING_CONFIG
     log_config["formatters"]["access"][
         "fmt"
@@ -43,17 +56,23 @@ def start(host=None, port=None, debug=False):
     log_config["formatters"]["default"][
         "fmt"
     ] = "%(asctime)s %(levelname)s %(name)s %(message)s"
+    cfg = dict(handlers=["default"], level=log_level)
 
-    # add mapchete packages and mapchete hub to default log handler
-    cfg = dict(handlers=["default"], level=log_level.upper())
-    for i in all_mapchete_packages:
-        log_config["loggers"][i] = cfg
+    # add mapchete packages to default log handler
+    if (
+        add_mapchete_logger
+        or os.environ.get("MHUB_ADD_MAPCHETE_LOGGER", "").lower() == "true"
+    ):
+        for i in all_mapchete_packages:
+            log_config["loggers"][i] = cfg
+    # add mapchete hub to default log handler
     log_config["loggers"]["mapchete_hub"] = cfg
 
+    # start server
     uvicorn.run(
         app,
         host=host,
         port=port,
-        log_level=log_level,
+        log_level=log_level.lower(),
         log_config=log_config,
     )
