@@ -31,7 +31,7 @@ def main():
     default=os.environ.get("MHUB_PORT", 5000),
     help="Bind socket to this port. (default: MHUB_PORT evironment variable or 5000)",
 )
-@click.option("--debug", is_flag=True)
+@click.option("--debug", "-d", is_flag=True)
 def start(host=None, port=None, debug=False):
 
     # set up logging
