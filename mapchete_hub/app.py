@@ -358,10 +358,10 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
     if job["properties"]["state"] == "done":
         return job["properties"]["results"]
 
-    elif job["properties"]["state"] in ["pending", "running"]:
+    elif job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
         raise HTTPException(404, f"job {job_id} does not yet have a result")
 
-    elif job["properties"]["state"] in ["aborting", "cancelled"]:
+    elif job["properties"]["state"] in ["aborting", "cancelled"]:  # pragma: no cover
         raise HTTPException(
             400,
             {
@@ -382,7 +382,7 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
                 }
             },
         )
-    else:
+    else:  # pragma: no cover
         raise ValueError("invalid job state")
 
 
@@ -458,7 +458,7 @@ def cluster_adapt(cluster, flavor=None, adapt_options=None):
     elif flavor == "gateway":  # pragma: no cover
         logger.debug("adapt cluster: %s", adapt_options)
         cluster.adapt(**adapt_options)
-    else:
+    else:  # pragma: no cover
         raise TypeError(f"cannot determine cluster type: {cluster}")
 
 
@@ -540,7 +540,7 @@ def job_wrapper(
                             )
                             # the maximum should also not be larger than one eigth of the expected number of tasks
                             max_workers = min([adapt_options["maximum"], len(job) // 8])
-                        else:
+                        else:  # pragma: no cover
                             # the minimum should not be larger than the expected number of job tasks
                             min_workers = min(
                                 [adapt_options["minimum"], job.tiles_tasks]
@@ -559,11 +559,11 @@ def job_wrapper(
                             maximum=max_workers,
                         )
                     logger.debug("set cluster adapt to %s", adapt_options)
-                    # cluster_adapt(
-                    #     cluster,
-                    #     flavor=dask_cluster_setup.get("flavor"),
-                    #     adapt_options=adapt_options,
-                    # )
+                    cluster_adapt(
+                        cluster,
+                        flavor=dask_cluster_setup.get("flavor"),
+                        adapt_options=adapt_options,
+                    )
 
                     # By iterating through the Job object, mapchete will send all tasks to the dask cluster and
                     # yield the results.

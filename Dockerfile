@@ -75,7 +75,6 @@ RUN pip install --upgrade pip && \
     aiohttp \
     boto3 \
     botocore \
-    click \
     fiona \
     fsspec \
     gdal \

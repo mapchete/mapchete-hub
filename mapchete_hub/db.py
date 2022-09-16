@@ -2,6 +2,7 @@
 Abstraction classes for database.
 """
 
+from abc import ABC, abstractmethod
 import logging
 from operator import ge, le
 import os
@@ -31,8 +32,6 @@ class BackendDB:
         """Initialize."""
         if isinstance(src, str) and src.startswith("mongodb"):  # pragma: no cover
             return MongoDBStatusHandler(db_uri=src)
-        elif isinstance(src, (pymongo.MongoClient, mongomock.MongoClient)):
-            return MongoDBStatusHandler(client=src)
         elif isinstance(src, mongomock.database.Database):
             return MongoDBStatusHandler(database=src)
         elif isinstance(src, str) and src == "memory":
@@ -41,9 +40,10 @@ class BackendDB:
             raise NotImplementedError(f"backend {src} of type {type(src)}")
 
 
-class BaseStatusHandler:
+class BaseStatusHandler(ABC):
     """Base functions for status handler."""
 
+    @abstractmethod
     def jobs(self, **kwargs):
         """
         Return jobs as list of GeoJSON features.
@@ -69,8 +69,8 @@ class BaseStatusHandler:
         -------
         GeoJSON features : list of dict
         """
-        raise NotImplementedError()
 
+    @abstractmethod
     def job(self, job_id):
         """
         Return job as GeoJSON feature.
@@ -84,14 +84,14 @@ class BaseStatusHandler:
         -------
         GeoJSON feature or None
         """
-        raise NotImplementedError()
 
+    @abstractmethod
     def new(self, job_config: models.MapcheteJob = None):
         """
         Create new job entry in database.
         """
-        raise NotImplementedError()
 
+    @abstractmethod
     def set(
         self,
         job_id: str,
@@ -104,7 +104,9 @@ class BaseStatusHandler:
         dask_specs: dict = None,
         results: str = None,
     ):
-        raise NotImplementedError()
+        """
+        Set job metadata.
+        """
 
     def _entry_to_geojson(self, entry):
         return {
@@ -196,7 +198,7 @@ class MemoryStatusHandler(BaseStatusHandler):
             for field, value in query.items():
                 # skip job if any query field does not match
                 if field == "bounds":
-                    if not _intersects_with(job, bbox):
+                    if not _intersects_with(job, bbox):  # pragma: no cover
                         break
                 elif field == "from_date":
                     if not _updated_since(job, value):
@@ -266,20 +268,16 @@ class MemoryStatusHandler(BaseStatusHandler):
                     ).total_seconds(),
                     finished=timestamp,
                 )
-        if current_progress is not None:
-            entry.update(current_progress=current_progress)
-        if total_progress is not None:
-            entry.update(total_progress=total_progress)
-        if exception is not None:
-            entry.update(exception=str(exception))
-        if traceback is not None:
-            entry.update(traceback=traceback)
-        if dask_dashboard_link is not None:
-            entry.update(dask_dashboard_link=dask_dashboard_link)
-        if dask_specs:  # pragma: no cover
-            entry.update(dask_specs=dask_specs)
-        if results is not None:
-            entry.update(results=results)
+        attributes = dict(
+            current_progress=current_progress,
+            total_progress=total_progress,
+            exception=exception if exception is None else str(exception),
+            traceback=traceback,
+            dask_dashboard_link=dask_dashboard_link,
+            dask_specs=dask_specs,
+            results=results,
+        )
+        entry.update(**{k: v for k, v in attributes.items() if v is not None})
         # add timestamp to entry
         entry.update(updated=timestamp)
         logger.debug("upsert entry: %s", entry)
@@ -297,7 +295,7 @@ class MongoDBStatusHandler(BaseStatusHandler):
             self._client = pymongo.MongoClient(db_uri, tz_aware=False)
             self._db = self._client["mhub"]
             self._jobs = self._db["jobs"]
-        elif client:
+        elif client:  # pragma: no cover
             logger.debug("use existing PyMongo client instance: %s", client)
             self._client = client
             self._db = self._client["mhub"]
@@ -460,20 +458,16 @@ class MongoDBStatusHandler(BaseStatusHandler):
                     ).total_seconds(),
                     finished=timestamp,
                 )
-        if current_progress is not None:
-            entry.update(current_progress=current_progress)
-        if total_progress is not None:
-            entry.update(total_progress=total_progress)
-        if exception is not None:
-            entry.update(exception=str(exception))
-        if traceback is not None:
-            entry.update(traceback=traceback)
-        if dask_dashboard_link is not None:
-            entry.update(dask_dashboard_link=dask_dashboard_link)
-        if dask_specs:  # pragma: no cover
-            entry.update(dask_specs=dask_specs)
-        if results is not None:
-            entry.update(results=results)
+        attributes = dict(
+            current_progress=current_progress,
+            total_progress=total_progress,
+            exception=exception if exception is None else str(exception),
+            traceback=traceback,
+            dask_dashboard_link=dask_dashboard_link,
+            dask_specs=dask_specs,
+            results=results,
+        )
+        entry.update(**{k: v for k, v in attributes.items() if v is not None})
         # add timestamp to entry
         entry.update(updated=timestamp)
         logger.debug("upsert entry: %s", entry)

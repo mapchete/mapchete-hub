@@ -1,12 +1,11 @@
 from dask.distributed import LocalCluster
 from fastapi.testclient import TestClient
 import pytest
-import mongomock.database
 
 from mapchete_hub.app import app, get_backend_db, get_dask_cluster_setup
 from mapchete_hub.db import BackendDB
 
-_fake_backend_db = BackendDB(mongomock.MongoClient())
+_fake_backend_db = BackendDB("memory")
 _dask_cluster = LocalCluster()
 
 

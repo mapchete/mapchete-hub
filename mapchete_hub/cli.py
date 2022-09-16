@@ -14,7 +14,7 @@ from mapchete_hub.db import BackendDB
 
 @click.version_option(version=__version__, message="%(version)s")
 @click.group()
-def main():
+def main():  # pragma: no cover
     pass
 
 
@@ -45,7 +45,9 @@ def main():
     default="error",
     help="Set log level.",
 )
-def start(host=None, port=None, log_level="error", add_mapchete_logger=False):
+def start(
+    host=None, port=None, log_level="error", add_mapchete_logger=False
+):  # pragma: no cover
 
     # set up logging
     log_level = log_level.upper()

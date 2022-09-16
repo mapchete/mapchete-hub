@@ -23,5 +23,5 @@ def send_slack_message(msg):
             )
         else:  # pragma: no cover
             logger.debug("no SLACK_WEBHOOK_URL env variable set.")
-    except ImportError:
+    except ImportError:  # pragma: no cover
         logger.debug("install 'slack' extra to send messages to slack")
