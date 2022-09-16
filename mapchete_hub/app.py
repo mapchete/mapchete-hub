@@ -127,12 +127,14 @@ send_slack_message(
 
 # dependencies
 def get_backend_db():  # pragma: no cover
-    url = os.environ.get("MHUB_MONGODB_URL")
-    if not url:
-        raise ValueError("MHUB_MONGODB_URL must be provided")
+    src = os.environ.get("MHUB_MONGODB_URL", "memory")
     if "backendb" not in CACHE:
-        logger.debug("connect to %s", url)
-        CACHE["backendb"] = BackendDB(src=url)
+        if src == "memory":
+            logger.warning(
+                "MHUB_MONGODB_URL not provided; using in-memory metadata store"
+            )
+        logger.debug("use status db: %s", src)
+        CACHE["backendb"] = BackendDB(src=src)
     return CACHE["backendb"]
 
 
@@ -156,7 +158,12 @@ def get_dask_cluster_setup():  # pragma: no cover
             logger.debug("using cached LocalCluster")
         else:
             logger.debug("creating LocalCluster")
-            CACHE["cluster"] = LocalCluster(processes=False)
+            CACHE["cluster"] = LocalCluster(
+                processes=True,
+                n_workers=1,
+                # threads_per_worker=os.cpu_count()
+                threads_per_worker=8,
+            )
         return {"flavor": "local_cluster", "cluster": CACHE["cluster"]}
 
 
@@ -351,10 +358,10 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
     if job["properties"]["state"] == "done":
         return job["properties"]["results"]
 
-    elif job["properties"]["state"] in ["pending", "running"]:
+    elif job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
         raise HTTPException(404, f"job {job_id} does not yet have a result")
 
-    elif job["properties"]["state"] in ["aborting", "cancelled"]:
+    elif job["properties"]["state"] in ["aborting", "cancelled"]:  # pragma: no cover
         raise HTTPException(
             400,
             {
@@ -375,7 +382,7 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
                 }
             },
         )
-    else:
+    else:  # pragma: no cover
         raise ValueError("invalid job state")
 
 
@@ -451,7 +458,7 @@ def cluster_adapt(cluster, flavor=None, adapt_options=None):
     elif flavor == "gateway":  # pragma: no cover
         logger.debug("adapt cluster: %s", adapt_options)
         cluster.adapt(**adapt_options)
-    else:
+    else:  # pragma: no cover
         raise TypeError(f"cannot determine cluster type: {cluster}")
 
 
@@ -533,7 +540,7 @@ def job_wrapper(
                             )
                             # the maximum should also not be larger than one eigth of the expected number of tasks
                             max_workers = min([adapt_options["maximum"], len(job) // 8])
-                        else:
+                        else:  # pragma: no cover
                             # the minimum should not be larger than the expected number of job tasks
                             min_workers = min(
                                 [adapt_options["minimum"], job.tiles_tasks]

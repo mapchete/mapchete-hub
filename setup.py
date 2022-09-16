@@ -20,7 +20,7 @@ install_requires = [
     "dask-gateway",
     "distributed",
     "fastapi==0.66",
-    "mapchete[contours,geobuf,http,s3,vrt]>=2022.3.1",
+    "mapchete[contours,geobuf,http,s3,vrt]>=2022.9.0",
     "mongomock",
     "odmantic",
     "pymongo",
@@ -46,6 +46,9 @@ setup(
     url="https://gitlab.eox.at/maps/mapchete_hub",
     license="MIT",
     packages=find_packages(),
+    entry_points={
+        "console_scripts": ["mhub-server=mapchete_hub.cli:main"],
+    },
     install_requires=install_requires,
     extras_require={
         "complete": complete_requires,
@@ -60,6 +63,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
     ],
     setup_requires=["pytest-runner"],
     tests_require=["pytest", "pytest-flask"],

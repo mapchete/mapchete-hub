@@ -26,7 +26,7 @@ DASK_DEFAULT_SPECS = {
         "adapt_options": {
             "minimum": int(os.environ.get("MHUB_DASK_MIN_WORKERS", 10)),
             "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)),
-            "active": os.environ.get("MHUB_DASK_ADAPTIVE_SCALING", "TRUE") == "TRUE",
+            "active": os.environ.get("MHUB_DASK_ADAPTIVE_SCALING", "FALSE") == "TRUE",
         },
     },
     "s2_16bit_regular": {

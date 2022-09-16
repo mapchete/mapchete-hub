@@ -153,15 +153,13 @@ def test_list_jobs_bounds(client, test_process_id, example_config_json):
     )
     job_id = response.json()["id"]
 
-    # NotImplementedError: '$geoIntersects' is a valid operation but it is not supported by Mongomock yet.
-    with pytest.raises(NotImplementedError):
-        response = client.get("/jobs", params={"bounds": "0,1,2,3"})
-        jobs = [j["id"] for j in response.json()["features"]]
-        assert job_id in jobs
-    with pytest.raises(NotImplementedError):
-        response = client.get("/jobs", params={"bounds": "10,1,12,3"})
-        jobs = [j["id"] for j in response.json()["features"]]
-        assert job_id not in jobs
+    response = client.get("/jobs", params={"bounds": "0,1,2,3"})
+    jobs = [j["id"] for j in response.json()["features"]]
+    assert job_id in jobs
+
+    response = client.get("/jobs", params={"bounds": "10,1,12,3"})
+    jobs = [j["id"] for j in response.json()["features"]]
+    assert job_id not in jobs
 
 
 def test_list_jobs_output_path(client, test_process_id, example_config_json):
@@ -355,7 +353,7 @@ def test_process_exception(
     response = client.get(f"/jobs/{job_id}/results")
     assert response.status_code == 400
     assert response.json()["detail"]["properties"]["type"].startswith(
-        "MapcheteProcessException"
+        "MapcheteTaskFailed"
     )
     assert isinstance(response.json()["detail"]["properties"]["detail"], str)
 

@@ -24,7 +24,7 @@ ENDPOINT_AVAILABLE = _endpoint_available()
 
 @pytest.mark.skipif(
     not ENDPOINT_AVAILABLE,
-    reason="requires up and running endpoint using docker-compose",
+    reason="requires up and running endpoint using either 'docker-compose up' or 'mhub-server start'",
 )
 def test_get_root():
     response = requests.get(f"{TEST_ENDPOINT}/")
