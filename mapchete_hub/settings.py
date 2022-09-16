@@ -85,8 +85,12 @@ def get_gateway_cluster_options(gateway, dask_specs="default"):  # pragma: no co
         {
             k: v
             for k, v in get_dask_specs(dask_specs).items()
-            if k not in ["adapt_options"]
+            if k not in ["adapt_options", "environment"]
         }
     )
+    
+    for k, v in get_dask_specs(dask_specs).items():
+        if k == "environment" and v != {}:
+            options.update({k: v})
     logger.debug("using cluster specs: %s", dict(options))
     return options
