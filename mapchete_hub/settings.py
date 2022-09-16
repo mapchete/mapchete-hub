@@ -28,6 +28,7 @@ DASK_DEFAULT_SPECS = {
             "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)),
             "active": os.environ.get("MHUB_DASK_ADAPTIVE_SCALING", "FALSE") == "TRUE",
         },
+        "environment": {},
     },
     "s2_16bit_regular": {
         "worker_cores": 1,
@@ -36,6 +37,7 @@ DASK_DEFAULT_SPECS = {
         "scheduler_cores": 1,
         "scheduler_memory": 2.0,
         "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
+        "environment": {},
     },
     "s2_16bit_large": {
         "worker_cores": 1,
@@ -44,6 +46,7 @@ DASK_DEFAULT_SPECS = {
         "scheduler_cores": 1,
         "scheduler_memory": 4.0,
         "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
+        "environment": {},
     },
     "s1_large": {
         "worker_cores": 8,
@@ -52,6 +55,7 @@ DASK_DEFAULT_SPECS = {
         "scheduler_cores": 1,
         "scheduler_memory": 2.0,
         "image": f"registry.gitlab.eox.at/maps/mapchete_hub/mhub-s1:{WORKER_DEFAULT_TAG}",
+        "environment": {},
     },
     "custom": {
         "worker_cores": os.environ.get("MHUB_WORKER_CORES", 1),
@@ -61,6 +65,7 @@ DASK_DEFAULT_SPECS = {
         "scheduler_memory": os.environ.get("MHUB_SCHEDULER_MEMORY", 2),
         "image": f"{os.environ.get('MHUB_WORKER_IMAGE', WORKER_DEFAULT_IMAGE)}:"
         f"{os.environ.get('MHUB_WORKER_IMAGE_TAG', WORKER_DEFAULT_TAG)}",
+        "environment": {},
     },
 }
 
