@@ -2,6 +2,33 @@
 Changelog
 #########
 
+2022.9.0 - 2022-09-16
+---------------------
+
+* core
+    * add an optional in-memory status DB if no MongoDB is present
+    * dask `LocalCluster()` now uses processes & threads by default
+    * add `mhub-server` CLI to quickly start an mhub instance
+    * adaptive scaling is now deactivated by default unles `MHUB_DASK_ADAPTIVE_SCALING` is set to `TRUE`
+
+* CI/CD
+    * run only integration tests on integration test stage
+    * start mhub by using new `mhub-server` CLI instead of `uvicorn``
+    * use in-memory status DB in tests instead of `mongomock.MongoClient()`
+
+* packaging
+    * use base image ``2022.9.0``
+    * don't tag ``latest`` images anymore
+    * use `dask-gateway` pypi release instead of building from source
+    * bump ``dask`` to ``2022.9.0``
+    * bump ``dask-gateway`` to ``2022.6.1``
+    * bump ``dask-gateway-server`` to ``2022.6.1``
+    * bump ``dask-kubernetes`` to ``2022.7.0``
+    * bump ``distributed`` to ``2022.9.0``
+    * bump ``fastapi`` to ``0.85.0``
+    * bump ``mapchete`` to ``2022.9.0``
+
+
 2022.5.0 - 2022-05-05
 ---------------------
 
