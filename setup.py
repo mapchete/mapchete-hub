@@ -20,7 +20,7 @@ install_requires = [
     "dask-gateway",
     "distributed",
     "fastapi==0.66",
-    "mapchete[contours,geobuf,http,s3,vrt]>=2022.3.1",
+    "mapchete[contours,geobuf,http,s3,vrt]>=2022.9.0",
     "mongomock",
     "odmantic",
     "pymongo",

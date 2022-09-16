@@ -355,7 +355,7 @@ def test_process_exception(
     response = client.get(f"/jobs/{job_id}/results")
     assert response.status_code == 400
     assert response.json()["detail"]["properties"]["type"].startswith(
-        "MapcheteProcessException"
+        "MapcheteTaskFailed"
     )
     assert isinstance(response.json()["detail"]["properties"]["detail"], str)
 
