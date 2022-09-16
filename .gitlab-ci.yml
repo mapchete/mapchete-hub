@@ -141,14 +141,6 @@ push_mhub:
   script:
     - echo "push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}..."
     - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}
-    - >
-      if [ "$CI_COMMIT_REF_NAME" == "master" ]; then \
-      docker tag \
-        ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
-        ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:latest; \
-      docker push \
-        ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:latest; \
-      fi;
 
 push_mhub-s1:
   stage: push
@@ -159,14 +151,6 @@ push_mhub-s1:
   script:
     - echo "push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}..."
     - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}
-    - >
-      if [ "$CI_COMMIT_REF_NAME" == "master" ]; then \
-      docker tag \
-        ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
-        ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:latest; \
-      docker push \
-        ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:latest; \
-      fi;
 
 # also tag and push a tagged commit, i.e. a new version
 push_tag:
