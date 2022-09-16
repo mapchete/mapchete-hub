@@ -2,12 +2,6 @@
 Changelog
 #########
 
-2022.9.1 - 2022-09-16
----------------------
-
-* core
-    * add `environment` to DASK_DEFAULT_SPECS as an empty `dict()`
-
 2022.9.0 - 2022-09-16
 ---------------------
 
