@@ -31,15 +31,14 @@ services:
       - MHUB_DASK_SCHEDULER_URL=tcp://dask_scheduler:8786
       - MHUB_MONGODB_URL=mongodb://mhub:REDACTED_API_KEY@db:27017
       - MHUB_ADD_MAPCHETE_LOGGER=true
-      # - SLACK_WEBHOOK_URL=REDACTED_API_KEY
     networks:
       - backend
     ports:
       - ${MHUB_PORT:-5000}:${MHUB_PORT:-5000}
     command:
       [
-        "uvicorn",
-        "mapchete_hub.app:app",
+        "mhub-server",
+        "start",
         "--host",
         "0.0.0.0",
         "--port",
