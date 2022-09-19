@@ -400,24 +400,24 @@ def dask_cluster(
         logger.info("use existing %s", cluster)
         yield cluster
     elif flavor == "gateway":  # pragma: no cover
-        gateway = Gateway(url, **gateway_kwargs or {})
-        logger.debug("connected to gateway %s", gateway)
-        if dask_specs is not None:
-            logger.info("use gateway cluster with %s specs", dask_specs)
-            with gateway.new_cluster(
-                cluster_options=get_gateway_cluster_options(
-                    gateway, dask_specs=dask_specs
-                )
-            ) as cluster:
-                yield cluster
-                logger.info("closing cluster %s", cluster)
-            logger.info("closed cluster %s", cluster)
-        else:
-            logger.info("use gateway cluster with default specs")
-            with gateway.new_cluster() as cluster:
-                yield cluster
-                logger.info("closing cluster %s", cluster)
-            logger.info("closed cluster %s", cluster)
+        with Gateway(url, **gateway_kwargs or {}) as gateway:
+            logger.debug("connected to gateway %s", gateway)
+            if dask_specs is not None:
+                logger.info("use gateway cluster with %s specs", dask_specs)
+                with gateway.new_cluster(
+                    cluster_options=get_gateway_cluster_options(
+                        gateway, dask_specs=dask_specs
+                    )
+                ) as cluster:
+                    yield cluster
+                    logger.info("closing cluster %s", cluster)
+                logger.info("closed cluster %s", cluster)
+            else:
+                logger.info("use gateway cluster with default specs")
+                with gateway.new_cluster() as cluster:
+                    yield cluster
+                    logger.info("closing cluster %s", cluster)
+                logger.info("closed cluster %s", cluster)
     elif flavor == "scheduler":  # pragma: no cover
         logger.info("cluster exists, connecting directly to scheduler")
         yield None
