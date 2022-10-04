@@ -22,7 +22,7 @@ DASK_DEFAULT_SPECS = {
         "scheduler_cores": 1,
         "scheduler_cores_limit": 1.0,
         "scheduler_memory": 1.0,
-        # "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
+        "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
         "adapt_options": {
             "minimum": int(os.environ.get("MHUB_DASK_MIN_WORKERS", 10)),
             "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)),
@@ -35,7 +35,7 @@ DASK_DEFAULT_SPECS = {
         "worker_threads": 1,
         "scheduler_cores": 1,
         "scheduler_memory": 2.0,
-        # "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
+        "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
     },
     "s2_16bit_large": {
         "worker_cores": 1,
@@ -43,7 +43,7 @@ DASK_DEFAULT_SPECS = {
         "worker_threads": 1,
         "scheduler_cores": 1,
         "scheduler_memory": 4.0,
-        # "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
+        "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
     },
     "s1_large": {
         "worker_cores": 8,
@@ -51,7 +51,7 @@ DASK_DEFAULT_SPECS = {
         "worker_threads": 1,
         "scheduler_cores": 1,
         "scheduler_memory": 2.0,
-        # "image": f"registry.gitlab.eox.at/maps/mapchete_hub/mhub-s1:{WORKER_DEFAULT_TAG}",
+        "image": f"registry.gitlab.eox.at/maps/mapchete_hub/mhub-s1:{WORKER_DEFAULT_TAG}",
     },
     "custom": {
         "worker_cores": os.environ.get("MHUB_WORKER_CORES", 1),
@@ -59,8 +59,8 @@ DASK_DEFAULT_SPECS = {
         "worker_threads": os.environ.get("MHUB_WORKER_THREADS", 1),
         "scheduler_cores": os.environ.get("MHUB_SCHEDULER_CORES", 1),
         "scheduler_memory": os.environ.get("MHUB_SCHEDULER_MEMORY", 2),
-        # "image": f"{os.environ.get('MHUB_WORKER_IMAGE', WORKER_DEFAULT_IMAGE)}:"
-        # f"{os.environ.get('MHUB_WORKER_IMAGE_TAG', WORKER_DEFAULT_TAG)}",
+        "image": f"{os.environ.get('MHUB_WORKER_IMAGE', WORKER_DEFAULT_IMAGE)}:"
+        f"{os.environ.get('MHUB_WORKER_IMAGE_TAG', WORKER_DEFAULT_TAG)}",
     },
 }
 
