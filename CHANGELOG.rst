@@ -2,6 +2,13 @@
 Changelog
 #########
 
+2022.10.0 - 2022-10-07
+---------------------
+
+* packaging
+    * bump ``dask-kubernetes`` to ``2022.9.0``
+    * bump ``planet-signals-generation`` to ``2022.10.0``
+
 2022.9.0 - 2022-09-16
 ---------------------
 
