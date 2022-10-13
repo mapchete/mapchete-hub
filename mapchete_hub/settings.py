@@ -83,5 +83,9 @@ def get_gateway_cluster_options(gateway, dask_specs="default"):  # pragma: no co
             if k not in ["adapt_options"]
         }
     )
+    if "environment" in dask_specs and isinstance(dask_specs["environment"], dict):
+        # this allows custom scheduler ENV settings, e.g.:
+        # DASK_DISTRIBUTED__SCHEDULER__WORKER_SATURATION="1.0"
+        options.environment.update(dask_specs)
     logger.debug("using cluster specs: %s", dict(options))
     return options
