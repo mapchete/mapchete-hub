@@ -87,7 +87,7 @@ def get_gateway_cluster_options(gateway, dask_specs="default"):  # pragma: no co
     # get selected env variables from mhub and pass it on to the dask scheduler and workers
     # TODO: make less hacky
     env_prefixes = tuple(MHUB_PROPAGATE_ENV_PREFIXES.split(","))
-    for k, v in os.environ:
+    for k, v in os.environ.items():
         if k.startswith(env_prefixes):
             options.environs.update(k=v)
     dask_environment = dask_specs.get("environment", {})
