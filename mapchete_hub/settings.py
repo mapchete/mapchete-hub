@@ -89,7 +89,7 @@ def get_gateway_cluster_options(gateway, dask_specs="default"):  # pragma: no co
     env_prefixes = tuple(MHUB_PROPAGATE_ENV_PREFIXES.split(","))
     for k, v in os.environ.items():
         if k.startswith(env_prefixes):
-            options.environment.update(k=v)
+            options.environment[k] = v
     dask_environment = dask_specs.get("environment", {})
     if dask_environment and isinstance(dask_environment, dict):
         # this allows custom scheduler ENV settings, e.g.:
