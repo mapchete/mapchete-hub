@@ -13,6 +13,7 @@ Changelog
     * add `environment` parser for `dask_gateway.options`
     * add test for `dask_spec` in `settings.py`
     * enable parsing of `AWS`, `DASK`, `GDAL`, `MHUB`, `MAPCHETE`, `MP` ENV variable for `dask-scheduler` and `dask-worker`
+    * fix `docker-compose.yml` the `--nprocs` to `--nworkers` to fit newer ``dask`` and ``distributed`` versions
 
 
 2022.10.2 - 2022-10-13
