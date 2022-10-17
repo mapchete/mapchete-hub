@@ -13,7 +13,7 @@ mapchete_satellite[brdf,cli,stac]>=2022.10.0
 mongomock
 odmantic
 orgonite>=2021.11.0
-planet-signals-generation>=2022.10.1
+planet-signals-generation>=2022.10.2
 prometheus-client
 pymongo
 Slacker
