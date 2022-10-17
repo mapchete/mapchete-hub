@@ -1,10 +1,10 @@
 bokeh
 blosc
-dask==2022.9.0
+dask==2022.10.0
 dask-gateway==2022.6.1
 dask-gateway-server==2022.6.1
-dask-kubernetes==2022.9.0
-distributed==2022.9.0
+dask-kubernetes==2022.10.0
+distributed==2022.10.0
 eox_preprocessing==2022.1.0
 fastapi==0.85.0
 lz4

@@ -1,6 +1,7 @@
 """
 Settings.
 """
+from dask_gateway.options import Options
 import logging
 import os
 
@@ -11,6 +12,9 @@ logger = logging.getLogger(__name__)
 
 WORKER_DEFAULT_IMAGE = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
 WORKER_DEFAULT_TAG = os.environ.get("MHUB_IMAGE_TAG", __version__)
+MHUB_PROPAGATE_ENV_PREFIXES = os.environ.get(
+    "MHUB_PROPAGATE_ENV_PREFIXES", "AWS, DASK, GDAL, MHUB, MAPCHETE, MP"
+)
 
 DASK_DEFAULT_SPECS = {
     "default": {
@@ -74,14 +78,19 @@ def get_dask_specs(dask_specs="default"):
     return dict(DASK_DEFAULT_SPECS["default"], **DASK_DEFAULT_SPECS[dask_specs])
 
 
-def get_gateway_cluster_options(gateway, dask_specs="default"):  # pragma: no cover
-    options = gateway.cluster_options()
-    options.update(
-        {
-            k: v
-            for k, v in get_dask_specs(dask_specs).items()
-            if k not in ["adapt_options"]
-        }
-    )
+def update_gateway_cluster_options(options: Options, dask_specs: str = "default"):
+    specs = get_dask_specs(dask_specs)
+    options.update({k: v for k, v in specs.items() if k not in ["adapt_options"]})
+    # get selected env variables from mhub and pass it on to the dask scheduler and workers
+    # TODO: make less hacky
+    env_prefixes = tuple([i.strip() for i in MHUB_PROPAGATE_ENV_PREFIXES.split(",")])
+    for k, v in os.environ.items():
+        if k.startswith(env_prefixes):
+            options.environment[k] = v
+    dask_environment = specs.get("environment", {})
+    if dask_environment and isinstance(dask_environment, dict):
+        # this allows custom scheduler ENV settings, e.g.:
+        # DASK_DISTRIBUTED__SCHEDULER__WORKER_SATURATION="1.0"
+        options.environment.update(dask_environment)
     logger.debug("using cluster specs: %s", dict(options))
     return options

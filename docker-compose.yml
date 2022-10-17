@@ -57,7 +57,7 @@ services:
       - backend
     command:
       [
-        "dask-scheduler",
+        "dask", "scheduler",
         "--host",
         "dask_scheduler",
         "--port",
@@ -81,10 +81,10 @@ services:
       - DASK_LOGGING__MAPCHETE="debug"
     command:
       [
-        "dask-worker",
+        "dask", "worker",
         "--nthreads",
         "2",
-        "--nprocs",
+        "--nworkers",
         "8",
         "tcp://dask_scheduler:8786"
       ]
