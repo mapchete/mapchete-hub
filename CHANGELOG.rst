@@ -2,6 +2,18 @@
 Changelog
 #########
 
+2022.10.3 - 2022-10-17
+---------------------
+
+* packaging
+    * bump ``planet-signals-generation`` to ``2022.10.2``
+    * bump ``dask`` and ``distributed`` to ``2022.10.0```
+
+* core
+    * add `environment` parser for `dask_gateway.options`
+    * add test for `dask_spec` in `settings.py`
+    * enable parsing of `AWS`, `DASK`, `GDAL`, `MHUB`, `MAPCHETE`, `MP` ENV variable for `dask-scheduler` and `dask-worker`
+
 
 2022.10.2 - 2022-10-13
 ---------------------
