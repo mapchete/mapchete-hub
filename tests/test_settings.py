@@ -31,3 +31,4 @@ def test_update_gateway_cluster_options():
     for k, v in default_options.items():
         assert options[k] == v
     assert isinstance(options.environment, dict)
+    assert options.environment["MHUB_ENV"] == "testing"
