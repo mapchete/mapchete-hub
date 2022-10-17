@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 WORKER_DEFAULT_IMAGE = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
 WORKER_DEFAULT_TAG = os.environ.get("MHUB_IMAGE_TAG", __version__)
+MHUB_PROPAGATE_ENV_PREFIXES = "AWS, DASK, GDAL, MHUB, MAPCHETE"
 
 DASK_DEFAULT_SPECS = {
     "default": {
@@ -83,6 +84,12 @@ def get_gateway_cluster_options(gateway, dask_specs="default"):  # pragma: no co
             if k not in ["adapt_options"]
         }
     )
+    # get selected env variables from mhub and pass it on to the dask scheduler and workers
+    # TODO: make less hacky
+    env_prefixes = tuple(MHUB_PROPAGATE_ENV_PREFIXES.split(","))
+    for k, v in os.environ:
+        if k.startswith(env_prefixes):
+            options.environs.update(k=v)
     dask_environment = dask_specs.get("environment", {})
     if dask_environment and isinstance(dask_environment, dict):
         # this allows custom scheduler ENV settings, e.g.:
