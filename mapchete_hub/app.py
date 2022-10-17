@@ -74,7 +74,7 @@ from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
 from mapchete_hub.timetools import str_to_date
 from mapchete_hub.settings import (
-    get_gateway_cluster_options,
+    update_gateway_cluster_options,
     DASK_DEFAULT_SPECS,
     get_dask_specs,
 )
@@ -405,8 +405,8 @@ def dask_cluster(
             if dask_specs is not None:
                 logger.info("use gateway cluster with %s specs", dask_specs)
                 with gateway.new_cluster(
-                    cluster_options=get_gateway_cluster_options(
-                        gateway, dask_specs=dask_specs
+                    cluster_options=update_gateway_cluster_options(
+                        gateway.cluster_options(), dask_specs=dask_specs
                     )
                 ) as cluster:
                     yield cluster

@@ -1,6 +1,7 @@
 """
 Settings.
 """
+from dask_gateway.options import Options
 import logging
 import os
 
@@ -75,22 +76,16 @@ def get_dask_specs(dask_specs="default"):
     return dict(DASK_DEFAULT_SPECS["default"], **DASK_DEFAULT_SPECS[dask_specs])
 
 
-def get_gateway_cluster_options(gateway, dask_specs="default"):  # pragma: no cover
-    options = gateway.cluster_options()
-    options.update(
-        {
-            k: v
-            for k, v in get_dask_specs(dask_specs).items()
-            if k not in ["adapt_options"]
-        }
-    )
+def update_gateway_cluster_options(options: Options, dask_specs: str = "default"):
+    specs = get_dask_specs(dask_specs)
+    options.update({k: v for k, v in specs.items() if k not in ["adapt_options"]})
     # get selected env variables from mhub and pass it on to the dask scheduler and workers
     # TODO: make less hacky
     env_prefixes = tuple(MHUB_PROPAGATE_ENV_PREFIXES.split(","))
     for k, v in os.environ.items():
         if k.startswith(env_prefixes):
             options.environment[k] = v
-    dask_environment = dask_specs.get("environment", {})
+    dask_environment = specs.get("environment", {})
     if dask_environment and isinstance(dask_environment, dict):
         # this allows custom scheduler ENV settings, e.g.:
         # DASK_DISTRIBUTED__SCHEDULER__WORKER_SATURATION="1.0"
