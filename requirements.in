@@ -10,6 +10,7 @@ fastapi==0.85.0
 lz4
 mapchete>=2022.9.0
 mapchete_satellite[brdf,cli,stac]>=2022.10.1
+mapchete_xarray==2022.10.0
 mongomock
 odmantic
 orgonite>=2021.11.0
