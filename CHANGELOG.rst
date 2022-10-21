@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2022.10.5 - 2022-10-21
+----------------------
+
+* packaging
+    * bump ``mapchete-xarray`` to ``2022.10.0``
+    * bump ``planet-signals-generation`` to ``2022.10.3``
+
+
 2022.10.4 - 2022-10-20
 ----------------------
 

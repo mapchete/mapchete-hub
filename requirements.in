@@ -14,7 +14,7 @@ mapchete_xarray==2022.10.0
 mongomock
 odmantic
 orgonite>=2021.11.0
-planet-signals-generation>=2022.10.2
+planet-signals-generation>=2022.10.3
 prometheus-client
 pymongo
 Slacker
