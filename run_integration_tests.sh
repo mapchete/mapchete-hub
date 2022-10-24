@@ -25,6 +25,7 @@ if [ "$BUILD" == "TRUE" ]; then
         -f $COMPFILE \
         -f docker-compose.test.yml \
         build \
+        --network host
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg IMAGE_TAG=${IMAGE_TAG} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} || exit 1
@@ -33,6 +34,7 @@ else
     TESTFILE="docker-compose.image.test.yml"
     echo "build mhub image registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG}"
     docker build \
+        --network host
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         -t registry.gitlab.eox.at/maps/mapchete_hub/${IMAGE_NAME:-mhub}:${IMAGE_TAG} \
