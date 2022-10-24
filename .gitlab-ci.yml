@@ -22,7 +22,6 @@ build_mhub:
   script:
     - >
       docker build \
-        --no-cache \
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
@@ -47,7 +46,6 @@ build_mhub-s1:
   script:
     - >
       docker build \
-        --no-cache \
         --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
