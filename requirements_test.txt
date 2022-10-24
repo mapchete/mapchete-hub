@@ -1,5 +1,5 @@
-pytest
-pytest-cov
+pytest==6.2.5
+pytest-cov==0.6.2
 pytest-env
 pytest-mongodb
 requests
