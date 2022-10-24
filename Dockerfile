@@ -39,9 +39,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     # git+https://github.com/wankoelias/mapchete_xarray.git@master \
     # git+https://github.com/dask/distributed.git@master \
     # git+https://github.com/dask/dask.git@master \
-    psutil \
     jenkspy==0.2.0 \
-    --no-binary :all: \
     --wheel-dir $WHEEL_DIR \
     --no-deps
 
@@ -84,6 +82,7 @@ RUN pip install --upgrade pip && \
     mapchete \
     numcodecs \
     numpy \
+    psutil \
     rasterio \
     shapely \
     snuggs \
