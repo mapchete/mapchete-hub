@@ -40,7 +40,6 @@ RUN pip install --upgrade pip setuptools wheel && \
     # git+https://github.com/dask/distributed.git@master \
     # git+https://github.com/dask/dask.git@master \
     jenkspy==0.2.0 \
-    numcodecs==0.10.2 \
     --wheel-dir $WHEEL_DIR \
     --no-deps
 
@@ -65,6 +64,7 @@ COPY requirements.in $MHUB_DIR/
 
 # install wheels first and then everything else
 RUN pip install --upgrade pip && \
+    pip uninstall numcodecs \
     pip install \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
     $WHEEL_DIR/*.whl && \
