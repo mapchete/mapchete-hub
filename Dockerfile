@@ -40,6 +40,7 @@ RUN pip install --upgrade pip setuptools wheel && \
     # git+https://github.com/dask/distributed.git@master \
     # git+https://github.com/dask/dask.git@master \
     jenkspy==0.2.0 \
+    numcodecs==0.10.2 \
     --wheel-dir $WHEEL_DIR \
     --no-deps
 
