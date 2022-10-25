@@ -7,6 +7,7 @@ Changelog
 
 * packaging
     * bump ``planet-signals-generation`` to ``2022.10.3``
+    * add and freeze ``mapchete_xarray`` to ``2022.10.0``
 * core
     * reinstall and use ``numcodecs`` from pypi as to fill any library or dependency gaps
 
