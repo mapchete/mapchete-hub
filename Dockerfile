@@ -64,7 +64,7 @@ COPY requirements.in $MHUB_DIR/
 
 # install wheels first and then everything else
 RUN pip install --upgrade pip && \
-    pip uninstall numcodecs && \
+    pip uninstall -y numcodecs && \
     pip install \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
     $WHEEL_DIR/*.whl && \
