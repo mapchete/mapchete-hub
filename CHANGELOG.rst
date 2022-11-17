@@ -2,14 +2,31 @@
 Changelog
 #########
 
+2022.11.0 - 2022-11-17
+----------------------
+
+* packaging
+    * bump ``dask`` to ``2022.11.0``
+    * bump ``dask-gateway`` to ``2022.11.0``
+    * bump ``dask-gateway-server`` to ``2022.11.0``
+    * bump ``dask-kubernetes`` to ``2022.10.1``
+    * bump ``distributed`` to ``2022.11.0``
+    * bump ``eox_preprocessing`` to ``2022.11.0``
+    * bump ``fastapi`` to ``0.87.0``
+    * bump ``mapchete_satellite`` to ``2022.11.2``
+    * run `pip check` after image build
+
+
 2022.10.5 - 2022-10-25
 ----------------------
 
 * packaging
     * bump ``planet-signals-generation`` to ``2022.10.3``
     * add and freeze ``mapchete_xarray`` to ``2022.10.0``
+
 * core
     * reinstall and use ``numcodecs`` from pypi as to fill any library or dependency gaps
+
 
 2022.10.4 - 2022-10-20
 ----------------------
