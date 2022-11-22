@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2022.11.2 - 2022-11-22
+----------------------
+
+* packaging
+    * use `hatch` instead of `setuptools`
+    * build, test and upload python package to registry for every release
+
+
 2022.11.1 - 2022-11-22
 ----------------------
 
