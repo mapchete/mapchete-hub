@@ -2,6 +2,16 @@
 Changelog
 #########
 
+2022.11.1 - 2022-11-22
+----------------------
+
+* packaging
+    * bump ``eox_preprocessing`` to ``2022.11.1``
+    * bump ``mapchete`` to ``2022.11.0``
+    * bump ``mapchete_satellite`` to ``2022.11.3``
+    * use base image ``2022.11.0``
+
+
 2022.11.0 - 2022-11-17
 ----------------------
 
