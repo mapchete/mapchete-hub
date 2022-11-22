@@ -12,3 +12,5 @@ ec2_user_data.sh
 spot_config.json
 dask-worker-space/
 .pymon
+build
+dist
