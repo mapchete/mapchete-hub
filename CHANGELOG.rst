@@ -7,6 +7,7 @@ Changelog
 
 * packaging
     * bump ``mapchete`` to ``2022.11.1``
+    * bump ``mapchete_satellite`` to ``2022.11.4``
 
 
 2022.11.2 - 2022-11-22
