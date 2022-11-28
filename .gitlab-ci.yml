@@ -80,7 +80,7 @@ build_docker_mhub-s1:
 
 # test python packages
 test_python_wheel:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.1
   needs: ["build_python_package"]
   stage: test
   before_script:
@@ -90,7 +90,7 @@ test_python_wheel:
     - pytest -v --cov=mapchete_hub tests/
 
 test_python_tar:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.1
   needs: ["build_python_package"]
   stage: test
   before_script:
@@ -102,7 +102,7 @@ test_python_tar:
 # run unittests
 test_unit_mhub:
   stage: test
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.1
   needs: ["build_docker_mhub"]
   timeout: 30m
   variables:
@@ -121,7 +121,7 @@ test_unit_mhub:
 
 test_unit_mhub-s1:
   stage: test
-  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete-ost:2022.11.0
+  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete-ost:2022.11.1
   needs: ["build_docker_mhub-s1"]
   timeout: 30m
   variables:
