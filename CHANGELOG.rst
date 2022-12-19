@@ -6,8 +6,12 @@ Changelog
 ----------------------
 
 * packaging
+    * bump ``dask-kubernetes`` is ``2022.12.0``
     * bump ``eox_preprocessing`` to ``2022.12.0``
+    * bump ``mapchete`` to ``2022.12.0``
     * bump ``mapchete_satellite`` to ``2022.12.2``
+    * use base image ``2022.12.0``    
+    
 
 2022.12.0 - 2022-12-15
 ----------------------
