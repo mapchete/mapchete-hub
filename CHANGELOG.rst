@@ -2,6 +2,19 @@
 Changelog
 #########
 
+2022.12.1 - 2022-12-19
+----------------------
+
+* packaging
+    * bump ``dask`` is ``2022.12.1``
+    * bump ``dask-kubernetes`` is ``2022.12.0``
+    * bump ``distributed`` is ``2022.12.1``
+    * bump ``eox_preprocessing`` to ``2022.12.0``
+    * bump ``mapchete`` to ``2022.12.0``
+    * bump ``mapchete_satellite`` to ``2022.12.2``
+    * use base image ``2022.12.0``    
+    
+
 2022.12.0 - 2022-12-15
 ----------------------
 
