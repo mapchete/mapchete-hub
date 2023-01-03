@@ -18,7 +18,7 @@ build_python_package:
     - hatch build
 
 # build docker image for mhub
-build_docker_mhub:
+build_docker:
   stage: build
   artifacts:
     paths:
@@ -70,10 +70,10 @@ test_python_tar:
     - pytest -v --cov=mapchete_hub tests/
 
 # run unittests
-test_unit_mhub:
+test_unit:
   stage: test
   image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.1
-  needs: ["build_docker_mhub"]
+  needs: ["build_docker"]
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
@@ -90,9 +90,9 @@ test_unit_mhub:
     - coverage report
 
 # test mapchete_hub package in built images
-test_integration_mhub:
+test_integration:
   stage: test
-  needs: ["build_docker_mhub"]
+  needs: ["build_docker"]
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
@@ -106,9 +106,9 @@ test_integration_mhub:
     - /bin/sh run_integration_tests.sh
 
 # push images to registry
-push_docker_mhub:
+push_docker:
   stage: push
-  needs: ["test_unit_mhub", "test_integration_mhub"]
+  needs: ["test_unit", "test_integration"]
   variables:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
