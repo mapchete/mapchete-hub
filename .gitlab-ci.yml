@@ -17,8 +17,8 @@ build_python_package:
   script:
     - hatch build
 
-# build docker images for mhub and mhub-s1
-build_docker_mhub:
+# build docker image for mhub
+build_docker:
   stage: build
   artifacts:
     paths:
@@ -26,36 +26,6 @@ build_docker_mhub:
   variables:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
-  script:
-    - >
-      docker build \
-        --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
-        --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
-        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
-  after_script:
-    # run pip check
-    - >
-      docker run \
-        --rm \
-        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
-        /bin/bash -c "pip check"
-    # dump installed package versions as artefact
-    - mkdir pip
-    - >
-      docker run \
-        --rm \
-        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
-        /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
-    - less pip/${IMAGE_NAME}_installed.txt
-
-build_docker_mhub-s1:
-  stage: build
-  artifacts:
-    paths:
-      - pip/
-  variables:
-    IMAGE_NAME: mhub-s1
-    BASE_IMAGE_NAME: snap-mapchete-ost
   script:
     - >
       docker build \
@@ -100,29 +70,10 @@ test_python_tar:
     - pytest -v --cov=mapchete_hub tests/
 
 # run unittests
-test_unit_mhub:
+test_unit:
   stage: test
   image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.1
-  needs: ["build_docker_mhub"]
-  timeout: 30m
-  variables:
-    EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
-  before_script:
-    - pip install --upgrade pip
-    - pip install -r requirements_test.txt
-    - pip install
-      --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple
-      --upgrade
-      -e .
-  script:
-    - pytest -v --cov=mapchete_hub tests/
-  after_script:
-    - coverage report
-
-test_unit_mhub-s1:
-  stage: test
-  image: registry.gitlab.eox.at/maps/docker-base/snap-mapchete-ost:2022.11.1
-  needs: ["build_docker_mhub-s1"]
+  needs: ["build_docker"]
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
@@ -139,29 +90,14 @@ test_unit_mhub-s1:
     - coverage report
 
 # test mapchete_hub package in built images
-test_integration_mhub:
+test_integration:
   stage: test
-  needs: ["build_docker_mhub"]
+  needs: ["build_docker"]
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
-    MHUB_ENV: testing
-  before_script:
-    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
-  script:
-    # run tests
-    - /bin/sh run_integration_tests.sh
-
-test_integration_mhub-s1:
-  stage: test
-  needs: ["build_docker_mhub-s1"]
-  timeout: 30m
-  variables:
-    EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
-    IMAGE_NAME: mhub-s1
-    BASE_IMAGE_NAME: snap-mapchete-ost
     MHUB_ENV: testing
   before_script:
     - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
@@ -170,24 +106,12 @@ test_integration_mhub-s1:
     - /bin/sh run_integration_tests.sh
 
 # push images to registry
-push_docker_mhub:
+push_docker:
   stage: push
-  needs: ["test_unit_mhub", "test_integration_mhub"]
+  needs: ["test_unit", "test_integration"]
   variables:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
-  before_script:
-    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
-  script:
-    - echo "push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}..."
-    - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}
-
-push_docker_mhub-s1:
-  stage: push
-  needs: ["test_unit_mhub-s1", "test_integration_mhub-s1"]
-  variables:
-    IMAGE_NAME: mhub-s1
-    BASE_IMAGE_NAME: snap-mapchete-ost
   before_script:
     - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
   script:
@@ -213,14 +137,6 @@ push_docker_tag:
     - >
       docker push \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
-    # mhub-s1
-    - >
-      docker tag \
-        ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_SHORT_SHA} \
-        ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}
-    - >
-      docker push \
-        ${CI_REGISTRY_IMAGE}/mhub-s1:${CI_COMMIT_REF_NAME}
 
 # release package
 push_python_package:
