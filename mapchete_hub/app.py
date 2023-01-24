@@ -566,6 +566,7 @@ def job_wrapper(
         logger.info("end fastAPI background task with job %s", job_id)
 
 
+@retry(tries=MHUB_CANCELLEDERROR_TRIES, logger=logger, exceptions=CancelledError)
 def _run_job_on_cluster(
     job=None,
     job_id=None,
