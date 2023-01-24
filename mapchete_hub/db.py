@@ -103,6 +103,7 @@ class BaseStatusHandler(ABC):
         dask_dashboard_link: str = None,
         dask_specs: dict = None,
         results: str = None,
+        **kwargs,
     ):
         """
         Set job metadata.
@@ -254,6 +255,7 @@ class MemoryStatusHandler(BaseStatusHandler):
         dask_dashboard_link: str = None,
         dask_specs: dict = None,
         results: str = None,
+        **kwargs,
     ):
         entry = self._jobs[job_id]
         timestamp = datetime.utcnow()
@@ -276,6 +278,7 @@ class MemoryStatusHandler(BaseStatusHandler):
             dask_dashboard_link=dask_dashboard_link,
             dask_specs=dask_specs,
             results=results,
+            **kwargs,
         )
         entry.update(**{k: v for k, v in attributes.items() if v is not None})
         # add timestamp to entry
@@ -444,6 +447,7 @@ class MongoDBStatusHandler(BaseStatusHandler):
         dask_dashboard_link: str = None,
         dask_specs: dict = None,
         results: str = None,
+        **kwargs,
     ):
         entry = {"job_id": job_id}
         timestamp = datetime.utcnow()
@@ -466,6 +470,7 @@ class MongoDBStatusHandler(BaseStatusHandler):
             dask_dashboard_link=dask_dashboard_link,
             dask_specs=dask_specs,
             results=results,
+            **kwargs,
         )
         entry.update(**{k: v for k, v in attributes.items() if v is not None})
         # add timestamp to entry

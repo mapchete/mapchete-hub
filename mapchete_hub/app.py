@@ -468,6 +468,7 @@ def job_wrapper(
     """Create a Job iterator through the mapchete_execute function. On every new finished task,
     check whether the task already got the abort status.
     """
+    client = None
     try:
         logger.info("start fastAPI background task with job %s", job_id)
         job_meta = backend_db.set(job_id, state="running")
@@ -618,11 +619,23 @@ def job_wrapper(
 
     except Exception as exc:
         logger.info("job %s raised an Exception: %s", job_id, exc)
+        if client is None:
+            scheduler_logs = []
+        elif client.scheduler is None:
+            scheduler_logs = ["scheduler was already gone"]
+        else:
+            try:
+                logger.debug("try to get latest scheduler logs ...")
+                scheduler_logs = client.get_scheduler_logs()
+            except Exception as e:
+                logger.exception(e)
+                scheduler_logs = [f"could not get scheduler logs: {str(e)}"]
         job_meta = backend_db.set(
             job_id=job_id,
             state="failed",
             exception=repr(exc),
             traceback="".join(traceback.format_tb(exc.__traceback__)),
+            dask_scheduler_logs=scheduler_logs,
         )
         logger.exception(exc)
         send_slack_message(
