@@ -597,7 +597,7 @@ def _run_job_on_cluster(
                         dask_dashboard_link=client.dashboard_link,
                     )
                     send_slack_message(
-                        f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> scheduler ready*\n"
+                        f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> started*\n"
                         f"{client.dashboard_link}"
                     )
                     # override the MHUB_DASK_MIN_WORKERS and MHUB_DASK_MAX_WORKERS default settings
