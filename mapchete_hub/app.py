@@ -311,8 +311,7 @@ async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db
         if job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
             send_slack_message(
-                f"*{MHUB_SELF_INSTANCE_NAME}: aborting {job['properties']['job_name']}*\n"
-                f"{job['properties']['url']}"
+                f"*{MHUB_SELF_INSTANCE_NAME}: aborting <{job['properties']['url']}|{job['properties']['job_name']}>*"
             )
         return backend_db.job(job_id)
     except KeyError as exc:
@@ -523,9 +522,8 @@ def job_wrapper(
                         dask_dashboard_link=client.dashboard_link,
                     )
                     send_slack_message(
-                        f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} started*\n"
-                        f"{client.dashboard_link}\n"
-                        f"{job_meta['properties']['url']}"
+                        f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> started*\n"
+                        f"{client.dashboard_link}"
                     )
                     # override the MHUB_DASK_MIN_WORKERS and MHUB_DASK_MAX_WORKERS default settings
                     # if it makes sense to avoid asking for more workers than could be possible used
@@ -595,8 +593,7 @@ def job_wrapper(
                                     pass
                                 backend_db.set(job_id, state="cancelled")
                                 send_slack_message(
-                                    f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} cancelled*\n"
-                                    f"{job_meta['properties']['url']}"
+                                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> cancelled*"
                                 )
                                 break
                     else:
@@ -613,8 +610,7 @@ def job_wrapper(
                         )
                         logger.info("job %s finished in %s", job_id, timer_job)
                         send_slack_message(
-                            f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {timer_job}*\n"
-                            f"{job_meta['properties']['url']}"
+                            f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> finished in {timer_job}*"
                         )
 
     except Exception as exc:
@@ -639,10 +635,9 @@ def job_wrapper(
         )
         logger.exception(exc)
         send_slack_message(
-            f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} failed*\n"
+            f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> failed*\n"
             f"{exc}\n"
-            f"{''.join(traceback.format_tb(exc.__traceback__))}\n"
-            f"{job_meta['properties']['url']}"
+            f"{''.join(traceback.format_tb(exc.__traceback__))}"
         )
     finally:
         logger.info("end fastAPI background task with job %s", job_id)
