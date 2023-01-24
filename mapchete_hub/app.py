@@ -56,6 +56,7 @@ POST /processes/{process_id}/execution
 Trigger a job using a given process_id. This returns a job ID.
 """
 
+from concurrent.futures._base import CancelledError
 from contextlib import contextmanager
 import logging
 import os
@@ -66,9 +67,11 @@ from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import Gateway, BasicAuth
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
 from mapchete import commands, Timer
+from mapchete.errors import MapcheteTaskFailed
 from mapchete.io import path_is_remote
 from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings
+from retry import retry
 
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
@@ -113,6 +116,7 @@ MHUB_WORKER_EVENT_RATE_LIMIT = float(
 )
 MHUB_SELF_URL = os.environ.get("MHUB_SELF_URL", "/")
 MHUB_SELF_INSTANCE_NAME = os.environ.get("MHUB_SELF_INSTANCE_NAME", "mapchete Hub")
+MHUB_CANCELLEDERROR_TRIES = int(os.environ.get("MHUB_CANCELLEDERROR_TRIES", 1))
 
 
 app = FastAPI()
@@ -505,6 +509,77 @@ def job_wrapper(
         backend_db.set(job_id, current_progress=0, total_progress=len(job))
         logger.info("job %s initialized in %s", job_id, timer_initialize)
 
+        # This part will be retried x times (see MHUB_CANCELLEDERROR_TRIES) if
+        # dask scheduler cancels execution.
+        for attempt in range(MHUB_CANCELLEDERROR_TRIES + 1):
+            try:
+                _run_job_on_cluster(
+                    job=job,
+                    job_id=job_id,
+                    job_config=job_config,
+                    dask_cluster_setup=dask_cluster_setup,
+                    dask_specs=dask_specs,
+                    backend_db=backend_db,
+                )
+                break
+            except CancelledError:
+                logger.error("caught CancelledError on attempt %s", attempt)
+                if attempt < MHUB_CANCELLEDERROR_TRIES:
+                    logger.debug(
+                        "starting attempt %s/%s to retry job %s",
+                        attempt,
+                        MHUB_CANCELLEDERROR_TRIES,
+                        job_id,
+                    )
+                    send_slack_message(
+                        f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} retrying "
+                        f"(attempt {attempt}/{MHUB_CANCELLEDERROR_TRIES}) ...*\n"
+                        f"{job_meta['properties']['url']}"
+                    )
+                else:
+                    raise
+
+    except Exception as exc:
+        logger.info("job %s raised an Exception: %s", job_id, exc)
+        if client is None:
+            scheduler_logs = []
+        elif client.scheduler is None:
+            scheduler_logs = ["scheduler was already gone"]
+        else:
+            try:
+                logger.debug("try to get latest scheduler logs ...")
+                scheduler_logs = client.get_scheduler_logs()
+            except Exception as e:
+                logger.exception(e)
+                scheduler_logs = [f"could not get scheduler logs: {str(e)}"]
+        job_meta = backend_db.set(
+            job_id=job_id,
+            state="failed",
+            exception=repr(exc),
+            traceback="".join(traceback.format_tb(exc.__traceback__)),
+            dask_scheduler_logs=scheduler_logs,
+        )
+        logger.exception(exc)
+        send_slack_message(
+            f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} failed*\n"
+            f"{exc}\n"
+            f"{''.join(traceback.format_tb(exc.__traceback__))}\n"
+            f"{job_meta['properties']['url']}"
+        )
+    finally:
+        logger.info("end fastAPI background task with job %s", job_id)
+
+
+@retry(tries=MHUB_CANCELLEDERROR_TRIES, logger=logger, exceptions=CancelledError)
+def _run_job_on_cluster(
+    job=None,
+    job_id=None,
+    job_config=None,
+    dask_cluster_setup=None,
+    dask_specs=None,
+    backend_db=None,
+):
+    try:
         logger.info("requesting dask cluster and dask client...")
         with dask_cluster(**dask_cluster_setup, dask_specs=dask_specs) as cluster:
             logger.info("job %s cluster: %s", job_id, cluster)
@@ -523,7 +598,7 @@ def job_wrapper(
                         dask_dashboard_link=client.dashboard_link,
                     )
                     send_slack_message(
-                        f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} started*\n"
+                        f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} scheduler ready:*\n"
                         f"{client.dashboard_link}\n"
                         f"{job_meta['properties']['url']}"
                     )
@@ -616,33 +691,13 @@ def job_wrapper(
                             f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} finished in {timer_job}*\n"
                             f"{job_meta['properties']['url']}"
                         )
-
-    except Exception as exc:
-        logger.info("job %s raised an Exception: %s", job_id, exc)
-        if client is None:
-            scheduler_logs = []
-        elif client.scheduler is None:
-            scheduler_logs = ["scheduler was already gone"]
+    except MapcheteTaskFailed as exc:
+        # mapchete masks a CancelledError and hides it behind a MapcheteTaskFailed exception
+        if "has status 'cancelled' but its exception could not be recovered" in str(
+            exc
+        ):
+            raise CancelledError from exc
         else:
-            try:
-                logger.debug("try to get latest scheduler logs ...")
-                scheduler_logs = client.get_scheduler_logs()
-            except Exception as e:
-                logger.exception(e)
-                scheduler_logs = [f"could not get scheduler logs: {str(e)}"]
-        job_meta = backend_db.set(
-            job_id=job_id,
-            state="failed",
-            exception=repr(exc),
-            traceback="".join(traceback.format_tb(exc.__traceback__)),
-            dask_scheduler_logs=scheduler_logs,
-        )
-        logger.exception(exc)
-        send_slack_message(
-            f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} failed*\n"
-            f"{exc}\n"
-            f"{''.join(traceback.format_tb(exc.__traceback__))}\n"
-            f"{job_meta['properties']['url']}"
-        )
-    finally:
-        logger.info("end fastAPI background task with job %s", job_id)
+            raise exc
+    except Exception:
+        raise

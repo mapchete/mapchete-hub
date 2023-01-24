@@ -17,6 +17,7 @@ orgonite>=2021.11.0
 planet-signals-generation>=2022.10.3
 prometheus-client
 pymongo
+retry
 s2brdf==2023.1.0
 Slacker
 sqlalchemy
