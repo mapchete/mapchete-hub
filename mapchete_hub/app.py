@@ -262,8 +262,7 @@ async def post_job(
 
         # send message to Slack
         send_slack_message(
-            f"*{MHUB_SELF_INSTANCE_NAME}: job '{job['properties']['job_name']}' with ID {job['id']} submitted ({running} running)*\n"
-            f"{job['properties']['url']}"
+            f"*{MHUB_SELF_INSTANCE_NAME}: job '<{job['properties']['url']}|{job['properties']['job_name']}>' with ID {job['id']} submitted ({running} running)*\n"
         )
         return job
     except Exception as exc:  # pragma: no cover
