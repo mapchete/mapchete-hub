@@ -530,9 +530,8 @@ def job_wrapper(
                         job_id,
                     )
                     send_slack_message(
-                        f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} retrying "
-                        f"(attempt {attempt}/{MHUB_CANCELLEDERROR_TRIES}) ...*\n"
-                        f"{job_meta['properties']['url']}"
+                        f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> retrying "
+                        f"(attempt {attempt}/{MHUB_CANCELLEDERROR_TRIES}) ...*"
                     )
                 else:
                     raise
@@ -559,10 +558,9 @@ def job_wrapper(
         )
         logger.exception(exc)
         send_slack_message(
-            f"*{MHUB_SELF_INSTANCE_NAME}: {job_meta['properties']['job_name']} failed*\n"
+            f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> failed*\n"
             f"{exc}\n"
-            f"{''.join(traceback.format_tb(exc.__traceback__))}\n"
-            f"{job_meta['properties']['url']}"
+            f"{''.join(traceback.format_tb(exc.__traceback__))}"
         )
     finally:
         logger.info("end fastAPI background task with job %s", job_id)
