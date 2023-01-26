@@ -693,25 +693,6 @@ def _run_job_on_cluster(
             exc
         ):
             raise CancelledError from exc
-        else:
-            try:
-                logger.debug("try to get latest scheduler logs ...")
-                scheduler_logs = client.get_scheduler_logs()
-            except Exception as e:
-                logger.exception(e)
-                scheduler_logs = [f"could not get scheduler logs: {str(e)}"]
-        job_meta = backend_db.set(
-            job_id=job_id,
-            state="failed",
-            exception=repr(exc),
-            traceback="".join(traceback.format_tb(exc.__traceback__)),
-            dask_scheduler_logs=scheduler_logs,
-        )
-        logger.exception(exc)
-        send_slack_message(
-            f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> failed*\n"
-            f"{exc}\n"
-            f"{''.join(traceback.format_tb(exc.__traceback__))}"
-        )
-    finally:
-        logger.info("end fastAPI background task with job %s", job_id)
+        raise
+    except Exception:
+        raise
