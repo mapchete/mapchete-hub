@@ -509,7 +509,7 @@ def job_wrapper(
 
         # This part will be retried x times (see MHUB_CANCELLEDERROR_TRIES) if
         # dask scheduler cancels execution.
-        for attempt in range(MHUB_CANCELLEDERROR_TRIES + 1):
+        for attempt in range(1, MHUB_CANCELLEDERROR_TRIES + 1):
             try:
                 _run_job_on_cluster(
                     job=job,
