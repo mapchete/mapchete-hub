@@ -2,6 +2,23 @@
 Changelog
 #########
 
+
+2023.1.0 - 2023-01-30
+---------------------
+
+* core
+    * integrate URLs into text of Slack messages
+    * enable retrying jobs when they raise a `CancelledError` configurable by environment variable `MHUB_CANCELLEDERROR_TRIES`
+    * try to get dask scheduler logs after a failed job
+
+* packaging
+    * use base image ``2023.1.1``
+    * bump ``mapchete_satellite`` to ``2023.1.9``
+    * bump ``s2brdf`` to ``2023.1.0``
+
+* CI/CD
+    * remove ``mhub-s1`` image
+
 2022.12.1 - 2022-12-19
 ----------------------
 
