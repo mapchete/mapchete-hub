@@ -71,7 +71,6 @@ from mapchete.errors import MapcheteTaskFailed
 from mapchete.io import path_is_remote
 from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings
-from retry import retry
 
 from mapchete_hub import __version__, models
 from mapchete_hub.db import BackendDB
@@ -566,7 +565,6 @@ def job_wrapper(
         logger.info("end fastAPI background task with job %s", job_id)
 
 
-@retry(tries=MHUB_CANCELLEDERROR_TRIES, logger=logger, exceptions=CancelledError)
 def _run_job_on_cluster(
     job=None,
     job_id=None,
