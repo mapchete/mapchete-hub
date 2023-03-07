@@ -544,7 +544,7 @@ def job_wrapper(
         else:
             try:
                 logger.debug("try to get latest scheduler logs ...")
-                scheduler_logs = client.get_scheduler_logs()
+                scheduler_logs = client.get_scheduler_logs(n=100)
             except Exception as e:
                 logger.exception(e)
                 scheduler_logs = [f"could not get scheduler logs: {str(e)}"]
