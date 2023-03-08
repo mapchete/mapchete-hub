@@ -3,10 +3,11 @@ Changelog
 #########
 
 
-2023.2.0 - TBD
+2023.3.0 - 2023-03-08
 ---------------------
 * packaging
-    * bump ``mapchete_satellite`` to ``2023.2.0``
+    * bump ``mapchete_satellite`` to ``2023.3.0``
+
 
 2023.1.0 - 2023-01-30
 ---------------------
@@ -23,6 +24,7 @@ Changelog
 
 * CI/CD
     * remove ``mhub-s1`` image
+
 
 2022.12.1 - 2022-12-19
 ----------------------
