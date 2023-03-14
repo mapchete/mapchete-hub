@@ -490,26 +490,28 @@ def job_wrapper(
         ):  # pragma: no cover
             raise ValueError(f"process output path must be absolute: {out_path}")
 
-        # Mapchete now will initialize the process and prepare all the tasks required.
-        logger.info("initializing job %s with mapchete %s", job_id, job_config.command)
-        with Timer() as timer_initialize:
-            job = MAPCHETE_COMMANDS[job_config.command](
-                config,
-                **{
-                    k: v
-                    for k, v in job_config.params.items()
-                    if k not in ["job_name", "dask_specs"]
-                },
-                as_iterator=True,
-                concurrency="dask",
-            )
-        backend_db.set(job_id, current_progress=0, total_progress=len(job))
-        logger.info("job %s initialized in %s", job_id, timer_initialize)
-
         # This part will be retried x times (see MHUB_CANCELLEDERROR_TRIES) if
         # dask scheduler cancels execution.
         for attempt in range(1, MHUB_CANCELLEDERROR_TRIES + 1):
             try:
+                # Mapchete now will initialize the process and prepare all the tasks required.
+                logger.info(
+                    "initializing job %s with mapchete %s", job_id, job_config.command
+                )
+                with Timer() as timer_initialize:
+                    job = MAPCHETE_COMMANDS[job_config.command](
+                        config,
+                        **{
+                            k: v
+                            for k, v in job_config.params.items()
+                            if k not in ["job_name", "dask_specs"]
+                        },
+                        as_iterator=True,
+                        concurrency="dask",
+                    )
+                backend_db.set(job_id, current_progress=0, total_progress=len(job))
+                logger.info("job %s initialized in %s", job_id, timer_initialize)
+
                 _run_job_on_cluster(
                     job=job,
                     job_id=job_id,
@@ -521,7 +523,7 @@ def job_wrapper(
                 break
             except CancelledError:
                 logger.error("caught CancelledError on attempt %s", attempt)
-                if attempt < MHUB_CANCELLEDERROR_TRIES:
+                if attempt <= MHUB_CANCELLEDERROR_TRIES:
                     logger.debug(
                         "starting attempt %s/%s to retry job %s",
                         attempt,
@@ -529,8 +531,9 @@ def job_wrapper(
                         job_id,
                     )
                     send_slack_message(
-                        f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> retrying "
-                        f"(attempt {attempt}/{MHUB_CANCELLEDERROR_TRIES}) ...*"
+                        f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> "
+                        f"automatically retrying job after receiving CancelledError by dask cluster on attempt "
+                        f"{attempt}/{MHUB_CANCELLEDERROR_TRIES} ...*"
                     )
                 else:
                     raise
