@@ -286,6 +286,11 @@ async def list_jobs(
     bounds = tuple(map(float, bounds.split(","))) if bounds else None
     from_date = str_to_date(from_date) if from_date else None
     to_date = str_to_date(to_date) if to_date else None
+    try:
+        state = models.State[state].value if state else None
+    except KeyError as exc:
+        raise HTTPException(400, f"invalid state: {state}") from exc
+
     kwargs = {
         "output_path": output_path,
         "state": state,
