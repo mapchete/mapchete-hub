@@ -115,7 +115,9 @@ MHUB_WORKER_EVENT_RATE_LIMIT = float(
 )
 MHUB_SELF_URL = os.environ.get("MHUB_SELF_URL", "/")
 MHUB_SELF_INSTANCE_NAME = os.environ.get("MHUB_SELF_INSTANCE_NAME", "mapchete Hub")
-MHUB_CANCELLEDERROR_TRIES = int(os.environ.get("MHUB_CANCELLEDERROR_TRIES", 1))
+MHUB_CANCELLEDERROR_TRIES = min(
+    [int(os.environ.get("MHUB_CANCELLEDERROR_TRIES", 1)), 1]
+)
 
 
 app = FastAPI()
@@ -492,7 +494,9 @@ def job_wrapper(
 
         # This part will be retried x times (see MHUB_CANCELLEDERROR_TRIES) if
         # dask scheduler cancels execution.
-        for attempt in range(1, MHUB_CANCELLEDERROR_TRIES + 1):
+        attempt = 0
+        while attempt < MHUB_CANCELLEDERROR_TRIES:
+            attempt += 1
             try:
                 # Mapchete now will initialize the process and prepare all the tasks required.
                 logger.info(
@@ -522,18 +526,23 @@ def job_wrapper(
                 )
                 break
             except CancelledError:
-                logger.error("caught CancelledError on attempt %s", attempt)
-                if attempt <= MHUB_CANCELLEDERROR_TRIES:
+                # only retry on CancelledError if retry attempts do not exceed maximum retries
+                logger.error(
+                    "caught CancelledError on attempt %s/%s",
+                    attempt,
+                    MHUB_CANCELLEDERROR_TRIES,
+                )
+                if attempt < MHUB_CANCELLEDERROR_TRIES:
                     logger.debug(
                         "starting attempt %s/%s to retry job %s",
-                        attempt,
+                        attempt + 1,
                         MHUB_CANCELLEDERROR_TRIES,
                         job_id,
                     )
                     send_slack_message(
                         f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> "
-                        f"automatically retrying job after receiving CancelledError by dask cluster on attempt "
-                        f"{attempt}/{MHUB_CANCELLEDERROR_TRIES} ...*"
+                        f"job received CancelledError by dask cluster on {attempt}/{MHUB_CANCELLEDERROR_TRIES}, retrying "
+                        f" ...*"
                     )
                 else:
                     raise
