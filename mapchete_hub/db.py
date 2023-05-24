@@ -4,9 +4,7 @@ Abstraction classes for database.
 
 from abc import ABC, abstractmethod
 import logging
-from operator import ge, le
 import os
-from unittest.mock import Base
 from uuid import uuid4
 
 from datetime import datetime
