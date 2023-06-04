@@ -3,10 +3,15 @@ Changelog
 #########
 
 
-2023.2.0 - TBD
+2023.6.0 - 2023-06-04
 ---------------------
+* core
+    * fix retry of `CancelledError` by reinitializing the whole job to skip existing output 
 * packaging
-    * bump ``mapchete_satellite`` to ``2023.2.0``
+    * bump ``dask`` is ``2023.4.0``
+    * bump ``distributed`` is ``2023.4.0``
+    * bump ``mapchete`` to ``2023.4.1``
+    * bump ``mapchete_satellite`` to ``2023.5.5``
 
 2023.1.0 - 2023-01-30
 ---------------------
