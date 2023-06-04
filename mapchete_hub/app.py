@@ -115,7 +115,7 @@ MHUB_WORKER_EVENT_RATE_LIMIT = float(
 )
 MHUB_SELF_URL = os.environ.get("MHUB_SELF_URL", "/")
 MHUB_SELF_INSTANCE_NAME = os.environ.get("MHUB_SELF_INSTANCE_NAME", "mapchete Hub")
-MHUB_CANCELLEDERROR_TRIES = min(
+MHUB_CANCELLEDERROR_TRIES = max(
     [int(os.environ.get("MHUB_CANCELLEDERROR_TRIES", 1)), 1]
 )
 
