@@ -690,7 +690,7 @@ def _run_job_on_cluster(
                             state="done",
                             results={
                                 "imagesOutput": {
-                                    "href": job.stac_item_path,
+                                    "href": str(job.stac_item_path),
                                     "type": "application/json",
                                 }
                             },
