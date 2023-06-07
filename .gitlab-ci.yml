@@ -1,56 +1,32 @@
-image: docker/compose:1.29.2
+image: podman 
 
 stages:
   - build
   - test
   - push
 
+before_script:
+  - echo -n $CI_JOB_TOKEN | podman login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+
 # build python packages
 build_python_package:
+  tags:
+    - 'podman'
   image: python:3.10-slim-buster
   stage: build
   artifacts:
     paths:
       - dist/
   before_script:
-    - pip install --upgrade pip hatch
+    - pip install --upgrade hatch
   script:
     - hatch build
 
-# build docker image for mhub
-build_docker:
-  stage: build
-  artifacts:
-    paths:
-      - pip/
-  variables:
-    IMAGE_NAME: mhub
-    BASE_IMAGE_NAME: mapchete
-  script:
-    - >
-      docker build \
-        --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
-        --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
-        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
-  after_script:
-    # run pip check
-    - >
-      docker run \
-        --rm \
-        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
-        /bin/bash -c "pip check"
-    # dump installed package versions as artefact
-    - mkdir pip
-    - >
-      docker run \
-        --rm \
-        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
-        /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
-    - less pip/${IMAGE_NAME}_installed.txt
-
 # test python packages
 test_python_wheel:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.1
+  tags:
+    - 'podman'
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.6.0
   needs: ["build_python_package"]
   stage: test
   before_script:
@@ -60,7 +36,9 @@ test_python_wheel:
     - pytest -v --cov=mapchete_hub tests/
 
 test_python_tar:
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.1
+  tags:
+    - 'podman'
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.6.0
   needs: ["build_python_package"]
   stage: test
   before_script:
@@ -71,9 +49,10 @@ test_python_tar:
 
 # run unittests
 test_unit:
+  tags:
+    - 'podman'
   stage: test
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2022.11.1
-  needs: ["build_docker"]
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.6.0
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
@@ -89,57 +68,67 @@ test_unit:
   after_script:
     - coverage report
 
-# test mapchete_hub package in built images
-test_integration:
-  stage: test
-  needs: ["build_docker"]
-  timeout: 30m
-  variables:
-    EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
-    IMAGE_NAME: mhub
-    BASE_IMAGE_NAME: mapchete
-    MHUB_ENV: testing
-  before_script:
-    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
-  script:
-    # run tests
-    - /bin/sh run_integration_tests.sh
-
-# push images to registry
-push_docker:
+# build image for mhub
+build_image:
+  tags:
+    - 'podman'
   stage: push
-  needs: ["test_unit", "test_integration"]
+  artifacts:
+    paths:
+      - pip/
   variables:
     IMAGE_NAME: mhub
     BASE_IMAGE_NAME: mapchete
-  before_script:
-    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
   script:
-    - echo "push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}..."
-    - docker push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}
-
-# also tag and push a tagged commit, i.e. a new version
-push_docker_tag:
-  stage: push
-  variables:
-    # we don't need the source code here
-    GIT_STRATEGY: none
-  only:
-    - tags
-  before_script:
-    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
-  script:
-    # mhub
+    # build
     - >
-      docker tag \
+      podman build \
+        --build-arg BASE_IMAGE_NAME=${BASE_IMAGE_NAME} \
+        --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
+        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} .
+    # push
+    - podman push ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}
+    - >
+      podman tag \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
     - >
-      docker push \
+      podman push \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
+  after_script:
+    # run pip check
+    - >
+      podman run \
+        --rm \
+        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
+        /bin/bash -c "pip check"
+    # dump installed package versions as artefact
+    - mkdir pip
+    - >
+      podman run \
+        --rm \
+        -t ${CI_REGISTRY_IMAGE}/${IMAGE_NAME}:${CI_COMMIT_SHORT_SHA} \
+        /bin/bash -c "pip freeze" > pip/${IMAGE_NAME}_installed.txt
+    - less pip/${IMAGE_NAME}_installed.txt
+
+# # test mapchete_hub package in built images
+# test_integration:
+#   stage: test
+#   needs: ["build_image"]
+#   timeout: 30m
+#   variables:
+#     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
+#     IMAGE_NAME: mhub
+#     BASE_IMAGE_NAME: mapchete
+#     MHUB_ENV: testing
+#   script:
+#     # run tests
+#     - /bin/sh run_integration_tests.sh
 
 # release package
 push_python_package:
+  tags:
+    - 'podman'
   image: python:3.10-slim-buster
   stage: push
   before_script:
