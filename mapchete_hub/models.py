@@ -79,9 +79,9 @@ class Job(Model, BaseModel):
     url: str
     state: State
     geometry: dict
-    area: str
     bounds: list
     mapchete: MapcheteJob
+    area: Optional[str] = None
     exception: Optional[str] = None
     traceback: Optional[str] = None
     output_path: Optional[str] = None
