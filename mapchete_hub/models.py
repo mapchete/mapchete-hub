@@ -70,6 +70,7 @@ class GeoJSON(BaseModel):
     id: str = None
     geometry: dict = None
     bounds: list = None
+    area: str = None
     properties: dict = None
 
 
@@ -80,6 +81,7 @@ class Job(Model, BaseModel):
     geometry: dict
     bounds: list
     mapchete: MapcheteJob
+    area: Optional[str] = None
     exception: Optional[str] = None
     traceback: Optional[str] = None
     output_path: Optional[str] = None

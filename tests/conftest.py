@@ -1,9 +1,14 @@
+import os
 from dask.distributed import LocalCluster
 from fastapi.testclient import TestClient
 import pytest
 
+from mapchete.io import path_exists, MPath
+
 from mapchete_hub.app import app, get_backend_db, get_dask_cluster_setup
 from mapchete_hub.db import BackendDB
+
+SCRIPT_DIR = MPath(os.path.dirname(os.path.realpath(__file__)))
 
 _fake_backend_db = BackendDB("memory")
 _dask_cluster = LocalCluster()
@@ -32,6 +37,18 @@ def test_process_id():
 
 
 @pytest.fixture
+def test_area_fgb():
+    """
+    Fixture for test area vector data.
+    """
+    fgb_path = MPath(os.path.join(SCRIPT_DIR, "test_area.fgb"))
+    if path_exists(fgb_path):
+        return fgb_path.__str__()
+    else:
+        raise FileNotFoundError
+
+
+@pytest.fixture
 def example_config_json(tmpdir):
     return {
         "command": "execute",
@@ -52,6 +69,49 @@ def example_config_json(tmpdir):
         },
     }
 
+
+@pytest.fixture
+def example_config_json_area(tmpdir):
+    return {
+        "command": "execute",
+        "params": {"zoom": 5, "area": "Polygon ((0 1, 2 1, 2 3, 0 3, 0 1))"},
+        "config": {
+            "process": "mapchete.processes.convert",
+            "input": {
+                "inp": "https://ungarj.github.io/mapchete_testdata/tiled_data/raster/cleantopo/"
+            },
+            "output": {
+                "format": "GTiff",
+                "bands": 1,
+                "dtype": "uint16",
+                "path": str(tmpdir),
+            },
+            "pyramid": {"grid": "geodetic", "metatiling": 2},
+            "zoom_levels": {"min": 0, "max": 13},
+        },
+    }
+
+
+@pytest.fixture
+def example_config_json_area_fgb(tmpdir, test_area_fgb):
+    return {
+        "command": "execute",
+        "params": {"zoom": 5, "area": test_area_fgb},
+        "config": {
+            "process": "mapchete.processes.convert",
+            "input": {
+                "inp": "https://ungarj.github.io/mapchete_testdata/tiled_data/raster/cleantopo/"
+            },
+            "output": {
+                "format": "GTiff",
+                "bands": 1,
+                "dtype": "uint16",
+                "path": str(tmpdir),
+            },
+            "pyramid": {"grid": "geodetic", "metatiling": 2},
+            "zoom_levels": {"min": 0, "max": 13},
+        },
+    }
 
 @pytest.fixture
 def example_config_custom_process_json(tmpdir):

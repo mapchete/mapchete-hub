@@ -225,6 +225,7 @@ class MemoryStatusHandler(BaseStatusHandler):
         process_area = process_area_from_config(
             job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
         )[0]
+
         started = datetime.utcnow()
         entry = models.Job(
             job_id=job_id,
@@ -232,6 +233,7 @@ class MemoryStatusHandler(BaseStatusHandler):
             state=models.State["pending"],
             geometry=process_area,
             bounds=shape(process_area).bounds,
+            area=str(process_area),
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"],
             started=started,
