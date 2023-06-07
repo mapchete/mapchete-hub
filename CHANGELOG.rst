@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2023.6.2 - 2023-06-07
+---------------------
+
+* core
+    * add passing `area` param to mhub config to initialize job geometry
+    * add test for `area` as `WKT` geometry and as `fgb` vector file
+
+* packaging
+    * bump ``dask`` to ``2023.5.0``
+    * bump ``distributed`` to ``2023.5.0``
+
+
 2023.6.1 - 2023-06-07
 ---------------------
 
