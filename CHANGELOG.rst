@@ -7,7 +7,7 @@ Changelog
 ---------------------
 
 * core
-    * add `fiona_open` to read `--area` files this will only work for local files now
+    * add `fiona.open` to read `--area` files (tested and works on `s3` stored files)
 
 * packaging
     * use base image ``2023.5.0``
