@@ -3,8 +3,15 @@ Changelog
 #########
 
 
-2023.6.2 - 2023-06-07
+2023.6.3 - 2023-06-10
 ---------------------
+
+* packaging
+    * use base image ``2023.5.0``
+    * revert ``mapchete`` to ``2023.4.1``
+
+2023.6.2 - 2023-06-07 (incompatible with `mapchete_satellite>=2023.5.5`)
+------------------------------------------------------------------------
 
 * core
     * add passing `area` param to mhub config to initialize job geometry
@@ -15,10 +22,11 @@ Changelog
     * bump ``distributed`` to ``2023.5.0``
 
 
-2023.6.1 - 2023-06-07
----------------------
+2023.6.1 - 2023-06-07 (incompatible with `mapchete_satellite>=2023.5.5`)
+------------------------------------------------------------------------
 
 * packaging
+    * use base image ``2023.6.0``
     * bump ``mapchete`` to ``2023.6.1``
 
 * CI/CD
