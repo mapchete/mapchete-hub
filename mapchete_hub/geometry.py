@@ -70,7 +70,7 @@ def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwa
             geometry_area = cascaded_union(all_geoms)
         else:
             geometry_area = from_wkt(params.get("area"))
-        geometry = intersection_all(geometry_bounds.append(geometry_area))
+        geometry = intersection_all([geometry_bounds, geometry_area])
     # bounds
     elif params.get("bounds"):
         geometry = box(*params.get("bounds"))
@@ -111,7 +111,7 @@ def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwa
             geometry_area = cascaded_union(all_geoms)
         else:
             geometry_area = from_wkt(params.get("area"))
-        geometry = intersection_all(geometry_bounds.append(geometry_area))
+        geometry = intersection_all([geometry_bounds, geometry_area])
     elif config.get("bounds"):
         geometry = box(*config.get("bounds"))
     elif config.get("area"):
