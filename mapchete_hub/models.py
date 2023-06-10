@@ -32,6 +32,7 @@ class MapcheteProcessConfig(BaseModel):
     pyramid: dict
     zoom_levels: dict
     bounds: tuple = None
+    area: str = None
     config_dir: str = None
 
 

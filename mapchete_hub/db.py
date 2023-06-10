@@ -11,6 +11,7 @@ from datetime import datetime
 import mongomock
 from pydantic import NonNegativeInt
 import pymongo
+from shapely import to_wkt
 from shapely.geometry import box, mapping, shape
 
 from mapchete_hub import models
@@ -233,7 +234,7 @@ class MemoryStatusHandler(BaseStatusHandler):
             state=models.State["pending"],
             geometry=process_area,
             bounds=shape(process_area).bounds,
-            area=str(process_area),
+            area=to_wkt(shape(process_area)),
             mapchete=job_config,
             output_path=job_config.dict()["config"]["output"]["path"],
             started=started,

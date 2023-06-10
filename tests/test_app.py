@@ -206,6 +206,28 @@ def test_list_jobs_area_file(client, test_process_id, example_config_json_area_f
     assert job_id not in jobs
 
 
+def test_list_jobs_bounds_area_file(client, test_process_id, example_config_json_area_fgb, test_area_fgb):
+    response = client.get("/jobs")
+    assert response.status_code == 200
+    response = client.post(
+        f"/processes/{test_process_id}/execution",
+        data=json.dumps(
+            dict(
+                example_config_json_area_fgb, params=dict(example_config_json_area_fgb["params"], zoom=2)
+            )
+        ),
+    )
+    job_id = response.json()["id"]
+
+    response = client.get("/jobs", params={"area": test_area_fgb, "bounds": "0,1,2,3"})
+    jobs = [j["id"] for j in response.json()["features"]]
+    assert job_id in jobs
+
+    response = client.get("/jobs", params={"bounds": "10,1,12,3"})
+    jobs = [j["id"] for j in response.json()["features"]]
+    assert job_id not in jobs
+
+
 def test_list_jobs_output_path(client, test_process_id, example_config_json):
     response = client.get("/jobs")
     assert response.status_code == 200
