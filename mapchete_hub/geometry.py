@@ -6,7 +6,7 @@ from mapchete.io import path_exists, absolute_path as mp_absolute_path
 from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTilePyramid
 from rasterio.crs import CRS
-from shapely import from_wkt, intersection
+from shapely import from_wkt, intersection_all
 from shapely.geometry import box, mapping, shape
 from shapely.ops import cascaded_union
 
@@ -70,13 +70,14 @@ def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwa
             geometry_area = cascaded_union(all_geoms)
         else:
             geometry_area = from_wkt(params.get("area"))
-        geometry = intersection(geometry_bounds, geometry_area)
-    # bounds        
+        geometry = intersection_all(geometry_bounds, geometry_area)
+    # bounds
     elif params.get("bounds"):
         geometry = box(*params.get("bounds"))
     # geometry
     elif params.get("geometry"):
         geometry = shape(params.get("geometry"))
+    # area
     elif params.get("area"):
         if path_exists(params.get("area")):
             absolute_path = mp_absolute_path(params.get("area"))
@@ -99,8 +100,30 @@ def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwa
     elif params.get("tile"):
         geometry = tp.tile(*params.get("tile")).bbox
     # mapchete_config
+    elif config.get("bounds") and config.get("area"):
+        geometry_bounds = box(*config.get("bounds"))
+        if path_exists(config.get("area")):
+            absolute_path = mp_absolute_path(config.get("area"))
+            all_geoms = []
+            with fiona.open(str(absolute_path), mode="r") as src:
+                for s in src:
+                    all_geoms.append(shape(s['geometry']))
+            geometry_area = cascaded_union(all_geoms)
+        else:
+            geometry_area = from_wkt(params.get("area"))
+        geometry = intersection_all(geometry_bounds, geometry_area)
     elif config.get("bounds"):
         geometry = box(*config.get("bounds"))
+    elif config.get("area"):
+        if path_exists(config.get("area")):
+            absolute_path = mp_absolute_path(config.get("area"))
+            all_geoms = []
+            with fiona.open(str(absolute_path), mode="r") as src:
+                for s in src:
+                    all_geoms.append(shape(s['geometry']))
+            geometry = cascaded_union(all_geoms)
+        else:
+            geometry = from_wkt(config.get("area"))
     else:
         # raise error if no process areas is given
         raise AttributeError(
