@@ -15,11 +15,11 @@ import fiona
 from mapchete_hub import models
 
 
-def fiona_read(path, mode="r", **kwargs):
+def fiona_read(path, mode="r"):
     """
-    Wrapper around fiona.open but fiona.Env is set according to path properties.
+    Wrapper around `fiona.open`.
     """
-    with fiona.open(str(path), mode=mode, **kwargs) as src:
+    with fiona.open(str(path), mode=mode) as src:
         yield src
 
 
