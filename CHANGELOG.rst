@@ -8,6 +8,7 @@ Changelog
 
 * core
     * add `fiona.open` to read `--area` files (tested and works on `s3` stored files)
+    * if `bounds` and `area` given use intersection as geometry
 
 * packaging
     * use base image ``2023.5.0``
