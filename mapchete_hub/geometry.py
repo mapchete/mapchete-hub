@@ -2,16 +2,18 @@
 Geometry functions.
 """
 from mapchete.config import get_zoom_levels
-from mapchete.io import path_exists, MPath
-from mapchete.io.vector import reproject_geometry, fiona_open
+from mapchete.io import path_exists, absolute_path as mp_absolute_path
+from mapchete.io.vector import reproject_geometry
 from mapchete.tile import BufferedTilePyramid
 from rasterio.crs import CRS
 from shapely import from_wkt
 from shapely.geometry import box, mapping, shape
 from shapely.ops import cascaded_union
 
+import fiona
+
 from mapchete_hub import models
-        
+
 
 def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwargs):
     """
@@ -63,9 +65,10 @@ def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwa
     elif params.get("geometry"):
         geometry = shape(params.get("geometry"))
     elif params.get("area"):
-        if path_exists(MPath(params.get("area"))):
+        if path_exists(params.get("area")):
+            absolute_path = mp_absolute_path(params.get("area"))
             all_geoms = []
-            with fiona_open(MPath(params.get("area"))) as src:
+            with fiona.open(str(absolute_path), mode="r") as src:
                 for s in src:
                     all_geoms.append(shape(s['geometry']))
             geometry = cascaded_union(all_geoms)

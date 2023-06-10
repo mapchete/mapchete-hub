@@ -6,6 +6,9 @@ Changelog
 2023.6.3 - 2023-06-10
 ---------------------
 
+* core
+    * add `fiona_open` to read `--area` files this will only work for local files now
+
 * packaging
     * use base image ``2023.5.0``
     * revert ``mapchete`` to ``2023.4.1``
