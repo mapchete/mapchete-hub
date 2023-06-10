@@ -15,14 +15,6 @@ import fiona
 from mapchete_hub import models
 
 
-def fiona_read(path, mode="r"):
-    """
-    Wrapper around `fiona.open`.
-    """
-    with fiona.open(str(path), mode=mode) as src:
-        yield src
-
-
 def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwargs):
     """
     Calculate process area from mapchete configuration and process parameters.
@@ -75,9 +67,9 @@ def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwa
     elif params.get("area"):
         if path_exists(params.get("area")):
             all_geoms = []
-            src = fiona_read(params.get("area"))
-            for s in src:
-                all_geoms.append(shape(s['geometry']))
+            with fiona.open(str(params.get("area")), mode="r") as src:
+                for s in src:
+                    all_geoms.append(shape(s['geometry']))
             geometry = cascaded_union(all_geoms)
         else:
             geometry = from_wkt(params.get("area"))
