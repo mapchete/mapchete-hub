@@ -75,9 +75,9 @@ def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwa
     elif params.get("area"):
         if path_exists(params.get("area")):
             all_geoms = []
-            with fiona_read(params.get("area")) as src:
-                for s in src:
-                    all_geoms.append(shape(s['geometry']))
+            src = fiona_read(params.get("area"))
+            for s in src:
+                all_geoms.append(shape(s['geometry']))
             geometry = cascaded_union(all_geoms)
         else:
             geometry = from_wkt(params.get("area"))
