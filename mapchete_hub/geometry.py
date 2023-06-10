@@ -68,7 +68,7 @@ def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwa
         if path_exists(params.get("area")):
             absolute_path = mp_absolute_path(params.get("area"))
             all_geoms = []
-            with fiona.open(absolute_path, mode="r") as src:
+            with fiona.open(str(absolute_path), mode="r") as src:
                 for s in src:
                     all_geoms.append(shape(s['geometry']))
             geometry = cascaded_union(all_geoms)
