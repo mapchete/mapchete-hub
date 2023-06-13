@@ -62,7 +62,6 @@ import logging
 import os
 import time
 import traceback
-from uuid import uuid4
 
 from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import Gateway, BasicAuth
@@ -243,21 +242,18 @@ async def post_job(
     response: Response = None,
 ):
     """Executes a process, i.e. creates a new job."""
-    job_id = uuid4().hex
     try:
         # get dask specs and extract to dictionary
         job_config.params["dask_specs"] = get_dask_specs(
             job_config.params.get("dask_specs", {})
         )
-        backend_db.set(job_id, state="pending")
-        while len(backend_db.jobs(state="creating")) >= MHUB_MAX_PARALLEL_JOBS:
+        while len(backend_db.jobs(state="pending")) >= MHUB_MAX_PARALLEL_JOBS:
             time.sleep(10)
         # create new entry in database
         job = backend_db.new(
-            job_id=job_id,
             job_config=job_config
         )
-        backend_db.set(job_id, state="created")
+        backend_db.set(job["id"], state="created")
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper, job["id"], job_config, backend_db, dask_cluster_setup
@@ -329,7 +325,6 @@ async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db
         job = backend_db.job(job_id)
         if job["properties"]["state"] in [
             "pending",
-            "creating",
             "created",
             "initializing",
             "initialized",
@@ -385,7 +380,6 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
 
     elif job["properties"]["state"] in [
         "pending",
-        "creating",
         "created",
         "initializing",
         "initialized",
@@ -529,7 +523,8 @@ def job_wrapper(
                 # Mapchete now will initialize the process and prepare all the tasks required.
                 # Mhub will wait for MHUB_MAX_PARALLEL_JOBS
                 while len(backend_db.jobs(state="initializing")) >= MHUB_MAX_PARALLEL_JOBS:
-                    time.sleep(10)               
+                    time.sleep(10)
+                job_meta = backend_db.set(job_id, state="initializing")
                 logger.info(
                     "initializing job %s with mapchete %s", job_id, job_config.command
                 )
@@ -537,7 +532,6 @@ def job_wrapper(
                     f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initializing*"
                 )                
                 with Timer() as timer_initialize:
-                    backend_db.set(job_id, state="initializing")
                     job = MAPCHETE_COMMANDS[job_config.command](
                         config,
                         **{
@@ -549,7 +543,7 @@ def job_wrapper(
                         concurrency="dask",
                     )
                 backend_db.set(job_id, current_progress=0, total_progress=len(job))
-                backend_db.set(job_id, state="initialized")
+                job_meta = backend_db.set(job_id, state="initialized")
                 logger.info("job %s initialized in %s", job_id, timer_initialize)
                 send_slack_message(
                     f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize}*"

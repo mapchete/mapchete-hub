@@ -5,6 +5,7 @@ Abstraction classes for database.
 from abc import ABC, abstractmethod
 import logging
 import os
+from uuid import uuid4
 
 from datetime import datetime
 import mongomock
@@ -84,7 +85,7 @@ class BaseStatusHandler(ABC):
         """
 
     @abstractmethod
-    def new(self, job_id, job_config: models.MapcheteJob = None):
+    def new(self, job_config: models.MapcheteJob = None):
         """
         Create new job entry in database.
         """
@@ -214,10 +215,11 @@ class MemoryStatusHandler(BaseStatusHandler):
                     logger.exception("cannot create GeoJSON from entry: %s", exc)
         return result
 
-    def new(self, job_id, job_config: models.MapcheteJob = None):
+    def new(self, job_config: models.MapcheteJob = None):
         """
         Create new job entry in database.
         """
+        job_id = uuid4().hex
         logger.debug(
             f"got new job with config {job_config} and assigning job ID {job_id}"
         )
@@ -404,21 +406,22 @@ class MongoDBStatusHandler(BaseStatusHandler):
         else:  # pragma: no cover
             raise KeyError(f"job {job_id} not found in the database: {result}")
 
-    def new(self, job_id, job_config: models.MapcheteJob = None):
+    def new(self, job_config: models.MapcheteJob = None):
         """
         Create new job entry in database.
         """
+        job_id = uuid4().hex
         logger.debug(
             f"got new job with config {job_config} and assigning job ID {job_id}"
         )
         process_area = process_area_from_config(
             job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
         )[0]
-        started = datetime.utcnow()        
+        started = datetime.utcnow()
         entry = models.Job(
             job_id=job_id,
             url=os.path.join(MHUB_SELF_URL, "jobs", job_id),
-            state=models.State["creating"],
+            state=models.State["pending"],
             geometry=process_area,
             bounds=shape(process_area).bounds,
             mapchete=job_config,
