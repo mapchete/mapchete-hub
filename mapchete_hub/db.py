@@ -177,6 +177,7 @@ class MemoryStatusHandler(BaseStatusHandler):
         GeoJSON features : list of dict
         """
         query = {k: v for k, v in kwargs.items() if v is not None}
+
         logger.debug("raw query: %s", query)
 
         bbox = box(*query.get("bounds")) if query.get("bounds") else None
@@ -205,6 +206,11 @@ class MemoryStatusHandler(BaseStatusHandler):
                         break
                 elif field == "to_date":
                     if not _updated_until(job, value):
+                        break
+                elif field == "state":
+                    states = value if isinstance(value, list) else [value]
+                    states = [models.State[state] for state in states]
+                    if job[field] not in states:
                         break
                 elif not _field_equals(job, value, field=field):
                     break
@@ -342,9 +348,11 @@ class MongoDBStatusHandler(BaseStatusHandler):
 
         # parsing job state groups and job states
         if query.get("state") is not None:
-            state = models.State[query.get("state")]
+            states = query.get("state")
+            states = states if isinstance(states, list) else [states]
+            states = [models.State[state] for state in states]
             # group states are lowercase!
-            query.update(state={"$in": [state]})
+            query.update(state={"$in": states})
 
         # convert bounds query into a geo search query
         if query.get("bounds") is not None:

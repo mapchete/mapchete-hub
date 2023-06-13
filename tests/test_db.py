@@ -13,7 +13,8 @@ def test_mongodb_backend_job(example_config_json, mongodb):
     with BackendDB(src=mongodb) as db:
         # add new job
         job = db.new(job_config=job_config)
-        job_id = job["id"]
+
+        job_id = job['id']
 
         current = db.job(job_id)
         geom = shape(current["geometry"])
@@ -26,6 +27,30 @@ def test_mongodb_backend_job(example_config_json, mongodb):
         db.set(job_id, state="pending")
         current = db.job(job_id)
         assert current["properties"]["state"] == "pending"
+        geom = shape(current["geometry"])
+        assert geom.is_valid
+        assert not geom.is_empty
+
+        # write initializing event
+        db.set(job_id, state="created")
+        current = db.job(job_id)
+        assert current["properties"]["state"] == "created"
+        geom = shape(current["geometry"])
+        assert geom.is_valid
+        assert not geom.is_empty
+
+        # write initializing event
+        db.set(job_id, state="initializing")
+        current = db.job(job_id)
+        assert current["properties"]["state"] == "initializing"
+        geom = shape(current["geometry"])
+        assert geom.is_valid
+        assert not geom.is_empty
+
+        # write initialized event
+        db.set(job_id, state="initialized")
+        current = db.job(job_id)
+        assert current["properties"]["state"] == "initialized"
         geom = shape(current["geometry"])
         assert geom.is_valid
         assert not geom.is_empty
@@ -77,6 +102,9 @@ def test_mongodb_backend_job(example_config_json, mongodb):
 
         db.set(another_job_id, state="pending")
         all_jobs = db.jobs()
+
+        certain_jobs = db.jobs(state=["pending", "failed"])
+        assert len(certain_jobs) == 2
 
         assert len(all_jobs) == 2
 

@@ -118,7 +118,14 @@ MHUB_SELF_INSTANCE_NAME = os.environ.get("MHUB_SELF_INSTANCE_NAME", "mapchete Hu
 MHUB_CANCELLEDERROR_TRIES = max(
     [int(os.environ.get("MHUB_CANCELLEDERROR_TRIES", 1)), 1]
 )
-
+MHUB_MAX_PARALLEL_JOBS = max(
+    [int(os.environ.get("MHUB_MAX_PARALLEL_JOBS", 2)), 2]
+)
+MHUB_PROCESSING_STATES = list(
+    os.environ.get(
+        "MHUB_PROCESSING_STATES", "pending,initializing,running"
+    ).split(',')
+)
 
 app = FastAPI()
 
@@ -246,8 +253,10 @@ async def post_job(
         )
 
         # create new entry in database
-        job = backend_db.new(job_config=job_config)
-
+        job = backend_db.new(
+            job_config=job_config
+        )
+        backend_db.set(job["id"], state="created")
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper, job["id"], job_config, backend_db, dask_cluster_setup
@@ -287,13 +296,16 @@ async def list_jobs(
     from_date = str_to_date(from_date) if from_date else None
     to_date = str_to_date(to_date) if to_date else None
     try:
-        state = models.State[state].value if state else None
+        if state is not None and ',' in state:
+            state = state.split(",")
+        states = state if isinstance(state, list) else [state] if state else None
+        states = [models.State[state] for state in states] if states else None
     except KeyError as exc:
         raise HTTPException(400, f"invalid state: {state}") from exc
 
     kwargs = {
         "output_path": output_path,
-        "state": state,
+        "state": states,
         "command": command,
         "job_name": job_name,
         "bounds": bounds,
@@ -317,7 +329,13 @@ async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db
     """Cancel a job execution."""
     try:
         job = backend_db.job(job_id)
-        if job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
+        if job["properties"]["state"] in [
+            "pending",
+            "created",
+            "initializing",
+            "initialized",
+            "running"
+        ]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
             send_slack_message(
                 f"*{MHUB_SELF_INSTANCE_NAME}: aborting <{job['properties']['url']}|{job['properties']['job_name']}>*"
@@ -366,7 +384,13 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
     if job["properties"]["state"] == "done":
         return job["properties"]["results"]
 
-    elif job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
+    elif job["properties"]["state"] in [
+        "pending",
+        "created",
+        "initializing",
+        "initialized",
+        "running"
+    ]:  # pragma: no cover
         raise HTTPException(404, f"job {job_id} does not yet have a result")
 
     elif job["properties"]["state"] in ["aborting", "cancelled"]:  # pragma: no cover
@@ -479,7 +503,6 @@ def job_wrapper(
     client = None
     try:
         logger.info("start fastAPI background task with job %s", job_id)
-        job_meta = backend_db.set(job_id, state="running")
 
         # TODO: fix https://github.com/ungarj/mapchete/issues/356
         # before mapchete config validation works again
@@ -504,9 +527,16 @@ def job_wrapper(
             attempt += 1
             try:
                 # Mapchete now will initialize the process and prepare all the tasks required.
+                # Mhub will wait for MHUB_MAX_PARALLEL_JOBS
+                while len(backend_db.jobs(state=MHUB_PROCESSING_STATES)) >= MHUB_MAX_PARALLEL_JOBS:
+                    time.sleep(10)
+                job_meta = backend_db.set(job_id, state="initializing")
                 logger.info(
                     "initializing job %s with mapchete %s", job_id, job_config.command
                 )
+                send_slack_message(
+                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initializing*"
+                )                
                 with Timer() as timer_initialize:
                     job = MAPCHETE_COMMANDS[job_config.command](
                         config,
@@ -519,8 +549,13 @@ def job_wrapper(
                         concurrency="dask",
                     )
                 backend_db.set(job_id, current_progress=0, total_progress=len(job))
+                job_meta = backend_db.set(job_id, state="initialized")
                 logger.info("job %s initialized in %s", job_id, timer_initialize)
-
+                send_slack_message(
+                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize}*"
+                )                      
+                # separate job initializing and job running
+                job_meta = backend_db.set(job_id, state="running")
                 _run_job_on_cluster(
                     job=job,
                     job_id=job_id,
