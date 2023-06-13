@@ -628,14 +628,13 @@ def _run_job_on_cluster(
     dask_specs=None,
     backend_db=None,
 ):
-
-    logger.info("requesting dask cluster and dask client...")
-    with dask_cluster(**dask_cluster_setup, dask_specs=dask_specs) as cluster:
-        logger.info("job %s cluster: %s", job_id, cluster)       
-        with dask_client(
-            dask_cluster_setup=dask_cluster_setup, cluster=cluster
-        ) as client:
-            try:
+    try:
+        logger.info("requesting dask cluster and dask client...")
+        with dask_cluster(**dask_cluster_setup, dask_specs=dask_specs) as cluster:
+            logger.info("job %s cluster: %s", job_id, cluster)
+            with dask_client(
+                dask_cluster_setup=dask_cluster_setup, cluster=cluster
+            ) as client:
                 logger.info("job %s client: %s", job_id, client)
 
                 logger.debug("set %s as job executor", client)
@@ -738,21 +737,12 @@ def _run_job_on_cluster(
                         send_slack_message(
                             f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> finished in {timer_job}*"
                         )
-            except MapcheteTaskFailed as exc:
-                # mapchete masks a CancelledError and hides it behind a MapcheteTaskFailed exception
-                if "has status 'cancelled' but its exception could not be recovered" in str(
-                    exc
-                ):
-                    try:
-                        client.shutdown()
-                    except Exception as e:
-                        logger.info(f"Dask Client Cluster was not shutdown due to: {e}")
-                    raise CancelledError from exc
-                raise
-            except Exception:
-                raise
-            finally:
-                try:
-                    client.shutdown()
-                except Exception as e:
-                    logger.info(f"Dask Client Cluster was not shutdown due to (or has already been shutdown): {e}")
+    except MapcheteTaskFailed as exc:
+        # mapchete masks a CancelledError and hides it behind a MapcheteTaskFailed exception
+        if "has status 'cancelled' but its exception could not be recovered" in str(
+            exc
+        ):
+            raise CancelledError from exc
+        raise
+    except Exception:
+        raise
