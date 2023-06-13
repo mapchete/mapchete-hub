@@ -11,9 +11,9 @@ from mapchete_hub.geometry import process_area_from_config
 def test_mongodb_backend_job(example_config_json, mongodb):
     job_config = models.MapcheteJob(**example_config_json)
     with BackendDB(src=mongodb) as db:
-        # add new job
-        job = db.new(job_config=job_config)
         job_id = job["id"]
+        # add new job
+        job = db.new(job_id=job_id, job_config=job_config)
 
         current = db.job(job_id)
         geom = shape(current["geometry"])
@@ -84,7 +84,7 @@ def test_mongodb_backend_job(example_config_json, mongodb):
         assert not geom.is_empty
 
         # write another job
-        another_job = db.new(job_config=job_config)
+        another_job = db.new(job_id=job_id, job_config=job_config)
         another_job_id = another_job["id"]
         current = db.job(another_job_id)
         geom = shape(current["geometry"])
