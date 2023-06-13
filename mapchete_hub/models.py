@@ -13,7 +13,6 @@ class State(str, Enum):
     pending = "pending"
     created = "created"
     initializing = "initializing"
-    initialized = "initialized"
     running = "running"
     aborting = "aborting"
     cancelled = "cancelled"

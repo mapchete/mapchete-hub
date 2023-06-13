@@ -8,6 +8,7 @@ Changelog
 
 * core
     * wait for jobs in states `MHUB_PROCESSING_STATES` for `10` seconds with up to `MHUB_MAX_PARALLEL_JOBS` (default: 2)
+    * add wait parameter `MHUB_PREPROCESSING_WAIT` (default: 5) after preprocessing to offset possible lag for `mongoDB` and `DaskExecutor` connection
 
 2023.6.3 - 2023-06-10
 ---------------------
