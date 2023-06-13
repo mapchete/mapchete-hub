@@ -124,8 +124,8 @@ MHUB_MAX_PARALLEL_JOBS = max(
 
 MHUB_PROCESSING_STATES = list(
     os.environ.get(
-        "MHUB_PROCESSING_STATES", ["pending", "initializing", "running"]
-    )
+        "MHUB_PROCESSING_STATES", "pending,initializing,running"
+    ).split(',')
 )
 
 
