@@ -2,6 +2,7 @@ import datetime
 import pytest
 from shapely.geometry import shape
 import time
+from uuid import uuid4
 
 from mapchete_hub import models
 from mapchete_hub.db import BackendDB
@@ -11,9 +12,9 @@ from mapchete_hub.geometry import process_area_from_config
 def test_mongodb_backend_job(example_config_json, mongodb):
     job_config = models.MapcheteJob(**example_config_json)
     with BackendDB(src=mongodb) as db:
-        job_id = job["id"]
+        job_id = uuid4().hex
         # add new job
-        job = db.new(job_id=job_id, job_config=job_config)
+        db.new(job_id=job_id, job_config=job_config)
 
         current = db.job(job_id)
         geom = shape(current["geometry"])
@@ -26,6 +27,22 @@ def test_mongodb_backend_job(example_config_json, mongodb):
         db.set(job_id, state="pending")
         current = db.job(job_id)
         assert current["properties"]["state"] == "pending"
+        geom = shape(current["geometry"])
+        assert geom.is_valid
+        assert not geom.is_empty
+
+        # write initializing event
+        db.set(job_id, state="creating")
+        current = db.job(job_id)
+        assert current["properties"]["state"] == "creating"
+        geom = shape(current["geometry"])
+        assert geom.is_valid
+        assert not geom.is_empty
+
+        # write initializing event
+        db.set(job_id, state="created")
+        current = db.job(job_id)
+        assert current["properties"]["state"] == "created"
         geom = shape(current["geometry"])
         assert geom.is_valid
         assert not geom.is_empty
@@ -84,7 +101,8 @@ def test_mongodb_backend_job(example_config_json, mongodb):
         assert not geom.is_empty
 
         # write another job
-        another_job = db.new(job_id=job_id, job_config=job_config)
+        another_job_id = uuid4().hex
+        another_job = db.new(job_id=another_job_id, job_config=job_config)
         another_job_id = another_job["id"]
         current = db.job(another_job_id)
         geom = shape(current["geometry"])

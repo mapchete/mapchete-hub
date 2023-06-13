@@ -120,7 +120,7 @@ MHUB_CANCELLEDERROR_TRIES = max(
     [int(os.environ.get("MHUB_CANCELLEDERROR_TRIES", 1)), 1]
 )
 MHUB_MAX_PARALLEL_JOBS = max(
-    [int(os.environ.get("MHUB_MAX_PARALLEL_JOBS", 2)), 1]
+    [int(os.environ.get("MHUB_MAX_PARALLEL_JOBS", 2)), 2]
 )
 
 
@@ -250,19 +250,14 @@ async def post_job(
             job_config.params.get("dask_specs", {})
         )
         backend_db.set(job_id, state="pending")
-        while len(backend_db.jobs(state="intitializing")) >= MHUB_MAX_PARALLEL_JOBS:
+        while len(backend_db.jobs(state="creating")) >= MHUB_MAX_PARALLEL_JOBS:
             time.sleep(10)
-
         # create new entry in database
         job = backend_db.new(
             job_id=job_id,
             job_config=job_config
         )
-        backend_db.set(job_id, state="intitialized")
-
-        # wait if MHUB_PARALLEL_JOBS jobs are running
-        while len(backend_db.jobs(state="running")) >= MHUB_MAX_PARALLEL_JOBS:
-            time.sleep(10)
+        backend_db.set(job_id, state="created")
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper, job["id"], job_config, backend_db, dask_cluster_setup
@@ -334,6 +329,8 @@ async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db
         job = backend_db.job(job_id)
         if job["properties"]["state"] in [
             "pending",
+            "creating",
+            "created",
             "initializing",
             "initialized",
             "running"
@@ -386,7 +383,14 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
     if job["properties"]["state"] == "done":
         return job["properties"]["results"]
 
-    elif job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
+    elif job["properties"]["state"] in [
+        "pending",
+        "creating",
+        "created",
+        "initializing",
+        "initialized",
+        "running"
+    ]:  # pragma: no cover
         raise HTTPException(404, f"job {job_id} does not yet have a result")
 
     elif job["properties"]["state"] in ["aborting", "cancelled"]:  # pragma: no cover
@@ -499,7 +503,6 @@ def job_wrapper(
     client = None
     try:
         logger.info("start fastAPI background task with job %s", job_id)
-        job_meta = backend_db.set(job_id, state="running")
 
         # TODO: fix https://github.com/ungarj/mapchete/issues/356
         # before mapchete config validation works again
@@ -524,10 +527,14 @@ def job_wrapper(
             attempt += 1
             try:
                 # Mapchete now will initialize the process and prepare all the tasks required.
+                # Mhub will wait for MHUB_MAX_PARALLEL_JOBS
+                while len(backend_db.jobs(state="initializing")) >= MHUB_MAX_PARALLEL_JOBS:
+                    time.sleep(10)               
                 logger.info(
                     "initializing job %s with mapchete %s", job_id, job_config.command
                 )
                 with Timer() as timer_initialize:
+                    backend_db.set(job_id, state="initializing")
                     job = MAPCHETE_COMMANDS[job_config.command](
                         config,
                         **{
@@ -539,8 +546,15 @@ def job_wrapper(
                         concurrency="dask",
                     )
                 backend_db.set(job_id, current_progress=0, total_progress=len(job))
+                backend_db.set(job_id, state="initialized")
                 logger.info("job %s initialized in %s", job_id, timer_initialize)
 
+                # wait if MHUB_PARALLEL_JOBS jobs are running
+                while len(backend_db.jobs(state="running")) >= MHUB_MAX_PARALLEL_JOBS:
+                    time.sleep(10)
+
+                # separate job initializing and job running
+                job_meta = backend_db.set(job_id, state="running")
                 _run_job_on_cluster(
                     job=job,
                     job_id=job_id,

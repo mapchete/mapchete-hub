@@ -414,11 +414,11 @@ class MongoDBStatusHandler(BaseStatusHandler):
         process_area = process_area_from_config(
             job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
         )[0]
-        started = datetime.utcnow()
+        started = datetime.utcnow()        
         entry = models.Job(
             job_id=job_id,
             url=os.path.join(MHUB_SELF_URL, "jobs", job_id),
-            state=models.State["intitializing"],
+            state=models.State["creating"],
             geometry=process_area,
             bounds=shape(process_area).bounds,
             mapchete=job_config,
