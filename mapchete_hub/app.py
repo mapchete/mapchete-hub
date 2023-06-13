@@ -118,6 +118,7 @@ MHUB_SELF_INSTANCE_NAME = os.environ.get("MHUB_SELF_INSTANCE_NAME", "mapchete Hu
 MHUB_CANCELLEDERROR_TRIES = max(
     [int(os.environ.get("MHUB_CANCELLEDERROR_TRIES", 1)), 1]
 )
+MHUB_PREPROCESSING_WAIT = int(os.environ.get("MHUB_PREPROCESSING_WAIT", 0))
 MHUB_MAX_PARALLEL_JOBS = max(
     [int(os.environ.get("MHUB_MAX_PARALLEL_JOBS", 2)), 2]
 )
@@ -333,7 +334,6 @@ async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db
             "pending",
             "created",
             "initializing",
-            "initialized",
             "running"
         ]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
@@ -388,7 +388,6 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
         "pending",
         "created",
         "initializing",
-        "initialized",
         "running"
     ]:  # pragma: no cover
         raise HTTPException(404, f"job {job_id} does not yet have a result")
@@ -549,11 +548,11 @@ def job_wrapper(
                         concurrency="dask",
                     )
                 backend_db.set(job_id, current_progress=0, total_progress=len(job))
-                job_meta = backend_db.set(job_id, state="initialized")
                 logger.info("job %s initialized in %s", job_id, timer_initialize)
                 send_slack_message(
-                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize}*"
-                )                      
+                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize} will start the process execution in {MHUB_PREPROCESSING_WAIT}*"
+                )        
+                time.sleep(MHUB_PREPROCESSING_WAIT)
                 # separate job initializing and job running
                 job_meta = backend_db.set(job_id, state="running")
                 _run_job_on_cluster(
