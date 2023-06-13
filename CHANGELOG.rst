@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2023.6.5 - 2023-06-13
+---------------------
+
+* core
+    * add `retry_flag` to only wait for newly started jobs, if retried, go ahead and retry
+    * add `client.shutdown()` to the `_run_job_on_cluster()` when `CancelledError` is raised, as well as to `finally`, wraped and logged if already closed
+
+
 2023.6.4 - 2023-06-13
 ---------------------
 

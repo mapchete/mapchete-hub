@@ -743,10 +743,16 @@ def _run_job_on_cluster(
                 if "has status 'cancelled' but its exception could not be recovered" in str(
                     exc
                 ):
-                    client.shutdown()
+                    try:
+                        client.shutdown()
+                    except Exception as e:
+                        logger.info(f"Dask Client Cluster was not shutdown due to: {e}")
                     raise CancelledError from exc
                 raise
             except Exception:
                 raise
             finally:
-                client.shutdown()
+                try:
+                    client.shutdown()
+                except Exception as e:
+                    logger.info(f"Dask Client Cluster was not shutdown due to (or has already been shutdown): {e}")
