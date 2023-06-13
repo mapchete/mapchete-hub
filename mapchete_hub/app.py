@@ -748,3 +748,5 @@ def _run_job_on_cluster(
                 raise
             except Exception:
                 raise
+            finally:
+                client.shutdown()
