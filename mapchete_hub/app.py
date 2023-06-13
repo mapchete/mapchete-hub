@@ -553,7 +553,7 @@ def job_wrapper(
                 backend_db.set(job_id, current_progress=0, total_progress=len(job))
                 logger.info("job %s initialized in %s", job_id, timer_initialize)
                 send_slack_message(
-                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize} will start the process execution in {MHUB_PREPROCESSING_WAIT}*"
+                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize} will start the process execution in {MHUB_PREPROCESSING_WAIT} seconds*"
                 )        
                 time.sleep(MHUB_PREPROCESSING_WAIT)
                 # separate job initializing and job running
