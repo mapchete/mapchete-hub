@@ -522,12 +522,15 @@ def job_wrapper(
         # This part will be retried x times (see MHUB_CANCELLEDERROR_TRIES) if
         # dask scheduler cancels execution.
         attempt = 0
+        retry_flag = False
         while attempt < MHUB_CANCELLEDERROR_TRIES:
             attempt += 1
             try:
                 # Mapchete now will initialize the process and prepare all the tasks required.
                 # Mhub will wait for MHUB_MAX_PARALLEL_JOBS
-                while len(backend_db.jobs(state=MHUB_PROCESSING_STATES)) >= MHUB_MAX_PARALLEL_JOBS:
+                while len(
+                    backend_db.jobs(state=MHUB_PROCESSING_STATES)
+                ) >= MHUB_MAX_PARALLEL_JOBS and retry_flag is False:
                     time.sleep(10)
                 job_meta = backend_db.set(job_id, state="initializing")
                 logger.info(
@@ -572,6 +575,7 @@ def job_wrapper(
                     MHUB_CANCELLEDERROR_TRIES,
                 )
                 if attempt < MHUB_CANCELLEDERROR_TRIES:
+                    retry_flag = True
                     logger.debug(
                         "starting attempt %s/%s to retry job %s",
                         attempt + 1,
@@ -624,13 +628,14 @@ def _run_job_on_cluster(
     dask_specs=None,
     backend_db=None,
 ):
-    try:
-        logger.info("requesting dask cluster and dask client...")
-        with dask_cluster(**dask_cluster_setup, dask_specs=dask_specs) as cluster:
-            logger.info("job %s cluster: %s", job_id, cluster)
-            with dask_client(
-                dask_cluster_setup=dask_cluster_setup, cluster=cluster
-            ) as client:
+
+    logger.info("requesting dask cluster and dask client...")
+    with dask_cluster(**dask_cluster_setup, dask_specs=dask_specs) as cluster:
+        logger.info("job %s cluster: %s", job_id, cluster)       
+        with dask_client(
+            dask_cluster_setup=dask_cluster_setup, cluster=cluster
+        ) as client:
+            try:
                 logger.info("job %s client: %s", job_id, client)
 
                 logger.debug("set %s as job executor", client)
@@ -733,12 +738,13 @@ def _run_job_on_cluster(
                         send_slack_message(
                             f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> finished in {timer_job}*"
                         )
-    except MapcheteTaskFailed as exc:
-        # mapchete masks a CancelledError and hides it behind a MapcheteTaskFailed exception
-        if "has status 'cancelled' but its exception could not be recovered" in str(
-            exc
-        ):
-            raise CancelledError from exc
-        raise
-    except Exception:
-        raise
+            except MapcheteTaskFailed as exc:
+                # mapchete masks a CancelledError and hides it behind a MapcheteTaskFailed exception
+                if "has status 'cancelled' but its exception could not be recovered" in str(
+                    exc
+                ):
+                    client.shutdown()
+                    raise CancelledError from exc
+                raise
+            except Exception:
+                raise
