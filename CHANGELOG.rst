@@ -3,6 +3,12 @@ Changelog
 #########
 
 
+2023.6.4 - TBD
+---------------------
+
+* core
+    * wait for jobs in states `MHUB_PROCESSING_STATES` for `10` seconds with up to `MHUB_MAX_PARALLEL_JOBS` (default: 2)
+
 2023.6.3 - 2023-06-10
 ---------------------
 

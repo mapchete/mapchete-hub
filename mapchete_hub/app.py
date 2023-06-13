@@ -122,7 +122,11 @@ MHUB_MAX_PARALLEL_JOBS = max(
     [int(os.environ.get("MHUB_MAX_PARALLEL_JOBS", 2)), 2]
 )
 
-MHUB_PROCESSING_STATES = ["pending", "initializing", "running"]
+MHUB_PROCESSING_STATES = str(
+    os.environ.get(
+        "MHUB_PROCESSING_STATES",["pending", "initializing", "running"]
+    )
+)
 
 
 app = FastAPI()
