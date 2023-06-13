@@ -533,6 +533,9 @@ def job_wrapper(
                 logger.info(
                     "initializing job %s with mapchete %s", job_id, job_config.command
                 )
+                send_slack_message(
+                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initializing*"
+                )                
                 with Timer() as timer_initialize:
                     backend_db.set(job_id, state="initializing")
                     job = MAPCHETE_COMMANDS[job_config.command](
@@ -548,6 +551,9 @@ def job_wrapper(
                 backend_db.set(job_id, current_progress=0, total_progress=len(job))
                 backend_db.set(job_id, state="initialized")
                 logger.info("job %s initialized in %s", job_id, timer_initialize)
+                send_slack_message(
+                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize}*"
+                )                      
 
                 # wait if MHUB_PARALLEL_JOBS jobs are running
                 while len(backend_db.jobs(state="running")) >= MHUB_MAX_PARALLEL_JOBS:
