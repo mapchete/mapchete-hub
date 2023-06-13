@@ -30,6 +30,22 @@ def test_mongodb_backend_job(example_config_json, mongodb):
         assert geom.is_valid
         assert not geom.is_empty
 
+        # write initializing event
+        db.set(job_id, state="initializing")
+        current = db.job(job_id)
+        assert current["properties"]["state"] == "initializing"
+        geom = shape(current["geometry"])
+        assert geom.is_valid
+        assert not geom.is_empty
+
+        # write initialized event
+        db.set(job_id, state="initialized")
+        current = db.job(job_id)
+        assert current["properties"]["state"] == "initialized"
+        geom = shape(current["geometry"])
+        assert geom.is_valid
+        assert not geom.is_empty
+
         # write running event
         db.set(job_id, state="running", current_progress=0, total_progress=100)
         current = db.job(job_id)

@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 
 class State(str, Enum):
     pending = "pending"
+    intitializing = "intitializing"
+    intitialized = "intitialized"
     running = "running"
     aborting = "aborting"
     cancelled = "cancelled"

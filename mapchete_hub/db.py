@@ -5,7 +5,6 @@ Abstraction classes for database.
 from abc import ABC, abstractmethod
 import logging
 import os
-from uuid import uuid4
 
 from datetime import datetime
 import mongomock
@@ -406,11 +405,10 @@ class MongoDBStatusHandler(BaseStatusHandler):
         else:  # pragma: no cover
             raise KeyError(f"job {job_id} not found in the database: {result}")
 
-    def new(self, job_config: models.MapcheteJob = None):
+    def new(self, job_id, job_config: models.MapcheteJob = None):
         """
         Create new job entry in database.
         """
-        job_id = uuid4().hex
         logger.debug(
             f"got new job with config {job_config} and assigning job ID {job_id}"
         )
@@ -421,7 +419,7 @@ class MongoDBStatusHandler(BaseStatusHandler):
         entry = models.Job(
             job_id=job_id,
             url=os.path.join(MHUB_SELF_URL, "jobs", job_id),
-            state=models.State["pending"],
+            state=models.State["intitializing"],
             geometry=process_area,
             bounds=shape(process_area).bounds,
             mapchete=job_config,

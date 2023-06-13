@@ -62,6 +62,7 @@ import logging
 import os
 import time
 import traceback
+from uuid import uuid4
 
 from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import Gateway, BasicAuth
@@ -117,6 +118,9 @@ MHUB_SELF_URL = os.environ.get("MHUB_SELF_URL", "/")
 MHUB_SELF_INSTANCE_NAME = os.environ.get("MHUB_SELF_INSTANCE_NAME", "mapchete Hub")
 MHUB_CANCELLEDERROR_TRIES = max(
     [int(os.environ.get("MHUB_CANCELLEDERROR_TRIES", 1)), 1]
+)
+MHUB_MAX_PARALLEL_JOBS = max(
+    [int(os.environ.get("MHUB_MAX_PARALLEL_JOBS", 2)), 1]
 )
 
 
@@ -239,15 +243,26 @@ async def post_job(
     response: Response = None,
 ):
     """Executes a process, i.e. creates a new job."""
+    job_id = uuid4().hex
     try:
         # get dask specs and extract to dictionary
         job_config.params["dask_specs"] = get_dask_specs(
             job_config.params.get("dask_specs", {})
         )
+        backend_db.set(job_id, state="pending")
+        while len(backend_db.jobs(state="intitializing")) >= MHUB_MAX_PARALLEL_JOBS:
+            time.sleep(10)
 
         # create new entry in database
-        job = backend_db.new(job_config=job_config)
+        job = backend_db.new(
+            job_id=job_id,
+            job_config=job_config
+        )
+        backend_db.set(job_id, state="intitialized")
 
+        # wait if MHUB_PARALLEL_JOBS jobs are running
+        while len(backend_db.jobs(state="running")) >= MHUB_MAX_PARALLEL_JOBS:
+            time.sleep(10)
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper, job["id"], job_config, backend_db, dask_cluster_setup
@@ -317,7 +332,12 @@ async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db
     """Cancel a job execution."""
     try:
         job = backend_db.job(job_id)
-        if job["properties"]["state"] in ["pending", "running"]:  # pragma: no cover
+        if job["properties"]["state"] in [
+            "pending",
+            "initializing",
+            "initialized",
+            "running"
+        ]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
             send_slack_message(
                 f"*{MHUB_SELF_INSTANCE_NAME}: aborting <{job['properties']['url']}|{job['properties']['job_name']}>*"
