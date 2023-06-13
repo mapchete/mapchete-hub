@@ -334,7 +334,6 @@ async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db
             "pending",
             "created",
             "initializing",
-            "initialized",
             "running"
         ]:  # pragma: no cover
             backend_db.set(job_id, state="aborting")
@@ -389,7 +388,6 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
         "pending",
         "created",
         "initializing",
-        "initialized",
         "running"
     ]:  # pragma: no cover
         raise HTTPException(404, f"job {job_id} does not yet have a result")
