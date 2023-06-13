@@ -118,7 +118,7 @@ MHUB_SELF_INSTANCE_NAME = os.environ.get("MHUB_SELF_INSTANCE_NAME", "mapchete Hu
 MHUB_CANCELLEDERROR_TRIES = max(
     [int(os.environ.get("MHUB_CANCELLEDERROR_TRIES", 1)), 1]
 )
-MHUB_PREPROCESSING_WAIT = int(os.environ.get("MHUB_PREPROCESSING_WAIT", 5))
+MHUB_PREPROCESSING_WAIT = int(os.environ.get("MHUB_PREPROCESSING_WAIT", 0))
 MHUB_MAX_PARALLEL_JOBS = max(
     [int(os.environ.get("MHUB_MAX_PARALLEL_JOBS", 2)), 2]
 )
