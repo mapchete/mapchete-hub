@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2023.6.5 - 2023-06-13
+---------------------
+
+* core
+    * add `retry_flag` to only wait for newly started jobs, if retried by `CancelledError`, go ahead and start processing without delay
+
+
 2023.6.4 - 2023-06-13
 ---------------------
 

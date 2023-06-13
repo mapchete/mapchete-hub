@@ -522,12 +522,15 @@ def job_wrapper(
         # This part will be retried x times (see MHUB_CANCELLEDERROR_TRIES) if
         # dask scheduler cancels execution.
         attempt = 0
+        retry_flag = False
         while attempt < MHUB_CANCELLEDERROR_TRIES:
             attempt += 1
             try:
                 # Mapchete now will initialize the process and prepare all the tasks required.
                 # Mhub will wait for MHUB_MAX_PARALLEL_JOBS
-                while len(backend_db.jobs(state=MHUB_PROCESSING_STATES)) >= MHUB_MAX_PARALLEL_JOBS:
+                while len(
+                    backend_db.jobs(state=MHUB_PROCESSING_STATES)
+                ) >= MHUB_MAX_PARALLEL_JOBS and retry_flag is False:
                     time.sleep(10)
                 job_meta = backend_db.set(job_id, state="initializing")
                 logger.info(
@@ -550,7 +553,7 @@ def job_wrapper(
                 backend_db.set(job_id, current_progress=0, total_progress=len(job))
                 logger.info("job %s initialized in %s", job_id, timer_initialize)
                 send_slack_message(
-                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize} will start the process execution in {MHUB_PREPROCESSING_WAIT}*"
+                    f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize} will start the process execution in {MHUB_PREPROCESSING_WAIT} seconds*"
                 )        
                 time.sleep(MHUB_PREPROCESSING_WAIT)
                 # separate job initializing and job running
@@ -572,6 +575,7 @@ def job_wrapper(
                     MHUB_CANCELLEDERROR_TRIES,
                 )
                 if attempt < MHUB_CANCELLEDERROR_TRIES:
+                    retry_flag = True
                     logger.debug(
                         "starting attempt %s/%s to retry job %s",
                         attempt + 1,
