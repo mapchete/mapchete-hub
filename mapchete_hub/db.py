@@ -84,7 +84,7 @@ class BaseStatusHandler(ABC):
         """
 
     @abstractmethod
-    def new(self, job_config: models.MapcheteJob = None):
+    def new(self, job_id, job_config: models.MapcheteJob = None):
         """
         Create new job entry in database.
         """
@@ -214,11 +214,10 @@ class MemoryStatusHandler(BaseStatusHandler):
                     logger.exception("cannot create GeoJSON from entry: %s", exc)
         return result
 
-    def new(self, job_config: models.MapcheteJob = None):
+    def new(self, job_id, job_config: models.MapcheteJob = None):
         """
         Create new job entry in database.
         """
-        job_id = uuid4().hex
         logger.debug(
             f"got new job with config {job_config} and assigning job ID {job_id}"
         )
