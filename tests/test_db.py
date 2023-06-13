@@ -103,6 +103,9 @@ def test_mongodb_backend_job(example_config_json, mongodb):
         db.set(another_job_id, state="pending")
         all_jobs = db.jobs()
 
+        certain_jobs = db.jobs(state=["pending", "failed"])
+        assert len(certain_jobs) == 2
+
         assert len(all_jobs) == 2
 
         # filter by time

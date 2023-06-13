@@ -61,6 +61,13 @@ def test_post_job(client, test_process_id, example_config_json):
     # check if job is submitted
     job_id = response.json()["id"]
     response = client.get(f"/jobs/{job_id}")
+    all_jobs = client.get("/jobs/").json()
+    assert len(all_jobs["features"]) == 1
+    jobs_state_list_done = client.get("/jobs/?state=done,created").json()
+    assert len(jobs_state_list_done["features"]) == 1
+    jobs_state_list_created = client.get("/jobs/?state=created").json()
+    assert len(jobs_state_list_created["features"]) == 0
+
     assert response.status_code == 200
 
     # make sure dask_specs were passed on

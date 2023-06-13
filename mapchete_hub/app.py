@@ -122,6 +122,8 @@ MHUB_MAX_PARALLEL_JOBS = max(
     [int(os.environ.get("MHUB_MAX_PARALLEL_JOBS", 2)), 2]
 )
 
+MHUB_PROCESSING_STATES = ["pending", "initializing", "running"]
+
 
 app = FastAPI()
 
@@ -247,8 +249,7 @@ async def post_job(
         job_config.params["dask_specs"] = get_dask_specs(
             job_config.params.get("dask_specs", {})
         )
-        while len(backend_db.jobs(state="pending")) >= MHUB_MAX_PARALLEL_JOBS:
-            time.sleep(10)
+
         # create new entry in database
         job = backend_db.new(
             job_config=job_config
@@ -293,13 +294,16 @@ async def list_jobs(
     from_date = str_to_date(from_date) if from_date else None
     to_date = str_to_date(to_date) if to_date else None
     try:
-        state = models.State[state].value if state else None
+        if state is not None and ',' in state:
+            state = state.split(",")
+        states = state if isinstance(state, list) else [state] if state else None
+        states = [models.State[state] for state in states] if states else None
     except KeyError as exc:
         raise HTTPException(400, f"invalid state: {state}") from exc
 
     kwargs = {
         "output_path": output_path,
-        "state": state,
+        "state": states,
         "command": command,
         "job_name": job_name,
         "bounds": bounds,
@@ -522,7 +526,7 @@ def job_wrapper(
             try:
                 # Mapchete now will initialize the process and prepare all the tasks required.
                 # Mhub will wait for MHUB_MAX_PARALLEL_JOBS
-                while len(backend_db.jobs(state="initializing")) >= MHUB_MAX_PARALLEL_JOBS:
+                while len(backend_db.jobs(state=MHUB_PROCESSING_STATES)) >= MHUB_MAX_PARALLEL_JOBS:
                     time.sleep(10)
                 job_meta = backend_db.set(job_id, state="initializing")
                 logger.info(
@@ -548,11 +552,6 @@ def job_wrapper(
                 send_slack_message(
                     f"*{MHUB_SELF_INSTANCE_NAME}: <{job_meta['properties']['url']}|{job_meta['properties']['job_name']}> initialized in {timer_initialize}*"
                 )                      
-
-                # wait if MHUB_PARALLEL_JOBS jobs are running
-                while len(backend_db.jobs(state="running")) >= MHUB_MAX_PARALLEL_JOBS:
-                    time.sleep(10)
-
                 # separate job initializing and job running
                 job_meta = backend_db.set(job_id, state="running")
                 _run_job_on_cluster(
