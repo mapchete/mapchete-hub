@@ -9,7 +9,7 @@ eox_preprocessing==2023.7.0
 fastapi==0.87.0
 lz4
 mapchete==2023.7.0
-mapchete_satellite[brdf,cli,stac]==2023.5.5
+mapchete_satellite[brdf,cli,stac]==2023.6.1
 mapchete_xarray==2022.10.0
 mongomock
 odmantic
