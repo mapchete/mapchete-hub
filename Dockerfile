@@ -56,6 +56,11 @@ ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
 ENV MP_SATELLITE_REMOTE_TIMEOUT=30
 ENV WHEEL_DIR /usr/local/wheels
 
+# this is just needed for OpenCV, used in eox-preprocessing
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends libgl1-mesa-glx && \
+    rm -rf /var/lib/apt/lists/*
+
 # get wheels from builder
 COPY --from=builder $WHEEL_DIR $WHEEL_DIR
 # get requirements from mhub
