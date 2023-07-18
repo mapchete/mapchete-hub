@@ -85,7 +85,7 @@ RUN pip install --upgrade pip && \
     fsspec \
     gdal \
     jenkspy \
-    mapchete \
+    # mapchete \
     numcodecs \
     numpy \
     psutil \
