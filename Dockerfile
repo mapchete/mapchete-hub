@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=2023.7.0
+ARG BASE_IMAGE_TAG=2023.7.1
 
 # use builder to build python wheels #
 ######################################
@@ -56,6 +56,11 @@ ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
 ENV MP_SATELLITE_REMOTE_TIMEOUT=30
 ENV WHEEL_DIR /usr/local/wheels
 
+# this is just needed for OpenCV, used in eox-preprocessing
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends libgl1-mesa-glx && \
+    rm -rf /var/lib/apt/lists/*
+
 # get wheels from builder
 COPY --from=builder $WHEEL_DIR $WHEEL_DIR
 # get requirements from mhub
@@ -70,8 +75,8 @@ RUN pip install --upgrade pip && \
     $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
-    dask-gateway \
-    dask-gateway-server \
+    # dask-gateway \
+    # dask-gateway-server \
     affine \
     aiohttp \
     boto3 \
