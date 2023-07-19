@@ -6,10 +6,10 @@ Changelog
 ---------------------
 * packaging
     * use base image ``2023.7.1``
-    * bump ``dask`` to ``2023.7.0``
-    * bump ``distributed`` to ``2023.7.0``
+    * bump ``dask`` to ``2023.5.0``
+    * bump ``distributed`` to ``2023.5.0``
     * bump ``dask-gateway`` to ``2023.1.1``     
-    * bump ``dask-kubernetes`` to ``2023.7.2``
+    * bump ``dask-kubernetes`` to ``2023.3.2``
     * bump ``eox_preprocessing`` to ``2023.7.3``
     * bump ``fastapi`` to ``0.100.0``    
     * bump ``mapchete`` to ``2023.7.1``
