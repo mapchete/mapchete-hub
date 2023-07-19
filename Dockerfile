@@ -75,8 +75,8 @@ RUN pip install --upgrade pip && \
     $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
-    dask-gateway \
-    dask-gateway-server \
+    # dask-gateway \
+    # dask-gateway-server \
     affine \
     aiohttp \
     boto3 \
