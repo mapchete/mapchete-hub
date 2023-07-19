@@ -26,7 +26,7 @@ build_python_package:
 test_python_wheel:
   tags:
     - 'podman'
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.6.0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.7.1
   needs: ["build_python_package"]
   stage: test
   before_script:
@@ -38,7 +38,7 @@ test_python_wheel:
 test_python_tar:
   tags:
     - 'podman'
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.6.0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.7.1
   needs: ["build_python_package"]
   stage: test
   before_script:
@@ -52,7 +52,7 @@ test_unit:
   tags:
     - 'podman'
   stage: test
-  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.6.0
+  image: registry.gitlab.eox.at/maps/docker-base/mapchete:2023.7.1
   timeout: 30m
   variables:
     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
