@@ -5,7 +5,7 @@ dask-gateway==2023.1.1
 dask-gateway-server==2023.1.1
 dask-kubernetes==2023.3.2
 distributed==2023.5.0
-eox_preprocessing==2023.7.3
+eox_preprocessing==2023.8.0
 fastapi==0.100.0
 lz4
 mapchete==2023.7.1
