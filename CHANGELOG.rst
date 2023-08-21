@@ -2,6 +2,12 @@
 Changelog
 #########
 
+2023.8.1 - 2023-08-21
+---------------------
+* packaging
+    * use base image ``2023.8.0``
+    * bump ``mapchete`` to ``2023.8.1``
+
 2023.8.0 - 2023-08-21
 ---------------------
 * packaging
@@ -17,8 +23,9 @@ Changelog
     * bump ``dask-gateway`` to ``2023.1.1``     
     * bump ``dask-kubernetes`` to ``2023.3.2``
     * bump ``eox_preprocessing`` to ``2023.7.3``
-    * bump ``fastapi`` to ``0.100.0``    
+    * bump ``fastapi`` to ``0.100.0``
     * bump ``mapchete`` to ``2023.7.1``
+
 
 2023.7.0 - 2023-07-06
 ---------------------
