@@ -23,15 +23,16 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
-    "anyio==3.7.1",
     "aioredis>=2.0.0a1",
     "cached_property",
     "dask",
     "dask-gateway",
     "distributed",
-    "fastapi==0.85.0",
+    "fastapi==0.103.1",
+    "httpx",
     "mapchete[contours,geobuf,http,s3,vrt]>=2022.9.0",
     "mongomock",
+    "pydantic<2.0.0",    
     "odmantic",
     "pymongo",
     "uvicorn",
@@ -39,17 +40,18 @@ dependencies = [
 
 [project.optional-dependencies]
 complete = [
-    "anyio==3.7.1",
     "aioredis>=2.0.0a1",
     "cached_property",
     "dask",
     "dask-gateway",
     "distributed",
-    "fastapi==0.85.0",
+    "fastapi==0.103.1",
+    "httpx",
     "mapchete[contours,geobuf,http,s3,vrt]>=2022.9.0",
     "mapchete_xarray>=2022.5.0",
     "mongomock",
     "odmantic",
+    "pydantic<2.0.0",
     "pymongo",
     "Slacker",
     "uvicorn",
@@ -58,7 +60,6 @@ slack = [
     "Slacker",
 ]
 test = [
-    "anyio==3.7.1",
     "pytest",
     "pytest-cov",
     "pytest-env",

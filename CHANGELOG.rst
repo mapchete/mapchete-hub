@@ -2,6 +2,15 @@
 Changelog
 #########
 
+2023.9.0 - 2023-06-18
+---------------------
+* packaging
+    * use base image ``2023.8.0`` for tests as well
+    * bump ``fastapi`` to ``0.103.1``
+    * restrict ``pydantic`` to ``<2.0.0``
+    * add ``httpx`` to dependencies
+
+
 2023.8.1 - 2023-08-21
 ---------------------
 * packaging
