@@ -39,6 +39,7 @@ dependencies = [
 
 [project.optional-dependencies]
 complete = [
+    "anyio==3.7.1",
     "aioredis>=2.0.0a1",
     "cached_property",
     "dask",
