@@ -23,6 +23,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
+    "anyio==3.7.1",
     "aioredis>=2.0.0a1",
     "cached_property",
     "dask",
@@ -38,6 +39,7 @@ dependencies = [
 
 [project.optional-dependencies]
 complete = [
+    "anyio==3.7.1",
     "aioredis>=2.0.0a1",
     "cached_property",
     "dask",
@@ -56,6 +58,7 @@ slack = [
     "Slacker",
 ]
 test = [
+    "anyio==3.7.1",
     "pytest",
     "pytest-cov",
     "pytest-env",
