@@ -58,6 +58,7 @@ slack = [
     "Slacker",
 ]
 test = [
+    "anyio==3.7.1",
     "pytest",
     "pytest-cov",
     "pytest-env",
