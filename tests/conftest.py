@@ -2,7 +2,6 @@ import os
 from dask.distributed import LocalCluster
 from fastapi.testclient import TestClient
 import pytest
-import pytest_asyncio
 
 from mapchete.io import path_exists
 
@@ -27,7 +26,7 @@ app.dependency_overrides[get_backend_db] = fake_backend_db
 app.dependency_overrides[get_dask_cluster_setup] = local_dask_cluster
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest.fixture
 def client():
     return TestClient(app)
 

@@ -1,6 +1,5 @@
 anyio==3.7.1
 pytest
-pytest-asyncio
 pytest-cov
 pytest-env
 pytest-mongodb
