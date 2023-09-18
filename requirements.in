@@ -1,3 +1,4 @@
+anyio==3.7.1
 bokeh
 blosc
 dask==2023.5.0
