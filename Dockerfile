@@ -56,11 +56,6 @@ ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
 ENV MP_SATELLITE_REMOTE_TIMEOUT=30
 ENV WHEEL_DIR /usr/local/wheels
 
-# this is just needed for OpenCV, used in eox-preprocessing
-RUN apt-get update && \
-    apt-get install --yes --no-install-recommends libgl1-mesa-glx && \
-    rm -rf /var/lib/apt/lists/*
-
 # get wheels from builder
 # COPY --from=builder $WHEEL_DIR $WHEEL_DIR
 
@@ -77,8 +72,8 @@ RUN pip install --upgrade pip && \
     # $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
-    # dask-gateway \
-    # dask-gateway-server \
+    dask-gateway \
+    dask-gateway-server \
     affine \
     aiohttp \
     boto3 \
@@ -114,10 +109,6 @@ RUN pip install --upgrade pip && \
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR
 
-# install xarray dependencies only on mhub image, not mhub-s1
-RUN if [ "$BASE_IMAGE_NAME" = "mapchete" ]; \
-    then pip install -e $MHUB_DIR[slack,xarray]; \
-    else pip install -e $MHUB_DIR[slack]; \
-    fi
+RUN pip install -e $MHUB_DIR[complete]
 
 WORKDIR $MHUB_DIR
