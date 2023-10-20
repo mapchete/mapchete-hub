@@ -5,7 +5,7 @@ import datetime
 from enum import Enum
 from typing import Optional, Union
 
-from odmantic import Model
+from mapchete.config import ProcessConfig
 from pydantic import BaseModel, Field
 
 
@@ -27,24 +27,10 @@ class MapcheteCommand(str, Enum):
     # index = "index"
 
 
-class MapcheteProcessConfig(BaseModel):
-    process: Union[str, list]
-    input: dict
-    output: dict
-    pyramid: dict
-    zoom_levels: dict
-    bounds: tuple = None
-    area: str = None
-    config_dir: str = None
-
-
 class MapcheteJob(BaseModel):
     command: MapcheteCommand = Field(None, example="execute")
     params: dict = Field(None, example={"zoom": 8, "bounds": [0, 1, 2, 3]})
-    # TODO: fix https://github.com/ungarj/mapchete/issues/356
-    # before mapchete config validation works again
-    # config: MapcheteProcessConfig = Field(
-    config: dict = Field(
+    config: ProcessConfig = Field(
         None,
         example={
             "process": "mapchete.processes.convert",
@@ -77,7 +63,7 @@ class GeoJSON(BaseModel):
     properties: dict = None
 
 
-class Job(Model, BaseModel):
+class Job(BaseModel):
     job_id: str
     url: str
     state: State

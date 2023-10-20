@@ -53,9 +53,9 @@ def test_process_area_from_config(example_config_json):
     assert area.equals(box(*bounds))
 
     # errors
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         process_area_from_config(job_config=None)
-    with pytest.raises(KeyError):
+    with pytest.raises(TypeError):
         process_area_from_config(job_config=dict())
-    with pytest.raises(AttributeError):
+    with pytest.raises(TypeError):
         process_area_from_config(job_config=dict(config=example_config_json["config"]))
