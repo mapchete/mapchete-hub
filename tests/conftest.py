@@ -113,6 +113,7 @@ def example_config_json_area_fgb(tmpdir, test_area_fgb):
         },
     }
 
+
 @pytest.fixture
 def example_config_custom_process_json(tmpdir):
     return {

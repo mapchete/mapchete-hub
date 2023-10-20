@@ -14,7 +14,7 @@ def test_mongodb_backend_job(example_config_json, mongodb):
         # add new job
         job = db.new(job_config=job_config)
 
-        job_id = job['id']
+        job_id = job["id"]
 
         current = db.job(job_id)
         geom = shape(current["geometry"])

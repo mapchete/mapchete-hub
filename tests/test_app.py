@@ -176,29 +176,35 @@ def test_list_jobs_area(client, test_process_id, example_config_json_area):
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json_area, params=dict(example_config_json_area["params"], zoom=2)
+                example_config_json_area,
+                params=dict(example_config_json_area["params"], zoom=2),
             )
         ),
     )
     job_id = response.json()["id"]
 
-    response = client.get("/jobs", params={"area": "Polygon ((0 1, 2 1, 2 3, 0 3, 0 1))"})
+    response = client.get(
+        "/jobs", params={"area": "Polygon ((0 1, 2 1, 2 3, 0 3, 0 1))"}
+    )
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
-    response = client.get("/jobs",params={"bounds": "10,1,12,3"})
+    response = client.get("/jobs", params={"bounds": "10,1,12,3"})
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
 
-def test_list_jobs_area_file(client, test_process_id, example_config_json_area_fgb, test_area_fgb):
+def test_list_jobs_area_file(
+    client, test_process_id, example_config_json_area_fgb, test_area_fgb
+):
     response = client.get("/jobs")
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json_area_fgb, params=dict(example_config_json_area_fgb["params"], zoom=2)
+                example_config_json_area_fgb,
+                params=dict(example_config_json_area_fgb["params"], zoom=2),
             )
         ),
     )
@@ -213,14 +219,17 @@ def test_list_jobs_area_file(client, test_process_id, example_config_json_area_f
     assert job_id not in jobs
 
 
-def test_list_jobs_bounds_area_file(client, test_process_id, example_config_json_area_fgb, test_area_fgb):
+def test_list_jobs_bounds_area_file(
+    client, test_process_id, example_config_json_area_fgb, test_area_fgb
+):
     response = client.get("/jobs")
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
-                example_config_json_area_fgb, params=dict(example_config_json_area_fgb["params"], zoom=2)
+                example_config_json_area_fgb,
+                params=dict(example_config_json_area_fgb["params"], zoom=2),
             )
         ),
     )
@@ -396,15 +405,15 @@ def test_job_result(client, test_process_id, example_config_json):
 
 def test_errors(client, example_config_json):
     # get job
-    response = client.get(f"/jobs/foo")
+    response = client.get("/jobs/foo")
     assert response.status_code == 404
 
     # cancel job
-    response = client.delete(f"/jobs/foo")
+    response = client.delete("/jobs/foo")
     assert response.status_code == 404
 
     # get job results
-    response = client.get(f"/jobs/foo/results")
+    response = client.get("/jobs/foo/results")
     assert response.status_code == 404
 
 
@@ -433,7 +442,7 @@ def test_process_exception(
 
 def test_process_custom_params(client, test_process_id, example_config_json):
     conf = dict(example_config_json)
-    conf["config"].update(foo="bar")
+    conf["config"]["process_parameters"] = dict(foo="bar")
     response = client.post(
         f"/processes/{test_process_id}/execution", data=json.dumps(conf)
     )
@@ -441,7 +450,10 @@ def test_process_custom_params(client, test_process_id, example_config_json):
 
     # make sure custom parameter was passed on
     response = client.get(f"/jobs/{job_id}")
-    assert "foo" in response.json()["properties"]["mapchete"]["config"]
+    assert (
+        "foo"
+        in response.json()["properties"]["mapchete"]["config"]["process_parameters"]
+    )
 
 
 def test_dask_dashboard_link(client, test_process_id, example_config_json):

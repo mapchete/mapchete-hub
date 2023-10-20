@@ -2,20 +2,18 @@
 Geometry functions.
 """
 from mapchete.config import get_zoom_levels
-from mapchete.io import path_exists, absolute_path as mp_absolute_path
-from mapchete.io.vector import reproject_geometry
+from mapchete.io.vector import reproject_geometry, fiona_open
+from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
 from rasterio.crs import CRS
 from shapely import from_wkt, intersection_all
 from shapely.geometry import box, mapping, shape
 from shapely.ops import cascaded_union
 
-import fiona
-
-from mapchete_hub import models
+from mapchete_hub.models import MapcheteJob
 
 
-def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwargs):
+def process_area_from_config(job: MapcheteJob, dst_crs=None, **kwargs):
     """
     Calculate process area from mapchete configuration and process parameters.
 
@@ -43,87 +41,71 @@ def process_area_from_config(job_config: models.MapcheteJob, dst_crs=None, **kwa
     (geometry, geometry_process_crs) : tuple of shapely.Polygon
         Geometry in mhub CRS (which is defined in status_gpkg_profile) and in process CRS.
     """
-    job_config = (
-        models.MapcheteJob(**job_config) if isinstance(job_config, dict) else job_config
-    )
-    config = job_config.dict().get("config") or {}
-    params = job_config.dict().get("params") or {}
-
-    if "pyramid" not in config:
-        raise KeyError("mapchete_config has no 'pyramid' defined")
-
-    tp = BufferedTilePyramid(
-        config["pyramid"]["grid"],
-        metatiling=config["pyramid"].get("metatiling", 1),
-        pixelbuffer=config["pyramid"].get("pixelbuffer", 0),
-    )
-
+    tp = BufferedTilePyramid(**dict(job.config.pyramid))
+    area = job.params.get("area")
+    area_path = MPath.from_inp(area) if area else None
     # bounds and area
-    if params.get("bounds") and params.get("area"):
-        geometry_bounds = box(*params.get("bounds"))
-        if path_exists(params.get("area")):
-            absolute_path = mp_absolute_path(params.get("area"))
+    if job.params.get("bounds") and job.params.get("area"):
+        geometry_bounds = box(*job.params.get("bounds"))
+        if area_path and area_path.exists():
             all_geoms = []
-            with fiona.open(str(absolute_path), mode="r") as src:
+            with fiona_open(area_path, mode="r") as src:
                 for s in src:
-                    all_geoms.append(shape(s['geometry']))
+                    all_geoms.append(shape(s["geometry"]))
             geometry_area = cascaded_union(all_geoms)
         else:
-            geometry_area = from_wkt(params.get("area"))
+            geometry_area = from_wkt(job.params.get("area"))
         geometry = intersection_all([geometry_bounds, geometry_area])
     # bounds
-    elif params.get("bounds"):
-        geometry = box(*params.get("bounds"))
+    elif job.params.get("bounds"):
+        geometry = box(*job.params.get("bounds"))
     # geometry
-    elif params.get("geometry"):
-        geometry = shape(params.get("geometry"))
+    elif job.params.get("geometry"):
+        geometry = shape(job.params.get("geometry"))
     # area
-    elif params.get("area"):
-        if path_exists(params.get("area")):
-            absolute_path = mp_absolute_path(params.get("area"))
+    elif job.params.get("area"):
+        if area_path and area_path.exists():
             all_geoms = []
-            with fiona.open(str(absolute_path), mode="r") as src:
+            with fiona_open(area_path, mode="r") as src:
                 for s in src:
-                    all_geoms.append(shape(s['geometry']))
+                    all_geoms.append(shape(s["geometry"]))
             geometry = cascaded_union(all_geoms)
         else:
-            geometry = from_wkt(params.get("area"))
+            geometry = from_wkt(job.params.get("area"))
     # point
-    elif params.get("point"):
-        x, y = params.get("point")
+    elif job.params.get("point"):
+        x, y = job.params.get("point")
         zoom_levels = get_zoom_levels(
-            process_zoom_levels=config["zoom_levels"],
-            init_zoom_levels=params.get("zoom"),
+            process_zoom_levels=job.config.zoom_levels,
+            init_zoom_levels=job.params.get("zoom"),
         )
         geometry = tp.tile_from_xy(x, y, max(zoom_levels)).bbox
     # tile
-    elif params.get("tile"):
-        geometry = tp.tile(*params.get("tile")).bbox
+    elif job.params.get("tile"):
+        geometry = tp.tile(*job.params.get("tile")).bbox
     # mapchete_config
-    elif config.get("bounds") and config.get("area"):
-        geometry_bounds = box(*config.get("bounds"))
-        if path_exists(config.get("area")):
-            absolute_path = mp_absolute_path(config.get("area"))
+    elif job.config.bounds and job.config.area:
+        geometry_bounds = box(*job.config.get("bounds"))
+        if area_path and area_path.exists():
             all_geoms = []
-            with fiona.open(str(absolute_path), mode="r") as src:
+            with fiona_open(area_path, mode="r") as src:
                 for s in src:
-                    all_geoms.append(shape(s['geometry']))
+                    all_geoms.append(shape(s["geometry"]))
             geometry_area = cascaded_union(all_geoms)
         else:
-            geometry_area = from_wkt(params.get("area"))
+            geometry_area = from_wkt(job.params.get("area"))
         geometry = intersection_all([geometry_bounds, geometry_area])
-    elif config.get("bounds"):
-        geometry = box(*config.get("bounds"))
-    elif config.get("area"):
-        if path_exists(config.get("area")):
-            absolute_path = mp_absolute_path(config.get("area"))
+    elif job.config.bounds:
+        geometry = box(*job.config.bounds)
+    elif job.config.area:
+        if area_path and area_path.exists():
             all_geoms = []
-            with fiona.open(str(absolute_path), mode="r") as src:
+            with fiona_open(area_path, mode="r") as src:
                 for s in src:
-                    all_geoms.append(shape(s['geometry']))
+                    all_geoms.append(shape(s["geometry"]))
             geometry = cascaded_union(all_geoms)
         else:
-            geometry = from_wkt(config.get("area"))
+            geometry = from_wkt(job.config.area)
     else:
         # raise error if no process areas is given
         raise AttributeError(
