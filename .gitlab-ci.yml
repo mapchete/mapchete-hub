@@ -24,12 +24,11 @@ build_python_package:
 # test python packages
 test_python_wheel:
   tags:
-    - docker
+    - podman
   needs: ["build_python_package"]
   stage: test
-  before_script:
-    - pip install `ls dist/mapchete_hub*.tar.gz -1 | head -1`[test]
   script:
+    - pip install `ls dist/mapchete_hub*.tar.gz -1 | head -1`[test]
     - mhub-server --help
     - pytest -v --cov=mapchete_hub tests/
 
