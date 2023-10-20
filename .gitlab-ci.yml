@@ -6,12 +6,12 @@ stages:
   - push
 
 before_script:
-  - echo -n $CI_JOB_TOKEN | podman login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+  - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
 
 # build python packages
 build_python_package:
   tags:
-    - podman
+    - docker
   stage: build
   artifacts:
     paths:
@@ -24,7 +24,7 @@ build_python_package:
 # test python packages
 test_python_wheel:
   tags:
-    - podman
+    - docker
   needs: ["build_python_package"]
   stage: test
   before_script:
@@ -35,7 +35,7 @@ test_python_wheel:
 
 test_python_tar:
   tags:
-    - podman
+    - docker
   needs: ["build_python_package"]
   stage: test
   before_script:
@@ -47,7 +47,7 @@ test_python_tar:
 # run unittests
 test_unit:
   tags:
-    - podman
+    - docker
   stage: test
   timeout: 30m
   variables:
@@ -124,7 +124,7 @@ build_image:
 # release package
 push_python_package:
   tags:
-    - podman
+    - docker
   stage: push
   before_script:
     - pip install --upgrade pip hatch
