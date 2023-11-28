@@ -2,6 +2,20 @@
 Changelog
 #########
 
+2023.11.0 - 2023-11-28
+----------------------
+* packaging
+    * use base image ``2023.11.0`` also for CI
+    * bump ``dask-gateway`` to ``2023.9.0``
+    * bump ``dask-gateway-server`` to ``2023.9.0``
+    * bump ``dask-kubernetes`` to ``2023.10.0``    
+    * bump ``dask`` to ``2023.11.0``
+    * bump ``distributed`` to ``2023.11.0``
+    * bump ``fastapi`` to ``0.104.1``
+    * bump ``mapchete`` to ``2023.11.0``
+    * bump ``mapchete_eo`` to ``2023.11.0``
+
+
 2023.9.0 - 2023-06-18
 ---------------------
 * packaging

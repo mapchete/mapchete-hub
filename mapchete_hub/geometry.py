@@ -1,7 +1,7 @@
 """
 Geometry functions.
 """
-from mapchete.config import get_zoom_levels
+from mapchete.config.parse import get_zoom_levels
 from mapchete.io.vector import reproject_geometry, fiona_open
 from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
