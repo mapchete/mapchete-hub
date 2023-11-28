@@ -30,7 +30,8 @@ dependencies = [
     "distributed",
     "fastapi",
     "httpx",
-    "mapchete[contours,geobuf,http,s3,vrt]>=2022.9.0",
+    "mapchete[contours,geobuf,http,s3,vrt]>=2022.11.0",
+    "mapchete_eo",
     "mongomock",
     "pydantic>=2.0.0",    
     "pymongo",
@@ -65,7 +66,7 @@ test = [
     "requests",
 ]
 xarray = [
-    "mapchete_xarray>=2022.5.0",
+    "mapchete_xarray>=2022.10.0",
 ]
 
 [project.scripts]
