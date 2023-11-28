@@ -1,4 +1,4 @@
-from mapchete.config import raw_conf_process_pyramid
+from mapchete.config.parse import raw_conf_process_pyramid
 import pytest
 from shapely.geometry import box, mapping, shape
 
