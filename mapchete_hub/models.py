@@ -9,6 +9,7 @@ from mapchete.config import ProcessConfig
 from pydantic import BaseModel, Field
 
 
+# TODO: take from core package
 class State(str, Enum):
     pending = "pending"
     created = "created"
@@ -49,6 +50,7 @@ class MapcheteJob(BaseModel):
     )
 
 
+# TODO: take from core package
 class Progress(BaseModel):
     current: int
     total: int

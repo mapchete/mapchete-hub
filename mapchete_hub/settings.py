@@ -1,96 +1,129 @@
 """
 Settings.
 """
-from dask_gateway.options import Options
 import logging
 import os
+from typing import Optional, Union
+
+from dask_gateway.options import Options
+from pydantic import BaseModel, Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from mapchete_hub import __version__
 
 
 logger = logging.getLogger(__name__)
 
-WORKER_DEFAULT_IMAGE = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
-WORKER_DEFAULT_TAG = os.environ.get("MHUB_IMAGE_TAG", __version__)
-MHUB_PROPAGATE_ENV_PREFIXES = os.environ.get(
-    "MHUB_PROPAGATE_ENV_PREFIXES", "AWS, DASK, GDAL, MHUB, MAPCHETE, MP"
-)
+
+class MHubSettings(BaseSettings):
+    """
+    Combine default settings with env variables.
+
+    All settings can be set in the environment by adding the 'MHUB_' prefix
+    and the settings in uppercase, e.g. MHUB_SELF_URL.
+    """
+
+    self_url: str = "/"
+    self_instance_name: str = "mapchete Hub"
+    add_mapchete_logger: bool = False
+    backend_db: str = "memory"
+    backend_db_event_rate_limit: float = 0.2
+    cancellederror_tries: int = 1
+    preprocessing_wait: int = 0  # do we need this?
+    max_parallel_jobs: int = 2
+    max_parallel_jobs_interval_seconds: int = 10
+    dask_gateway_url: Optional[str] = None
+    dask_gateway_pass: Optional[str] = None
+    dask_scheduler_url: Optional[str] = None
+    dask_min_workers: int = 10
+    dask_max_workers: int = 1000
+    dask_adaptive_scaling: bool = True
+    worker_default_image: str = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
+    worker_image_tag: str = __version__
+    worker_propagate_env_prefixes: str = "AWS, DASK, GDAL, MHUB, MAPCHETE, MP"
+
+    # read from environment
+    model_config = SettingsConfigDict(env_prefix="MHUB_")
+
+
+mhub_settings: MHubSettings = MHubSettings()
+
+
+class DaskAdaptOptions(BaseModel):
+    minimum: int = MHubSettings().dask_min_workers
+    maximum: int = MHubSettings().dask_max_workers
+    active: bool = MHubSettings().dask_adaptive_scaling
+
+
+class DaskDefaultSpecs(BaseModel):
+    worker_cores: float = 0.87
+    worker_cores_limit: float = 2.0
+    worker_memory: float = 2.1
+    worker_memory_limit: float = 12.0
+    worker_threads: int = 2
+    worker_environment: dict = Field(default_factory=dict)
+    scheduler_cores: int = 1
+    scheduler_cores_limit: int = 1.0
+    scheduler_memory: int = 1.0
+    image: str = (
+        f"{MHubSettings().worker_default_image}:{MHubSettings().worker_image_tag}"
+    )
+    adapt_options: DaskAdaptOptions = DaskAdaptOptions()
+
 
 DASK_DEFAULT_SPECS = {
-    "default": {
-        "worker_cores": 0.87,
-        "worker_cores_limit": 2.0,
-        "worker_memory": 2.1,
-        "worker_memory_limit": 12.0,
-        "worker_threads": 2,
-        "scheduler_cores": 1,
-        "scheduler_cores_limit": 1.0,
-        "scheduler_memory": 1.0,
-        "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
-        "adapt_options": {
-            "minimum": int(os.environ.get("MHUB_DASK_MIN_WORKERS", 10)),
-            "maximum": int(os.environ.get("MHUB_DASK_MAX_WORKERS", 1000)),
-            "active": os.environ.get("MHUB_DASK_ADAPTIVE_SCALING", "FALSE") == "TRUE",
-        },
-    },
-    "s2_16bit_regular": {
-        "worker_cores": 1,
-        "worker_memory": 4.0,
-        "worker_threads": 1,
-        "scheduler_cores": 1,
-        "scheduler_memory": 2.0,
-        "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
-    },
-    "s2_16bit_large": {
-        "worker_cores": 1,
-        "worker_memory": 8.0,
-        "worker_threads": 1,
-        "scheduler_cores": 1,
-        "scheduler_memory": 4.0,
-        "image": f"{WORKER_DEFAULT_IMAGE}:{WORKER_DEFAULT_TAG}",
-    },
-    "s1_large": {
-        "worker_cores": 8,
-        "worker_memory": 16.0,
-        "worker_threads": 1,
-        "scheduler_cores": 1,
-        "scheduler_memory": 2.0,
-        "image": f"registry.gitlab.eox.at/maps/mapchete_hub/mhub-s1:{WORKER_DEFAULT_TAG}",
-    },
-    "custom": {
-        "worker_cores": os.environ.get("MHUB_WORKER_CORES", 1),
-        "worker_memory": os.environ.get("MHUB_WORKER_MEMORY", 2),
-        "worker_threads": os.environ.get("MHUB_WORKER_THREADS", 1),
-        "scheduler_cores": os.environ.get("MHUB_SCHEDULER_CORES", 1),
-        "scheduler_memory": os.environ.get("MHUB_SCHEDULER_MEMORY", 2),
-        "image": f"{os.environ.get('MHUB_WORKER_IMAGE', WORKER_DEFAULT_IMAGE)}:"
-        f"{os.environ.get('MHUB_WORKER_IMAGE_TAG', WORKER_DEFAULT_TAG)}",
-    },
+    "default": DaskDefaultSpecs(),
+    "s2_16bit_regular": DaskDefaultSpecs(
+        worker_cores=1,
+        worker_memory=4.0,
+        worker_threads=1,
+        scheduler_cores=1,
+        scheduler_memory=2.0,
+    ),
+    "s2_16bit_large": DaskDefaultSpecs(
+        worker_cores=1,
+        worker_memory=8.0,
+        worker_threads=1,
+        scheduler_cores=1,
+        scheduler_memory=4.0,
+    ),
 }
 
 
-def get_dask_specs(dask_specs="default"):
-    """
-    Merge user-defined with default specs.
-    """
-    if isinstance(dask_specs, dict):
-        return dict(DASK_DEFAULT_SPECS["default"], **dask_specs)
-    return dict(DASK_DEFAULT_SPECS["default"], **DASK_DEFAULT_SPECS[dask_specs])
+def get_dask_specs(specs: Union[str, dict]) -> DaskDefaultSpecs:
+    if isinstance(specs, str):
+        return DASK_DEFAULT_SPECS[specs]
+    elif isinstance(specs, dict):
+        return DaskDefaultSpecs(**specs)
+    else:
+        raise TypeError(
+            "specs must refer to a predefined spec "
+            f"({', '.join(DASK_DEFAULT_SPECS.keys())}) or a dictionary"
+        )
 
 
-def update_gateway_cluster_options(options: Options, dask_specs: str = "default"):
-    specs = get_dask_specs(dask_specs)
-    options.update({k: v for k, v in specs.items() if k not in ["adapt_options"]})
+def update_gateway_cluster_options(
+    options: Options, custom_dask_specs: Optional[dict] = None
+) -> Options:
+    custom_dask_specs = custom_dask_specs or {}
+    dask_specs = DaskDefaultSpecs(**custom_dask_specs)
+
+    options.update(
+        {k: v for k, v in dask_specs.model_dump().items() if k not in ["adapt_options"]}
+    )
+
     # get selected env variables from mhub and pass it on to the dask scheduler and workers
     # TODO: make less hacky
-    env_prefixes = tuple([i.strip() for i in MHUB_PROPAGATE_ENV_PREFIXES.split(",")])
+    env_prefixes = tuple(
+        [i.strip() for i in MHubSettings().worker_propagate_env_prefixes.split(",")]
+    )
     for k, v in os.environ.items():
         if k.startswith(env_prefixes):
             options.environment[k] = v
-    dask_environment = specs.get("environment", {})
-    if dask_environment and isinstance(dask_environment, dict):
-        # this allows custom scheduler ENV settings, e.g.:
-        # DASK_DISTRIBUTED__SCHEDULER__WORKER_SATURATION="1.0"
-        options.environment.update(dask_environment)
+
+    # this allows custom scheduler ENV settings, e.g.:
+    # DASK_DISTRIBUTED__SCHEDULER__WORKER_SATURATION="1.0"
+    options.environment.update(dask_specs.worker_environment)
+
     logger.debug("using cluster specs: %s", dict(options))
     return options
