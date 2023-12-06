@@ -65,7 +65,7 @@ class GeoJSON(BaseModel):
     properties: dict = None
 
 
-class Job(BaseModel):
+class JobEntry(BaseModel):
     job_id: str
     url: str
     state: State
