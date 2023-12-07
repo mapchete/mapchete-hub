@@ -105,7 +105,11 @@ def test_post_job_custom_process(test_process_id, example_config_custom_process_
     job_id = response.json()["id"]
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
     assert response.status_code == 200
-    assert response.json()["properties"]["state"] in ["pending", "running"]
+    assert response.json()["properties"]["status"] in [
+        "parsing",
+        "initializing",
+        "running",
+    ]
 
 
 @pytest.mark.skipif(
@@ -197,7 +201,7 @@ def test_list_jobs_output_path(test_process_id, example_config_json):
     not ENDPOINT_AVAILABLE,
     reason="requires up and running endpoint using docker-compose",
 )
-def test_list_jobs_state(test_process_id, example_config_json):
+def test_list_jobs_status(test_process_id, example_config_json):
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
     assert response.status_code == 200
     response = requests.post(
@@ -214,17 +218,17 @@ def test_list_jobs_state(test_process_id, example_config_json):
     while True:
         time.sleep(1)
         response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
-        state = response.json()["properties"]["state"]
-        if state == "done":
+        status = response.json()["properties"]["status"]
+        if status == "done":
             break
         elif time.time() - start > 120:
-            raise RuntimeError(f"job not done in time, last state was '{state}'")
+            raise RuntimeError(f"job not done in time, last status was '{status}'")
 
-    response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"state": "done"})
+    response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"status": "done"})
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
-    response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"state": "cancelled"})
+    response = requests.get(f"{TEST_ENDPOINT}/jobs", params={"status": "cancelled"})
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
@@ -334,32 +338,34 @@ def test_cancel_job(test_process_id, example_config_json):
 
     # make sure job is running
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
-    assert response.json()["properties"]["state"] in ["pending", "running"]
+    assert response.json()["properties"]["status"] in ["parsing", "running"]
 
     # send cancel signal
     response = requests.delete(f"{TEST_ENDPOINT}/jobs/{job_id}")
 
     # make sure cancel signal was received
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
-    assert response.json()["properties"]["state"] in ["aborting", "cancelled"]
+    assert response.json()["properties"]["status"] in ["cancelled"]
+
+    status = response.json()["properties"]["status"]
 
     # see if job is cancelled
     start = time.time()
     while True:
         time.sleep(1)
         response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
-        state = response.json()["properties"]["state"]
+        status = response.json()["properties"]["status"]
         traceback = response.json()["properties"]["traceback"] or ""
-        if state == "cancelled":
+        if status == "cancelled":
             break
-        elif state == "done":
-            raise RuntimeError("job should not have 'done' state!")
+        elif status == "done":
+            raise RuntimeError("job should not have 'done' status!")
         elif time.time() - start > 30:
             raise RuntimeError(
-                f"job not cancelled in time, last state was '{state}' {traceback}"
+                f"job not cancelled in time, last status was '{status}' {traceback}"
             )
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
-    assert response.json()["properties"]["state"] == "cancelled"
+    assert response.json()["properties"]["status"] == "cancelled"
 
 
 @pytest.mark.skipif(
@@ -387,32 +393,32 @@ def test_cancel_jobs(test_process_id, example_config_json):
     for job_id in jobs:
         # make sure jobs are running
         response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
-        assert response.json()["properties"]["state"] in ["pending", "running"]
+        assert response.json()["properties"]["status"] in ["parsing", "running"]
 
     # send cancel signal
     response = requests.delete(f"{TEST_ENDPOINT}/jobs/{jobs[0]}", timeout=3)
 
     # make sure cancel signal is stored successfully
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{jobs[0]}", timeout=3)
-    assert response.json()["properties"]["state"] in ["aborting", "cancelled"]
+    assert response.json()["properties"]["status"] in ["cancelled"]
 
     # see if job is cancelled
     start = time.time()
     while True:
         time.sleep(1)
         response = requests.get(f"{TEST_ENDPOINT}/jobs/{jobs[0]}", timeout=3)
-        state = response.json()["properties"]["state"]
+        status = response.json()["properties"]["status"]
         traceback = response.json()["properties"]["traceback"] or ""
-        if state == "cancelled":
+        if status == "cancelled":
             break
         elif time.time() - start > 120:
             raise RuntimeError(
-                f"job not cancelled in time, last state was '{state}' {traceback}"
+                f"job not cancelled in time, last status was '{status}' {traceback}"
             )
 
     # make sure other job has not failed
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{jobs[1]}", timeout=3)
-    assert response.json()["properties"]["state"] in ["running", "done"]
+    assert response.json()["properties"]["status"] in ["running", "done"]
 
 
 @pytest.mark.skipif(
@@ -435,11 +441,11 @@ def test_job_result(test_process_id, example_config_json):
     while True:
         time.sleep(1)
         response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
-        state = response.json()["properties"]["state"]
-        if state == "done":
+        status = response.json()["properties"]["status"]
+        if status == "done":
             break
         elif time.time() - start > 120:
-            raise RuntimeError(f"job not finished in time, last state was '{state}'")
+            raise RuntimeError(f"job not finished in time, last status was '{status}'")
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}/results")
     assert response.status_code == 200

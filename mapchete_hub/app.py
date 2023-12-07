@@ -108,9 +108,7 @@ send_slack_message(
 
 # dependencies
 def get_backend_db() -> BaseStatusHandler:  # pragma: no cover
-    if "backend_db" in CACHE:
-        logger.debug("found cached backend db object!")
-    else:
+    if "backend_db" not in CACHE:
         logger.debug("no backend db found in cache, creating...")
         if mhub_settings.backend_db == "memory":
             logger.warning(
@@ -120,11 +118,7 @@ def get_backend_db() -> BaseStatusHandler:  # pragma: no cover
     return CACHE["backend_db"]
 
 
-get_backend_db()
-
 # REST endpoints
-
-
 @app.get("/")
 async def root() -> dict:
     return {
@@ -294,6 +288,8 @@ async def cancel_job(
             send_slack_message(
                 f"*{mhub_settings.self_instance_name}: aborting <{job.url}|{job.job_name}>*"
             )
+        # else:
+        #     raise AttributeError(f"job status is {job.status}")
         return backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc

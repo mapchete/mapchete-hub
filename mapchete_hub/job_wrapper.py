@@ -5,6 +5,7 @@ import time
 from mapchete.commands import execute
 from mapchete.commands.observer import Observers
 from mapchete.enums import Status
+from mapchete.errors import JobCancelledError
 from mapchete.path import MPath
 
 from mapchete_hub import __version__
@@ -72,6 +73,7 @@ def job_wrapper(
                 get_dask_executor, job.job_id, job_config.params.get("dask_specs")
             ),
             observers=[db_updater, slack_messenger],
+            cancel_on_exception=JobCancelledError,
             **{
                 k: v
                 for k, v in job_config.params.items()
@@ -88,6 +90,8 @@ def job_wrapper(
                 }
             },
         )
+    except JobCancelledError:
+        pass
     except Exception as exc:
         observers.notify(status=Status.failed, exception=exc)
         logger.exception(exc)

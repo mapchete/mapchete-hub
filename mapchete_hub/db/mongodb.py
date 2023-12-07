@@ -146,33 +146,36 @@ class MongoDBStatusHandler(BaseStatusHandler):
         **kwargs,
     ) -> JobEntry:
         entry = {"job_id": job_id}
-        attributes = dict(
-            exception=exception if exception is None else str(exception),
-            traceback=traceback,
-            dask_dashboard_link=dask_dashboard_link,
-            dask_specs=dask_specs,
-            results=results,
-            **kwargs,
-        )
+        new_attributes = {
+            k: v
+            for k, v in dict(
+                exception=exception if exception is None else str(exception),
+                traceback=traceback,
+                dask_dashboard_link=dask_dashboard_link,
+                dask_specs=dask_specs,
+                results=results,
+                **kwargs,
+            ).items()
+            if v is not None
+        }
         timestamp = datetime.utcnow()
         logger.debug("update timestamp: %s", timestamp)
-        if status is not None:
-            entry.update(status=Status[status])
+        if status:
+            new_attributes.update(status=Status[status])
             if status == Status.done:
-                entry.update(
+                new_attributes.update(
                     runtime=(timestamp - self.job(job_id).started).total_seconds(),
                     finished=timestamp,
                 )
         if progress:
-            attributes.update(
-                current_progress=progress.current,
-            )
+            new_attributes.update(current_progress=progress.current)
             if progress.total is not None:
-                attributes.update(total_progress=progress.total)
-        entry.update(**{k: v for k, v in attributes.items() if v is not None})
+                new_attributes.update(total_progress=progress.total)
+        logger.debug("%s: update attributes: %s", job_id, new_attributes)
+        entry.update(**new_attributes)
         # add timestamp to entry
         entry.update(updated=timestamp)
-        logger.debug("upsert entry: %s", entry)
+
         return JobEntry(
             **self._jobs.find_one_and_update(
                 {"job_id": job_id},

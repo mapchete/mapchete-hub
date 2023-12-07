@@ -63,8 +63,8 @@ class DaskDefaultSpecs(BaseModel):
     worker_threads: int = 2
     worker_environment: dict = Field(default_factory=dict)
     scheduler_cores: int = 1
-    scheduler_cores_limit: int = 1.0
-    scheduler_memory: int = 1.0
+    scheduler_cores_limit: float = 1.0
+    scheduler_memory: float = 1.0
     image: str = (
         f"{mhub_settings.worker_default_image}:{mhub_settings.worker_image_tag}"
     )

@@ -3,6 +3,7 @@ import time
 import traceback
 from typing import Optional
 
+from mapchete.errors import JobCancelledError
 from mapchete.enums import Status
 from mapchete.executor import DaskExecutor
 from mapchete.commands.observer import ObserverProtocol
@@ -38,6 +39,15 @@ class DBUpdater(ObserverProtocol):
         **kwargs,
     ):
         set_kwargs = dict()
+
+        # check always if job was cancelled but respect the rate limit
+        event_time_passed = time.time() - self.last_event
+        if event_time_passed > self.event_rate_limit:
+            current_status = self.backend_db.job(self.job_id).status
+            # if job status was set to cancelled, raise a JobCancelledError
+            if current_status == Status.cancelled:
+                raise JobCancelledError("job was cancelled")
+
         # job status always has to be updated
         if status:
             set_kwargs.update(status=status)
