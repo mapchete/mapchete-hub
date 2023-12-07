@@ -1,9 +1,9 @@
 import logging
 import os
-from typing import Optional, List, Any, Dict
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from datetime import datetime
 from mapchete.enums import Status
 from mapchete.types import Progress
 from shapely import to_wkt
@@ -11,7 +11,7 @@ from shapely.geometry import box, shape
 
 from mapchete_hub.db.base import BaseStatusHandler
 from mapchete_hub.geometry import process_area_from_config
-from mapchete_hub.models import MapcheteJob, JobEntry
+from mapchete_hub.models import JobEntry, MapcheteJob
 from mapchete_hub.random_names import random_name
 from mapchete_hub.settings import mhub_settings
 from mapchete_hub.timetools import str_to_date

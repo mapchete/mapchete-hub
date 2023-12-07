@@ -3,11 +3,11 @@ Models and schemas.
 """
 import datetime
 from enum import Enum
-from typing import Optional, List
+from typing import List, Optional
 
 from mapchete.config import ProcessConfig
 from mapchete.enums import Status
-from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt
+from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 
 from mapchete_hub.settings import DaskDefaultSpecs
 

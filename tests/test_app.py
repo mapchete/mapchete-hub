@@ -1,7 +1,8 @@
 import datetime
 import json
-import pytest
 import time
+
+import pytest
 
 
 def test_get_root(client):

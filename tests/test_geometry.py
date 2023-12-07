@@ -1,5 +1,5 @@
-from mapchete.config.parse import raw_conf_process_pyramid
 import pytest
+from mapchete.config.parse import raw_conf_process_pyramid
 from shapely.geometry import box, mapping, shape
 
 from mapchete_hub import models

@@ -1,8 +1,8 @@
 import os
+
+import pytest
 from dask.distributed import LocalCluster
 from fastapi.testclient import TestClient
-import pytest
-
 from mapchete.io import path_exists
 
 from mapchete_hub.app import app, get_backend_db, get_dask_cluster_setup

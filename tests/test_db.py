@@ -1,9 +1,10 @@
 import datetime
+import time
+
+import pytest
 from mapchete.enums import Status
 from mapchete.types import Progress
-import pytest
 from shapely.geometry import shape
-import time
 
 from mapchete_hub import models
 from mapchete_hub.db import init_backenddb

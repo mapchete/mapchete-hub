@@ -57,9 +57,9 @@ Trigger a job using a given process_id. This returns a job ID.
 """
 
 import logging
-from typing import Optional, Union, List
+from typing import Optional
 
-from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Response
 from mapchete.config.models import DaskSettings
 from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
@@ -67,13 +67,12 @@ from mapchete.processes import process_names_docstrings
 
 from mapchete_hub import __version__
 from mapchete_hub.cluster import get_dask_cluster_setup
+from mapchete_hub.db import BaseStatusHandler, init_backenddb
 from mapchete_hub.job_wrapper import job_wrapper
 from mapchete_hub.models import MapcheteJob
-from mapchete_hub.db import init_backenddb, BaseStatusHandler
-from mapchete_hub.timetools import str_to_date
 from mapchete_hub.settings import DASK_DEFAULT_SPECS, get_dask_specs, mhub_settings
 from mapchete_hub.slack import send_slack_message
-
+from mapchete_hub.timetools import str_to_date
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
 sh = logging.StreamHandler()

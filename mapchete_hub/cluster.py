@@ -1,14 +1,14 @@
+import logging
 from contextlib import contextmanager
 from enum import Enum
-import logging
 from typing import Optional, Union
 
-from dask.distributed import Client, get_client, LocalCluster
+from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import BasicAuth, Gateway, GatewayCluster
 from mapchete.executor import DaskExecutor
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
-from mapchete_hub.settings import update_gateway_cluster_options, mhub_settings
+from mapchete_hub.settings import mhub_settings, update_gateway_cluster_options
 
 logger = logging.getLogger(__name__)
 CACHE = {}
@@ -66,13 +66,10 @@ def get_dask_executor(
     logger.info("requesting dask cluster and dask client...")
     cluster_setup = get_dask_cluster_setup()
     with dask_cluster(cluster_setup, dask_specs=dask_specs) as cluster:
-
         logger.info("job %s cluster: %s", job_id, cluster)
         with dask_client(cluster_setup, cluster=cluster) as client:
-
             logger.info("job %s client: %s", job_id, client)
             with DaskExecutor(dask_client=client) as executor:
-
                 yield executor
 
 
@@ -80,7 +77,6 @@ def get_dask_executor(
 def dask_cluster(
     cluster_setup: ClusterSetup, dask_specs: Optional[dict] = None
 ) -> Union[LocalCluster, GatewayCluster, None]:
-
     dask_specs = dask_specs or {}
 
     if cluster_setup.type == ClusterType.local:
@@ -119,7 +115,6 @@ def dask_cluster(
 def dask_client(
     cluster_setup: ClusterSetup, cluster: Union[LocalCluster, GatewayCluster, None]
 ) -> Client:
-
     if cluster_setup.type == ClusterType.local:
         with Client(cluster, set_as_default=False) as client:
             logger.info("started client %s", client)

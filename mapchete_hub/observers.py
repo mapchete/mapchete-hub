@@ -3,16 +3,15 @@ import time
 import traceback
 from typing import Optional
 
-from mapchete.errors import JobCancelledError
-from mapchete.enums import Status
-from mapchete.executor import DaskExecutor
 from mapchete.commands.observer import ObserverProtocol
+from mapchete.enums import Status
+from mapchete.errors import JobCancelledError
+from mapchete.executor import DaskExecutor
 from mapchete.pretty import pretty_seconds
 from mapchete.types import Progress
 
 from mapchete_hub.db import BaseStatusHandler
 from mapchete_hub.slack import send_slack_message
-
 
 logger = logging.getLogger(__name__)
 

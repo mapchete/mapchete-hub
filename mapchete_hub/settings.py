@@ -11,7 +11,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from mapchete_hub import __version__
 
-
 logger = logging.getLogger(__name__)
 
 

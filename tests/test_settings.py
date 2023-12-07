@@ -1,4 +1,4 @@
-from dask_gateway.options import Options, Integer, Float, String, Mapping
+from dask_gateway.options import Float, Integer, Mapping, Options, String
 
 from mapchete_hub.settings import update_gateway_cluster_options
 

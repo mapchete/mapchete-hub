@@ -1,12 +1,12 @@
 import datetime
 import json
 import os
-import pytest
-import requests
 import time
 
-from mapchete_hub.timetools import str_to_date, date_to_str
+import pytest
+import requests
 
+from mapchete_hub.timetools import date_to_str, str_to_date
 
 TEST_ENDPOINT = os.environ.get("MHUB_HOST", "http://0.0.0.0:5000")
 
