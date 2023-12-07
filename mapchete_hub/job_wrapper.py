@@ -8,36 +8,33 @@ from mapchete.path import MPath
 
 from mapchete_hub import __version__
 from mapchete_hub.cluster import get_dask_executor
-from mapchete_hub.models import MapcheteJob
-from mapchete_hub.db import BackendDB
+from mapchete_hub.models import MapcheteJob, JobEntry
+from mapchete_hub.db import BaseStatusHandler
 from mapchete_hub.observers import DBUpdater, SlackMessenger
 from mapchete_hub.settings import mhub_settings
-from mapchete_hub.slack import send_slack_message
 
 
 logger = logging.getLogger(__name__)
 
 
 def job_wrapper(
-    job_id: str = None,
+    job: JobEntry,
     job_config: MapcheteJob = None,
-    backend_db: BackendDB = None,
+    backend_db: BaseStatusHandler = None,
     dask_cluster_setup: dict = None,
-    job_url: str = None,
-    job_name: str = None,
 ):
     # prepare observers for job:
     db_updater = DBUpdater(
         backend_db=backend_db,
-        job_id=job_id,
+        job_id=job.job_id,
         event_rate_limit=mhub_settings.backend_db_event_rate_limit,
     )
     slack_messenger = SlackMessenger(
-        mhub_settings.self_instance_name, job_url, job_name
+        mhub_settings.self_instance_name, job.url, job.job_name
     )
 
     try:
-        logger.info("start fastAPI background task with job %s", job_id)
+        logger.info("start fastAPI background task with job %s", job.job_id)
 
         mapchete_config = job_config.config
 
@@ -71,7 +68,7 @@ def job_wrapper(
             mapchete_config.model_dump(),
             retries=mhub_settings.cancellederror_tries,
             executor_getter=partial(
-                get_dask_executor, job_id, job_config.params.get("dask_specs")
+                get_dask_executor, job.job_id, job_config.params.get("dask_specs")
             ),
             observers=[db_updater, slack_messenger],
             **{
@@ -82,4 +79,4 @@ def job_wrapper(
         )
 
     finally:
-        logger.info("end fastAPI background task with job %s", job_id)
+        logger.info("end fastAPI background task with job %s", job.job_id)

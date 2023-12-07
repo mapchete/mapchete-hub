@@ -3,22 +3,13 @@ Models and schemas.
 """
 import datetime
 from enum import Enum
-from typing import Optional, Union
+from typing import Optional, List
 
 from mapchete.config import ProcessConfig
-from pydantic import BaseModel, Field
+from mapchete.enums import Status
+from pydantic import BaseModel, Field, ConfigDict, NonNegativeInt
 
-
-# TODO: take from core package
-class State(str, Enum):
-    pending = "pending"
-    created = "created"
-    initializing = "initializing"
-    running = "running"
-    aborting = "aborting"
-    cancelled = "cancelled"
-    failed = "failed"
-    done = "done"
+from mapchete_hub.settings import DaskDefaultSpecs
 
 
 class MapcheteCommand(str, Enum):
@@ -50,27 +41,38 @@ class MapcheteJob(BaseModel):
     )
 
 
-# TODO: take from core package
-class Progress(BaseModel):
-    current: int
-    total: int
-
-
 class GeoJSON(BaseModel):
     type: str = "Feature"
-    id: str = None
-    geometry: dict = None
-    bounds: list = None
+    id: str
+    geometry: dict
+    bounds: List[float] = None
     area: str = None
-    properties: dict = None
+    properties: dict = Field(default_factory=dict)
+
+    @property
+    def __geo_interface__(self):
+        return self.geometry
+
+    def to_dict(self) -> dict:
+        return {
+            "type": self.type,
+            "id": self.id,
+            "geometry": self.geometry,
+            "bounds": self.bounds,
+            "area": self.area,
+            "properties": self.properties,
+        }
 
 
 class JobEntry(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True, validate_assignment=True)
+
     job_id: str
     url: str
-    state: State
+    state: Optional[str] = None  # this is deprecated
+    status: Status
     geometry: dict
-    bounds: list
+    bounds: List[float]
     mapchete: MapcheteJob
     area: Optional[str] = None
     exception: Optional[str] = None
@@ -79,13 +81,38 @@ class JobEntry(BaseModel):
     result: Optional[dict] = None
     previous_job_id: Optional[str] = None
     next_job_id: Optional[str] = None
-    progress: Optional[Progress] = None
+    current_progress: Optional[NonNegativeInt] = None
+    total_progress: Optional[NonNegativeInt] = None
     started: Optional[datetime.datetime] = None
     finished: Optional[datetime.datetime] = None
     updated: Optional[datetime.datetime] = None
     runtime: Optional[float] = None
-    dask_specs: Union[dict, str, None] = None
+    dask_specs: DaskDefaultSpecs = DaskDefaultSpecs()
     command: Optional[MapcheteCommand] = MapcheteCommand.execute
     job_name: Optional[str] = None
     dask_dashboard_link: Optional[str] = None
     dask_scheduler_logs: Optional[list] = None
+
+    def update(self, **new_data):
+        for field, value in new_data.items():
+            setattr(self, field, value)
+
+    def to_geojson(self) -> GeoJSON:
+        return GeoJSON(
+            type="Feature",
+            id=self.job_id,
+            geometry=self.geometry,
+            bounds=self.bounds,
+            properties={
+                k: v
+                for k, v in self.model_dump().items()
+                if k not in ["job_id", "geometry", "id", "_id", "bounds"]
+            },
+        )
+
+    def to_geojson_dict(self) -> dict:
+        return self.to_geojson().to_dict()
+
+    @property
+    def __geo_interface__(self):
+        return self.geometry

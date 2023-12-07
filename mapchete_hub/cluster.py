@@ -60,12 +60,15 @@ def get_dask_cluster_setup() -> ClusterSetup:
 
 
 @contextmanager
-def get_dask_executor(job_id: str, dask_specs: Optional[dict] = None) -> DaskExecutor:
+def get_dask_executor(
+    job_id: str, dask_specs: Optional[dict] = None, **kwargs
+) -> DaskExecutor:
     logger.info("requesting dask cluster and dask client...")
-    with dask_cluster(get_dask_cluster_setup(), dask_specs=dask_specs) as cluster:
+    cluster_setup = get_dask_cluster_setup()
+    with dask_cluster(cluster_setup, dask_specs=dask_specs) as cluster:
 
         logger.info("job %s cluster: %s", job_id, cluster)
-        with dask_client(cluster=cluster) as client:
+        with dask_client(cluster_setup, cluster=cluster) as client:
 
             logger.info("job %s client: %s", job_id, client)
             with DaskExecutor(dask_client=client) as executor:

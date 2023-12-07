@@ -4,25 +4,22 @@ Abstraction classes for database.
 
 from abc import ABC, abstractmethod
 import logging
-import os
-from typing import Optional
+from typing import Optional, List
 
 from mapchete.enums import Status
+from mapchete.types import Progress
 from pydantic import NonNegativeInt
-from shapely.geometry import shape
 
-from mapchete_hub.models import MapcheteJob
+from mapchete_hub.models import MapcheteJob, JobEntry
 
 logger = logging.getLogger(__name__)
-
-MHUB_SELF_URL = os.environ.get("MHUB_SELF_URL", "/")
 
 
 class BaseStatusHandler(ABC):
     """Base functions for status handler."""
 
     @abstractmethod
-    def jobs(self, **kwargs):
+    def jobs(self, **kwargs) -> List[JobEntry]:
         """
         Return jobs as list of GeoJSON features.
 
@@ -30,8 +27,8 @@ class BaseStatusHandler(ABC):
         ----------
         output_path : str
             Filter by output path.
-        state : str
-            Filter by job state.
+        status : str
+            Filter by job status.
         command : str
             Filter by mapchete Hub command.
         job_name : str
@@ -49,7 +46,7 @@ class BaseStatusHandler(ABC):
         """
 
     @abstractmethod
-    def job(self, job_id):
+    def job(self, job_id) -> JobEntry:
         """
         Return job as GeoJSON feature.
 
@@ -64,7 +61,7 @@ class BaseStatusHandler(ABC):
         """
 
     @abstractmethod
-    def new(self, job_config: MapcheteJob):
+    def new(self, job_config: MapcheteJob) -> JobEntry:
         """
         Create new job entry in database.
         """
@@ -73,32 +70,18 @@ class BaseStatusHandler(ABC):
     def set(
         self,
         job_id: str,
-        state: Optional[Status] = None,
-        current_progress: Optional[NonNegativeInt] = None,
-        total_progress: Optional[NonNegativeInt] = None,
+        status: Optional[Status] = None,
+        progress: Optional[Progress] = None,
         exception: Optional[str] = None,
         traceback: Optional[str] = None,
         dask_dashboard_link: Optional[str] = None,
         dask_specs: Optional[dict] = None,
         results: Optional[str] = None,
         **kwargs,
-    ):
+    ) -> JobEntry:
         """
         Set job metadata.
         """
-
-    def _entry_to_geojson(self, entry: dict) -> dict:
-        return {
-            "type": "Feature",
-            "id": str(entry["job_id"]),
-            "geometry": entry["geometry"],
-            "bounds": entry.get("bounds", shape(entry["geometry"]).bounds),
-            "properties": {
-                k: entry.get(k)
-                for k in entry.keys()
-                if k not in ["job_id", "geometry", "id", "_id", "bounds"]
-            },
-        }
 
     def __enter__(self):
         """Enter context."""

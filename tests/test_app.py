@@ -63,9 +63,9 @@ def test_post_job(client, test_process_id, example_config_json):
     response = client.get(f"/jobs/{job_id}")
     all_jobs = client.get("/jobs/").json()
     assert len(all_jobs["features"]) == 1
-    jobs_state_list_done = client.get("/jobs/?state=done,created").json()
+    jobs_state_list_done = client.get("/jobs/?state=done,parsing").json()
     assert len(jobs_state_list_done["features"]) == 1
-    jobs_state_list_created = client.get("/jobs/?state=created").json()
+    jobs_state_list_created = client.get("/jobs/?state=parsing").json()
     assert len(jobs_state_list_created["features"]) == 0
 
     assert response.status_code == 200
@@ -158,13 +158,16 @@ def test_list_jobs_bounds(client, test_process_id, example_config_json):
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"bounds": "0,1,2,3"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = client.get("/jobs", params={"bounds": "10,1,12,3"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
@@ -181,11 +184,13 @@ def test_list_jobs_area(client, test_process_id, example_config_json_area):
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     response = client.get(
         "/jobs", params={"area": "Polygon ((0 1, 2 1, 2 3, 0 3, 0 1))"}
     )
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
@@ -208,6 +213,7 @@ def test_list_jobs_area_file(
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"area": test_area_fgb})
@@ -215,6 +221,7 @@ def test_list_jobs_area_file(
     assert job_id in jobs
 
     response = client.get("/jobs", params={"bounds": "10,1,12,3"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
@@ -233,13 +240,16 @@ def test_list_jobs_bounds_area_file(
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"area": test_area_fgb, "bounds": "0,1,2,3"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = client.get("/jobs", params={"bounds": "10,1,12,3"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
@@ -255,15 +265,18 @@ def test_list_jobs_output_path(client, test_process_id, example_config_json):
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     response = client.get(
         "/jobs", params={"output_path": example_config_json["config"]["output"]["path"]}
     )
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = client.get("/jobs", params={"output_path": "foo"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
@@ -279,13 +292,16 @@ def test_list_jobs_state(client, test_process_id, example_config_json):
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"state": "done"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = client.get("/jobs", params={"state": "cancelled"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
@@ -302,13 +318,16 @@ def test_list_jobs_job_name(client, test_process_id, example_config_json):
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     response = client.get("/jobs", params={"job_name": "foo"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
     response = client.get("/jobs", params={"job_name": "bar"})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
@@ -325,10 +344,12 @@ def test_list_jobs_from_date(client, test_process_id, example_config_json):
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     now = datetime.datetime.utcfromtimestamp(time.time()).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.get("/jobs", params={"from_date": now})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
@@ -336,6 +357,7 @@ def test_list_jobs_from_date(client, test_process_id, example_config_json):
         "%Y-%m-%dT%H:%M:%SZ"
     )
     response = client.get("/jobs", params={"from_date": future})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
@@ -352,12 +374,14 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     now = datetime.datetime.utcfromtimestamp(time.time() + 60).strftime(
         "%Y-%m-%dT%H:%M:%SZ"
     )
     response = client.get("/jobs", params={"to_date": now})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
@@ -365,6 +389,7 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
         "%Y-%m-%dT%H:%M:%SZ"
     )
     response = client.get("/jobs", params={"to_date": past})
+    assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
 
@@ -380,10 +405,12 @@ def test_send_cancel_signal(client, test_process_id, example_config_json):
             )
         ),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     # send cancel signal
     response = client.delete(f"/jobs/{job_id}")
+    assert response.status_code == 200
 
 
 def test_job_result(client, test_process_id, example_config_json):

@@ -8,8 +8,7 @@ import os
 import uvicorn
 
 from mapchete_hub import __version__
-from mapchete_hub.app import app, get_backend_db, get_dask_cluster_setup
-from mapchete_hub.db import BackendDB
+from mapchete_hub.app import app
 
 
 @click.version_option(version=__version__, message="%(version)s")

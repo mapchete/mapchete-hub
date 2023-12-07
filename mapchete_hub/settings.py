@@ -50,9 +50,9 @@ mhub_settings: MHubSettings = MHubSettings()
 
 
 class DaskAdaptOptions(BaseModel):
-    minimum: int = MHubSettings().dask_min_workers
-    maximum: int = MHubSettings().dask_max_workers
-    active: bool = MHubSettings().dask_adaptive_scaling
+    minimum: int = mhub_settings.dask_min_workers
+    maximum: int = mhub_settings.dask_max_workers
+    active: bool = mhub_settings.dask_adaptive_scaling
 
 
 class DaskDefaultSpecs(BaseModel):
@@ -66,7 +66,7 @@ class DaskDefaultSpecs(BaseModel):
     scheduler_cores_limit: int = 1.0
     scheduler_memory: int = 1.0
     image: str = (
-        f"{MHubSettings().worker_default_image}:{MHubSettings().worker_image_tag}"
+        f"{mhub_settings.worker_default_image}:{mhub_settings.worker_image_tag}"
     )
     adapt_options: DaskAdaptOptions = DaskAdaptOptions()
 

@@ -14,8 +14,8 @@ GET /jobs
 Return submitted jobs. Jobs can be filtered by using the following parameters:
     output_path : str
         Filter by output path.
-    state : str
-        Filter by job state.
+    status : str
+        Filter by job status.
     command : str
         Filter by mapchete command.
     job_name : str
@@ -57,17 +57,18 @@ Trigger a job using a given process_id. This returns a job ID.
 """
 
 import logging
-from typing import Optional
+from typing import Optional, Union, List
 
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
+from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings
 
 from mapchete_hub import __version__
 from mapchete_hub.cluster import get_dask_cluster_setup
 from mapchete_hub.job_wrapper import job_wrapper
-from mapchete_hub.models import MapcheteJob, State
-from mapchete_hub.db import BackendDB
+from mapchete_hub.models import MapcheteJob
+from mapchete_hub.db import init_backenddb, BaseStatusHandler
 from mapchete_hub.timetools import str_to_date
 from mapchete_hub.settings import DASK_DEFAULT_SPECS, get_dask_specs, mhub_settings
 from mapchete_hub.slack import send_slack_message
@@ -105,14 +106,14 @@ send_slack_message(
 
 
 # dependencies
-def get_backend_db() -> BackendDB:  # pragma: no cover
+def backend_db() -> BaseStatusHandler:  # pragma: no cover
     if "backenddb" not in CACHE:
         if mhub_settings.backend_db == "memory":
             logger.warning(
                 "MHUB_MONGODB_URL not provided; using in-memory metadata store"
             )
         logger.debug("use status db: %s", mhub_settings.backend_db)
-        CACHE["backendb"] = BackendDB(src=mhub_settings.backend_db)
+        CACHE["backendb"] = init_backenddb(src=mhub_settings.backend_db)
     return CACHE["backendb"]
 
 
@@ -178,7 +179,7 @@ async def post_job(
     process_id: str,
     job_config: MapcheteJob,
     background_tasks: BackgroundTasks,
-    backend_db: BackendDB = Depends(get_backend_db),
+    backend_db: BaseStatusHandler = Depends(backend_db),
     dask_cluster_setup: dict = Depends(get_dask_cluster_setup),
     response: Response = None,
 ) -> dict:
@@ -191,31 +192,28 @@ async def post_job(
 
         # create new entry in database
         job = backend_db.new(job_config=job_config)
-        backend_db.set(job["id"], state="created")
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper,
-            job["id"],
+            job,
             job_config,
             backend_db,
             dask_cluster_setup,
-            job["properties"]["url"],
-            job["properties"]["job_name"],
         )
-        response.headers["Location"] = f"/jobs/{job['id']}"
+        response.headers["Location"] = f"/jobs/{job.job_id}"
 
         # return job
-        job = backend_db.job(job["id"])
+        job = backend_db.job(job.job_id)
         logger.debug("submitted job %s", job)
 
-        running = len(backend_db.jobs(state="running"))
+        running = len(backend_db.jobs(status=Status.running))
         logger.debug("currently running %s jobs", running)
 
         # send message to Slack
         send_slack_message(
-            f"*{mhub_settings.self_instance_name}: job '<{job['properties']['url']}|{job['properties']['job_name']}>' with ID {job['id']} submitted ({running} running)*\n"
+            f"*{mhub_settings.self_instance_name}: job '<{job.url}|{job.job_name}>' with ID {job.job_id} submitted ({running} running)*\n"
         )
-        return job
+        return job.to_geojson_dict()
     except Exception as exc:  # pragma: no cover
         logger.exception(exc)
         raise HTTPException(400, str(exc)) from exc
@@ -224,69 +222,73 @@ async def post_job(
 @app.get("/jobs")
 async def list_jobs(
     output_path: Optional[str] = None,
-    state: Optional[str] = None,
+    status: Optional[Union[Status, List[Status], str]] = None,
     command: Optional[str] = None,
     job_name: Optional[str] = None,
     bounds: Optional[str] = None,  # Field(None, example="0.0,1.0,2.0,3.0"),
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
-    backend_db: BackendDB = Depends(get_backend_db),
+    backend_db: BaseStatusHandler = Depends(backend_db),
 ) -> dict:
     """Returns the running and finished jobs for a process."""
     bounds = tuple(map(float, bounds.split(","))) if bounds else None
     from_date = str_to_date(from_date) if from_date else None
     to_date = str_to_date(to_date) if to_date else None
     try:
-        if state is not None and "," in state:
-            state = state.split(",")
-        states = state if isinstance(state, list) else [state] if state else None
-        states = [State[state] for state in states] if states else None
+        if status is not None and "," in status:
+            status = status.split(",")
+        status = status if isinstance(status, list) else [status] if status else None
+        status = [Status[status] for status in status] if status else None
     except KeyError as exc:
-        raise HTTPException(400, f"invalid state: {state}") from exc
+        raise HTTPException(400, f"invalid status: {status}") from exc
 
     kwargs = {
         "output_path": output_path,
-        "state": states,
+        "status": status,
         "command": command,
         "job_name": job_name,
         "bounds": bounds,
         "from_date": from_date,
         "to_date": to_date,
     }
-    return {"type": "FeatureCollection", "features": backend_db.jobs(**kwargs)}
+    return {
+        "type": "FeatureCollection",
+        "features": [job.to_geojson_dict() for job in backend_db.jobs(**kwargs)],
+    }
 
 
 @app.get("/jobs/{job_id}")
-async def get_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
+async def get_job(job_id: str, backend_db: BaseStatusHandler = Depends(backend_db)):
     """Returns the status of a job."""
     try:
-        return backend_db.job(job_id)
+        return backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
 
 
 @app.delete("/jobs/{job_id}")
-async def cancel_job(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
+async def cancel_job(job_id: str, backend_db: BaseStatusHandler = Depends(backend_db)):
     """Cancel a job execution."""
     try:
         job = backend_db.job(job_id)
-        if job["properties"]["state"] in [
-            "pending",
-            "created",
-            "initializing",
-            "running",
+        if job.status in [
+            Status.parsing,
+            Status.initializing,
+            Status.running,
         ]:  # pragma: no cover
-            backend_db.set(job_id, state="aborting")
+            backend_db.set(job_id, status=Status.cancelled)
             send_slack_message(
                 f"*{mhub_settings.self_instance_name}: aborting <{job['properties']['url']}|{job['properties']['job_name']}>*"
             )
-        return backend_db.job(job_id)
+        return backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
 
 
 @app.get("/jobs/{job_id}/results")
-async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backend_db)):
+async def get_job_results(
+    job_id: str, backend_db: BaseStatusHandler = Depends(backend_db)
+):
     """
     Return the results of a job.
 
@@ -321,18 +323,17 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
 
-    if job["properties"]["state"] == "done":
-        return job["properties"]["results"]
+    if job.status == Status.done:
+        return job.result
 
-    elif job["properties"]["state"] in [
-        "pending",
-        "created",
-        "initializing",
-        "running",
+    elif job.status in [
+        Status.parsing,
+        Status.initializing,
+        Status.running,
     ]:  # pragma: no cover
         raise HTTPException(404, f"job {job_id} does not yet have a result")
 
-    elif job["properties"]["state"] in ["aborting", "cancelled"]:  # pragma: no cover
+    elif job.status == Status.cancelled:  # pragma: no cover
         raise HTTPException(
             400,
             {
@@ -343,15 +344,15 @@ async def get_job_results(job_id: str, backend_db: BackendDB = Depends(get_backe
             },
         )
 
-    elif job["properties"]["state"] == "failed":
+    elif job.status == Status.failed:
         raise HTTPException(
             400,
             {
                 "properties": {
-                    "type": job["properties"]["exception"],
-                    "detail": job["properties"]["traceback"],
+                    "type": job.exception,
+                    "detail": job.traceback,
                 }
             },
         )
     else:  # pragma: no cover
-        raise ValueError("invalid job state")
+        raise ValueError(f"invalid job status: {job.status}")

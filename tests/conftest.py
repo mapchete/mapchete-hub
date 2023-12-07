@@ -5,12 +5,12 @@ import pytest
 
 from mapchete.io import path_exists
 
-from mapchete_hub.app import app, get_backend_db, get_dask_cluster_setup
-from mapchete_hub.db import BackendDB
+from mapchete_hub.app import app, backend_db, get_dask_cluster_setup
+from mapchete_hub.db import init_backenddb
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-_fake_backend_db = BackendDB("memory")
+_fake_backend_db = init_backenddb("memory")
 _dask_cluster = LocalCluster()
 
 
@@ -22,7 +22,7 @@ def local_dask_cluster():
     return {"flavor": "local_cluster", "cluster": _dask_cluster}
 
 
-app.dependency_overrides[get_backend_db] = fake_backend_db
+app.dependency_overrides[backend_db] = fake_backend_db
 app.dependency_overrides[get_dask_cluster_setup] = local_dask_cluster
 
 
