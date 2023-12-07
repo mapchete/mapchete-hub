@@ -109,7 +109,11 @@ def update_gateway_cluster_options(
     dask_specs = DaskDefaultSpecs(**custom_dask_specs)
 
     options.update(
-        {k: v for k, v in dask_specs.model_dump().items() if k not in ["adapt_options"]}
+        {
+            k: v
+            for k, v in dask_specs.model_dump().items()
+            if k not in ["adapt_options", "worker_environment"]
+        }
     )
 
     # get selected env variables from mhub and pass it on to the dask scheduler and workers

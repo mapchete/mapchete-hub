@@ -60,6 +60,7 @@ import logging
 from typing import Optional, Union, List
 
 from fastapi import Depends, FastAPI, BackgroundTasks, HTTPException, Response
+from mapchete.config.models import DaskSettings
 from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings
@@ -97,7 +98,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-CACHE = {}
+CACHE = dict()
 
 # mhub online message
 send_slack_message(
@@ -106,16 +107,20 @@ send_slack_message(
 
 
 # dependencies
-def backend_db() -> BaseStatusHandler:  # pragma: no cover
-    if "backenddb" not in CACHE:
+def get_backend_db() -> BaseStatusHandler:  # pragma: no cover
+    if "backend_db" in CACHE:
+        logger.debug("found cached backend db object!")
+    else:
+        logger.debug("no backend db found in cache, creating...")
         if mhub_settings.backend_db == "memory":
             logger.warning(
                 "MHUB_MONGODB_URL not provided; using in-memory metadata store"
             )
-        logger.debug("use status db: %s", mhub_settings.backend_db)
-        CACHE["backendb"] = init_backenddb(src=mhub_settings.backend_db)
-    return CACHE["backendb"]
+        CACHE["backend_db"] = init_backenddb(src=mhub_settings.backend_db)
+    return CACHE["backend_db"]
 
+
+get_backend_db()
 
 # REST endpoints
 
@@ -179,15 +184,20 @@ async def post_job(
     process_id: str,
     job_config: MapcheteJob,
     background_tasks: BackgroundTasks,
-    backend_db: BaseStatusHandler = Depends(backend_db),
+    backend_db: BaseStatusHandler = Depends(get_backend_db),
     dask_cluster_setup: dict = Depends(get_dask_cluster_setup),
     response: Response = None,
 ) -> dict:
     """Executes a process, i.e. creates a new job."""
     try:
-        # get dask specs and extract to dictionary
+        # get dask specs and settings
         job_config.params["dask_specs"] = get_dask_specs(
             job_config.params.get("dask_specs", "default")
+        )
+        job_config.params["dask_settings"] = DaskSettings(
+            **job_config.params.pop("dask_settings")
+            if "dask_settings" in job_config.params
+            else {}
         )
 
         # create new entry in database
@@ -222,18 +232,19 @@ async def post_job(
 @app.get("/jobs")
 async def list_jobs(
     output_path: Optional[str] = None,
-    status: Optional[Union[Status, List[Status], str]] = None,
+    status: Optional[str] = None,
     command: Optional[str] = None,
     job_name: Optional[str] = None,
     bounds: Optional[str] = None,  # Field(None, example="0.0,1.0,2.0,3.0"),
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
-    backend_db: BaseStatusHandler = Depends(backend_db),
+    backend_db: BaseStatusHandler = Depends(get_backend_db),
 ) -> dict:
     """Returns the running and finished jobs for a process."""
     bounds = tuple(map(float, bounds.split(","))) if bounds else None
     from_date = str_to_date(from_date) if from_date else None
     to_date = str_to_date(to_date) if to_date else None
+    logger.debug(status)
     try:
         if status is not None and "," in status:
             status = status.split(",")
@@ -251,6 +262,7 @@ async def list_jobs(
         "from_date": from_date,
         "to_date": to_date,
     }
+    logger.debug("job filter kwargs: %s", kwargs)
     return {
         "type": "FeatureCollection",
         "features": [job.to_geojson_dict() for job in backend_db.jobs(**kwargs)],
@@ -258,7 +270,7 @@ async def list_jobs(
 
 
 @app.get("/jobs/{job_id}")
-async def get_job(job_id: str, backend_db: BaseStatusHandler = Depends(backend_db)):
+async def get_job(job_id: str, backend_db: BaseStatusHandler = Depends(get_backend_db)):
     """Returns the status of a job."""
     try:
         return backend_db.job(job_id).to_geojson_dict()
@@ -267,7 +279,9 @@ async def get_job(job_id: str, backend_db: BaseStatusHandler = Depends(backend_d
 
 
 @app.delete("/jobs/{job_id}")
-async def cancel_job(job_id: str, backend_db: BaseStatusHandler = Depends(backend_db)):
+async def cancel_job(
+    job_id: str, backend_db: BaseStatusHandler = Depends(get_backend_db)
+):
     """Cancel a job execution."""
     try:
         job = backend_db.job(job_id)
@@ -278,7 +292,7 @@ async def cancel_job(job_id: str, backend_db: BaseStatusHandler = Depends(backen
         ]:  # pragma: no cover
             backend_db.set(job_id, status=Status.cancelled)
             send_slack_message(
-                f"*{mhub_settings.self_instance_name}: aborting <{job['properties']['url']}|{job['properties']['job_name']}>*"
+                f"*{mhub_settings.self_instance_name}: aborting <{job.url}|{job.job_name}>*"
             )
         return backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
@@ -287,7 +301,7 @@ async def cancel_job(job_id: str, backend_db: BaseStatusHandler = Depends(backen
 
 @app.get("/jobs/{job_id}/results")
 async def get_job_results(
-    job_id: str, backend_db: BaseStatusHandler = Depends(backend_db)
+    job_id: str, backend_db: BaseStatusHandler = Depends(get_backend_db)
 ):
     """
     Return the results of a job.
@@ -322,7 +336,6 @@ async def get_job_results(
         job = backend_db.job(job_id)
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
-
     if job.status == Status.done:
         return job.result
 

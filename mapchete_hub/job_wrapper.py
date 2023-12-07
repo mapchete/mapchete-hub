@@ -3,6 +3,7 @@ import logging
 import time
 
 from mapchete.commands import execute
+from mapchete.commands.observer import Observers
 from mapchete.enums import Status
 from mapchete.path import MPath
 
@@ -32,7 +33,7 @@ def job_wrapper(
     slack_messenger = SlackMessenger(
         mhub_settings.self_instance_name, job.url, job.job_name
     )
-
+    observers = Observers([db_updater, slack_messenger])
     try:
         logger.info("start fastAPI background task with job %s", job.job_id)
 
@@ -78,5 +79,17 @@ def job_wrapper(
             },
         )
 
+        # NOTE: this is not ideal, as we have to get the STACTA path from the output
+        db_updater.set(
+            result={
+                "imagesOutput": {
+                    "href": mapchete_config.output["path"],
+                    "type": "application/json",
+                }
+            },
+        )
+    except Exception as exc:
+        observers.notify(status=Status.failed, exception=exc)
+        logger.exception(exc)
     finally:
         logger.info("end fastAPI background task with job %s", job.job_id)

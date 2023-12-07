@@ -4,6 +4,7 @@ import traceback
 from typing import Optional
 
 from mapchete.enums import Status
+from mapchete.executor import DaskExecutor
 from mapchete.commands.observer import ObserverProtocol
 from mapchete.pretty import pretty_seconds
 from mapchete.types import Progress
@@ -32,6 +33,8 @@ class DBUpdater(ObserverProtocol):
         *args,
         status: Optional[Status] = None,
         progress: Optional[Progress] = None,
+        executor: Optional[DaskExecutor] = None,
+        exception: Optional[Exception] = None,
         **kwargs,
     ):
         set_kwargs = dict()
@@ -49,14 +52,28 @@ class DBUpdater(ObserverProtocol):
             ):
                 logger.debug(
                     "DB update: job %s progress changed to %s/%s",
+                    self.job_id,
                     progress.current,
                     progress.total,
                 )
                 set_kwargs.update(progress=progress)
                 self.last_event = time.time()
 
+        if executor:
+            set_kwargs.update(dask_dashboard_link=executor._executor.dashboard_link)
+
+        if exception:
+            set_kwargs.update(
+                exception=exception,
+                traceback="\n".join(traceback.format_tb(exception.__traceback__)),
+            )
+
         if set_kwargs:
-            self.backend_db.set(self.job_id, **set_kwargs)
+            self.set(**set_kwargs)
+
+    def set(self, **kwargs):
+        if kwargs:
+            self.backend_db.set(self.job_id, **kwargs)
 
 
 class SlackMessenger(ObserverProtocol):

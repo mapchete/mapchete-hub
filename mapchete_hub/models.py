@@ -78,7 +78,7 @@ class JobEntry(BaseModel):
     exception: Optional[str] = None
     traceback: Optional[str] = None
     output_path: Optional[str] = None
-    result: Optional[dict] = None
+    result: dict = Field(default_factory=dict)
     previous_job_id: Optional[str] = None
     next_job_id: Optional[str] = None
     current_progress: Optional[NonNegativeInt] = None

@@ -76,4 +76,5 @@ def start(
         port=port,
         log_level=log_level.lower(),
         log_config=log_config,
+        workers=1,
     )

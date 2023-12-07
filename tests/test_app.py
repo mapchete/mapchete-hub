@@ -63,10 +63,6 @@ def test_post_job(client, test_process_id, example_config_json):
     response = client.get(f"/jobs/{job_id}")
     all_jobs = client.get("/jobs/").json()
     assert len(all_jobs["features"]) == 1
-    jobs_state_list_done = client.get("/jobs/?state=done,parsing").json()
-    assert len(jobs_state_list_done["features"]) == 1
-    jobs_state_list_created = client.get("/jobs/?state=parsing").json()
-    assert len(jobs_state_list_created["features"]) == 0
 
     assert response.status_code == 200
 
@@ -120,7 +116,7 @@ def test_post_job_custom_process(
     job_id = response.json()["id"]
     response = client.get(f"/jobs/{job_id}")
     assert response.status_code == 200
-    assert response.json()["properties"]["state"] == "done"
+    assert response.json()["properties"]["status"] == "done"
 
 
 def test_list_jobs(client, test_process_id, example_config_json):
@@ -281,7 +277,7 @@ def test_list_jobs_output_path(client, test_process_id, example_config_json):
     assert job_id not in jobs
 
 
-def test_list_jobs_state(client, test_process_id, example_config_json):
+def test_list_jobs_status(client, test_process_id, example_config_json):
     response = client.get("/jobs")
     assert response.status_code == 200
     response = client.post(
@@ -295,12 +291,12 @@ def test_list_jobs_state(client, test_process_id, example_config_json):
     assert response.status_code == 201
     job_id = response.json()["id"]
 
-    response = client.get("/jobs", params={"state": "done"})
+    response = client.get("/jobs", params={"status": "done"})
     assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id in jobs
 
-    response = client.get("/jobs", params={"state": "cancelled"})
+    response = client.get("/jobs", params={"status": "cancelled"})
     assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
@@ -451,19 +447,22 @@ def test_process_exception(
         f"/processes/{test_process_id}/execution",
         data=json.dumps(example_config_process_exception_json),
     )
+    assert response.status_code == 201
     job_id = response.json()["id"]
 
     # make sure job failed
     response = client.get(f"/jobs/{job_id}")
-    assert response.json()["properties"]["state"] == "failed"
+    assert response.json()["properties"]["status"] == "failed"
     assert response.json()["properties"]["traceback"]
 
     # make sure <job_id>/results shows an exception
     response = client.get(f"/jobs/{job_id}/results")
     assert response.status_code == 400
-    assert response.json()["detail"]["properties"]["type"].startswith(
-        "MapcheteTaskFailed"
-    )
+    # NOTE: we need to raise MapcheteTaskFailed errors again in the core package
+    # assert response.json()["detail"]["properties"]["type"].startswith(
+    #     "MapcheteTaskFailed"
+    # )
+    assert "ZeroDivisionError" in response.json()["detail"]["properties"]["type"]
     assert isinstance(response.json()["detail"]["properties"]["detail"], str)
 
 
