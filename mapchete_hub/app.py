@@ -287,8 +287,6 @@ async def cancel_job(
             send_slack_message(
                 f"*{mhub_settings.self_instance_name}: aborting <{job.url}|{job.job_name}>*"
             )
-        # else:
-        #     raise AttributeError(f"job status is {job.status}")
         return backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
