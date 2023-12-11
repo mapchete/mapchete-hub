@@ -90,7 +90,7 @@ class MongoDBStatusHandler(BaseStatusHandler):
         jobs = []
         for entry in self._jobs.find(query):
             try:
-                jobs.append(JobEntry(**{entry}))
+                jobs.append(JobEntry(**entry))
             except Exception as exc:  # pragma: no cover
                 logger.exception("cannot create JobEntry from entry: %s", exc)
         return jobs
