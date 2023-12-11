@@ -2,11 +2,28 @@
 Changelog
 #########
 
-2023.12.0 - TBD
+2023.12.0 - 2023-12-11
 ----------------------
 * packaging
     * bump ``dask`` to ``2023.12.0``
     * bump ``distributed`` to ``2023.12.0``
+    * bump ``mapchete`` to ``2023.12.1``
+    * bump ``mapchete_eo`` to ``2023.12.0``
+    * clean up unused dependencies in ``pyproject.toml``
+
+* CI
+    * use base image ``2023.12.1``
+    * add ``isort`` to pre-commit
+
+* core 
+    * `settings`: use `pydantic_settings` to collect mhub configuration from environment and defaults
+    * use job states from `mapchete.enums.Status`
+    * use completely refactored `mapchete.commands.execute` function with now integrated retries & observer classes in newly created `job_wrapper` module
+    * use observer classes (in `observers` module) to update status DB and send Slack messages
+    * create `db` submodule for mongo DB and memory status handlers
+    * define `models.JobEntry` model to ship around job metadata in from status handlers
+    * extract some functionality from `app` to `job_wrapper` and `cluster` modules
+
 
 2023.11.0 - 2023-11-28
 ----------------------
