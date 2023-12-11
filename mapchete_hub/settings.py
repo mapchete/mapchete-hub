@@ -102,10 +102,9 @@ def get_dask_specs(specs: Union[str, dict]) -> DaskDefaultSpecs:
 
 
 def update_gateway_cluster_options(
-    options: Options, custom_dask_specs: Optional[dict] = None
+    options: Options, dask_specs: Optional[dict] = None
 ) -> Options:
-    custom_dask_specs = custom_dask_specs or {}
-    dask_specs = DaskDefaultSpecs(**custom_dask_specs)
+    dask_specs = DaskDefaultSpecs(**dask_specs or {})
 
     options.update(
         {
