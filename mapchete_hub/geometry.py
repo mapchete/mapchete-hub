@@ -2,7 +2,7 @@
 Geometry functions.
 """
 from mapchete.config.parse import get_zoom_levels
-from mapchete.io.vector import reproject_geometry, fiona_open
+from mapchete.io.vector import fiona_open, reproject_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
 from rasterio.crs import CRS

@@ -8,12 +8,11 @@ distributed==2023.12.0
 fastapi==0.104.1
 httpx
 lz4
-mapchete==2023.11.0
-mapchete_eo==2023.11.0
+mapchete==2023.12.1
+mapchete_eo==2023.12.0
 mapchete_xarray==2022.10.0
 mongomock
 orgonite==2023.10.0
-#planet-signals-generation>=2022.10.3
 prometheus-client
 pydantic>=2.0.0
 pymongo

@@ -1,15 +1,15 @@
 """Mapchete command line tool with subcommands."""
 
+import os
+
 import click
+import mongomock.database
+import uvicorn
 from dask.distributed import LocalCluster
 from mapchete.log import all_mapchete_packages
-import mongomock.database
-import os
-import uvicorn
 
 from mapchete_hub import __version__
-from mapchete_hub.app import app, get_backend_db, get_dask_cluster_setup
-from mapchete_hub.db import BackendDB
+from mapchete_hub.app import app
 
 
 @click.version_option(version=__version__, message="%(version)s")
@@ -48,7 +48,6 @@ def main():  # pragma: no cover
 def start(
     host=None, port=None, log_level="error", add_mapchete_logger=False
 ):  # pragma: no cover
-
     # set up logging
     log_level = log_level.upper()
     log_config = uvicorn.config.LOGGING_CONFIG
@@ -77,4 +76,5 @@ def start(
         port=port,
         log_level=log_level.lower(),
         log_config=log_config,
+        workers=1,
     )

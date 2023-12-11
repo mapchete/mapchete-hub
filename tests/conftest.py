@@ -1,16 +1,16 @@
 import os
+
+import pytest
 from dask.distributed import LocalCluster
 from fastapi.testclient import TestClient
-import pytest
-
 from mapchete.io import path_exists
 
 from mapchete_hub.app import app, get_backend_db, get_dask_cluster_setup
-from mapchete_hub.db import BackendDB
+from mapchete_hub.db import init_backenddb
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-_fake_backend_db = BackendDB("memory")
+_fake_backend_db = init_backenddb("memory")
 _dask_cluster = LocalCluster()
 
 
