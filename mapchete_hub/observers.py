@@ -123,5 +123,5 @@ class SlackMessenger(ObserverProtocol):
             )
         if executor:
             send_slack_message(
-                f"*{self.message_prefix}*: <{executor._executor.dashboard_link}|dashboard url>"
+                f"*{self.message_prefix}*: <{executor._executor.dashboard_link}|cluster dashboard online>"
             )
