@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=2023.12.0
+ARG BASE_IMAGE_TAG=2023.12.1
 
 # use builder to build python wheels #
 ######################################
@@ -82,7 +82,7 @@ RUN pip install --upgrade pip && \
     fiona \
     fsspec \
     gdal \
-    # mapchete \
+    mapchete \
     numcodecs \
     numpy \
     psutil \
