@@ -2,8 +2,21 @@
 Changelog
 #########
 
-2023.12.0 - 2023-12-11
+
+2023.12.1 - 2023-12-11
 ----------------------
+* CI
+    * use podman layer caching
+
+* core 
+    * fix `db.mongodb` jobs parsing
+    * pass on `DaskSpecs` and `DaskSettings` to `cluster.get_dask_executor`
+    * rewrite and use `cluster.cluster_adapt`
+    * minor fixes to Slack messages
+
+
+2023.12.0 - 2023-12-11 (broken)
+-------------------------------
 * packaging
     * bump ``dask`` to ``2023.12.0``
     * bump ``distributed`` to ``2023.12.0``
