@@ -8,7 +8,11 @@ from dask_gateway import BasicAuth, Gateway, GatewayCluster
 from mapchete.executor import DaskExecutor
 from pydantic import BaseModel, ConfigDict, Field
 
-from mapchete_hub.settings import mhub_settings, update_gateway_cluster_options
+from mapchete_hub.settings import (
+    DaskDefaultSpecs,
+    mhub_settings,
+    update_gateway_cluster_options,
+)
 
 logger = logging.getLogger(__name__)
 CACHE = {}
@@ -61,7 +65,7 @@ def get_dask_cluster_setup() -> ClusterSetup:
 
 @contextmanager
 def get_dask_executor(
-    job_id: str, dask_specs: Optional[dict] = None, **kwargs
+    job_id: str, dask_specs: Optional[DaskDefaultSpecs] = None, **kwargs
 ) -> DaskExecutor:
     logger.info("requesting dask cluster and dask client...")
     cluster_setup = get_dask_cluster_setup()
@@ -75,9 +79,9 @@ def get_dask_executor(
 
 @contextmanager
 def dask_cluster(
-    cluster_setup: ClusterSetup, dask_specs: Optional[dict] = None
+    cluster_setup: ClusterSetup, dask_specs: Optional[DaskDefaultSpecs] = None
 ) -> Union[LocalCluster, GatewayCluster, None]:
-    dask_specs = dask_specs or {}
+    dask_specs = dask_specs or DaskDefaultSpecs()
 
     if cluster_setup.type == ClusterType.local:
         logger.info("use existing %s", cluster_setup.cluster)
@@ -86,22 +90,15 @@ def dask_cluster(
     elif cluster_setup.type == ClusterType.gateway:  # pragma: no cover
         with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
             logger.debug("connected to gateway %s", gateway)
-            if dask_specs is not None:
-                logger.info("use gateway cluster with %s specs", dask_specs)
-                with gateway.new_cluster(
-                    cluster_options=update_gateway_cluster_options(
-                        gateway.cluster_options(), dask_specs=dask_specs
-                    )
-                ) as cluster:
-                    yield cluster
-                    logger.info("closing cluster %s", cluster)
-                logger.info("closed cluster %s", cluster)
-            else:
-                logger.info("use gateway cluster with default specs")
-                with gateway.new_cluster() as cluster:
-                    yield cluster
-                    logger.info("closing cluster %s", cluster)
-                logger.info("closed cluster %s", cluster)
+            logger.info("use gateway cluster with %s specs", dask_specs)
+            with gateway.new_cluster(
+                cluster_options=update_gateway_cluster_options(
+                    gateway.cluster_options(), dask_specs=dask_specs
+                )
+            ) as cluster:
+                yield cluster
+                logger.info("closing cluster %s", cluster)
+            logger.info("closed cluster %s", cluster)
 
     elif cluster_setup.type == ClusterType.scheduler:  # pragma: no cover
         logger.info("cluster exists, connecting directly to scheduler")
