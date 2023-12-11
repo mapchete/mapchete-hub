@@ -109,6 +109,7 @@ class SlackMessenger(ObserverProtocol):
         self,
         *args,
         status: Optional[Status] = None,
+        executor: Optional[DaskExecutor] = None,
         exception: Optional[Exception] = None,
         **kwargs,
     ):
@@ -119,4 +120,8 @@ class SlackMessenger(ObserverProtocol):
                 f"*{self.job_name} failed after {pretty_seconds(time.time() - self.started)}*\n"
                 f"{exception}\n"
                 f"{''.join(traceback.format_tb(exception.__traceback__))}"
+            )
+        if executor:
+            send_slack_message(
+                f"*{self.message_prefix}*: <dask dashboard|{executor._executor.dashboard_link}>"
             )
