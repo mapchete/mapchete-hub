@@ -28,7 +28,6 @@ class MHubSettings(BaseSettings):
     backend_db: str = "memory"
     backend_db_event_rate_limit: float = 0.2
     cancellederror_tries: int = 1
-    preprocessing_wait: int = 0  # do we need this?
     max_parallel_jobs: int = 2
     max_parallel_jobs_interval_seconds: int = 10
     dask_gateway_url: Optional[str] = None
@@ -102,10 +101,9 @@ def get_dask_specs(specs: Union[str, dict]) -> DaskDefaultSpecs:
 
 
 def update_gateway_cluster_options(
-    options: Options, custom_dask_specs: Optional[dict] = None
+    options: Options, dask_specs: Optional[DaskDefaultSpecs] = None
 ) -> Options:
-    custom_dask_specs = custom_dask_specs or {}
-    dask_specs = DaskDefaultSpecs(**custom_dask_specs)
+    dask_specs = dask_specs or DaskDefaultSpecs()
 
     options.update(
         {
