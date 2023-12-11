@@ -87,6 +87,9 @@ build_image:
       podman build \
         --build-arg BASE_IMAGE_NAME=mapchete \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
+        --layers \
+        --cache-to ${CI_REGISTRY_IMAGE}/cache \
+        --cache-from ${CI_REGISTRY_IMAGE}/cache \
         -t ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} .
     # push
     - podman push ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA}

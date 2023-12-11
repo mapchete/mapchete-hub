@@ -150,14 +150,10 @@ def cluster_adapt(
         logger.debug("cluster does not support adaption")
         return
 
-    # override the MHUB_DASK_MIN_WORKERS and MHUB_DASK_MAX_WORKERS default settings
-    # if it makes sense to avoid asking for more workers than could be possible used
-    # this can be refined once we expose a more detailed information on the types of
-    # job tasks: https://github.com/ungarj/mapchete/issues/383
-
     logger.debug("adapt options: %s", dask_specs.adapt_options)
 
     # TODO: somehow get current task count in here (requires a core update)
+
     # if dask_settings.process_graph:
     #     # the minimum should not be larger than the expected number of job tasks
     #     min_workers = min(
