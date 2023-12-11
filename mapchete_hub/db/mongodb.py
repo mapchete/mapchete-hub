@@ -90,9 +90,9 @@ class MongoDBStatusHandler(BaseStatusHandler):
         jobs = []
         for entry in self._jobs.find(query):
             try:
-                jobs.append(entry)
+                jobs.append(JobEntry(**{entry}))
             except Exception as exc:  # pragma: no cover
-                logger.exception("cannot create GeoJSON from entry: %s", exc)
+                logger.exception("cannot create JobEntry from entry: %s", exc)
         return jobs
 
     def job(self, job_id) -> JobEntry:
