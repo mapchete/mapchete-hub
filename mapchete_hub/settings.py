@@ -28,7 +28,6 @@ class MHubSettings(BaseSettings):
     backend_db: str = "memory"
     backend_db_event_rate_limit: float = 0.2
     cancellederror_tries: int = 1
-    preprocessing_wait: int = 0  # do we need this?
     max_parallel_jobs: int = 2
     max_parallel_jobs_interval_seconds: int = 10
     dask_gateway_url: Optional[str] = None

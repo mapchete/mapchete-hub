@@ -5,6 +5,7 @@ from typing import Optional, Union
 
 from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import BasicAuth, Gateway, GatewayCluster
+from mapchete.config.models import DaskSettings
 from mapchete.executor import DaskExecutor
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -65,7 +66,10 @@ def get_dask_cluster_setup() -> ClusterSetup:
 
 @contextmanager
 def get_dask_executor(
-    job_id: str, dask_specs: Optional[DaskDefaultSpecs] = None, **kwargs
+    job_id: str,
+    dask_specs: DaskDefaultSpecs = DaskDefaultSpecs(),
+    dask_settings: DaskSettings = DaskSettings(),
+    **kwargs,
 ) -> DaskExecutor:
     logger.info("requesting dask cluster and dask client...")
     cluster_setup = get_dask_cluster_setup()
@@ -73,6 +77,7 @@ def get_dask_executor(
         logger.info("job %s cluster: %s", job_id, cluster)
         with dask_client(cluster_setup, cluster=cluster) as client:
             logger.info("job %s client: %s", job_id, client)
+            cluster_adapt(cluster_setup, cluster, dask_specs, dask_settings)
             with DaskExecutor(dask_client=client) as executor:
                 yield executor
 
@@ -135,13 +140,62 @@ def dask_client(
         raise TypeError("cannot get client")
 
 
-def cluster_adapt(cluster, flavor=None, adapt_options=None):
+def cluster_adapt(
+    cluster_setup: ClusterSetup,
+    cluster: Union[LocalCluster, GatewayCluster, None],
+    dask_specs: DaskDefaultSpecs,
+    dask_settings: DaskSettings,
+):
     if cluster is None:  # pragma: no cover
         logger.debug("cluster does not support adaption")
-    elif flavor == "local_cluster":  # pragma: no cover
+        return
+
+    # override the MHUB_DASK_MIN_WORKERS and MHUB_DASK_MAX_WORKERS default settings
+    # if it makes sense to avoid asking for more workers than could be possible used
+    # this can be refined once we expose a more detailed information on the types of
+    # job tasks: https://github.com/ungarj/mapchete/issues/383
+
+    logger.debug("adapt options: %s", dask_specs.adapt_options)
+
+    # TODO: somehow get current task count in here (requires a core update)
+    # if dask_settings.process_graph:
+    #     # the minimum should not be larger than the expected number of job tasks
+    #     min_workers = min(
+    #         [dask_specs.adapt_options.minimum, job.tiles_tasks]
+    #     )
+    #     # the maximum should also not be larger than one eigth of the expected number of tasks
+    #     max_workers = min([dask_specs.adapt_options.maximum, len(job) // 8])
+
+    # else:  # pragma: no cover
+    #     # the minimum should not be larger than the expected number of job tasks
+    #     min_workers = min(
+    #         [dask_specs.adapt_options.minimum, job.tiles_tasks]
+    #     )
+    #     # the maximum should also not be larger than the expected number of job tasks
+    #     max_workers = min(
+    #         [
+    #             dask_specs.adapt_options.maximum,
+    #             max([job.preprocessing_tasks, job.tiles_tasks]),
+    #         ]
+    #     )
+    # if max_workers < min_workers:
+    #     max_workers = min_workers
+    # adapt_options.update(
+    #     minimum=min_workers,
+    #     maximum=max_workers,
+    # )
+
+    adapt_options = dask_specs.adapt_options.model_dump()
+    logger.debug("set cluster adapt to %s", adapt_options)
+
+    if cluster_setup.type == ClusterType.local or isinstance(
+        cluster, LocalCluster
+    ):  # pragma: no cover
         cluster.adapt(**{k: v for k, v in adapt_options.items() if k not in ["active"]})
-    elif flavor == "gateway":  # pragma: no cover
+
+    elif cluster_setup.type == ClusterType.gateway:  # pragma: no cover
         logger.debug("adapt cluster: %s", adapt_options)
         cluster.adapt(**adapt_options)
+
     else:  # pragma: no cover
         raise TypeError(f"cannot determine cluster type: {cluster}")

@@ -9,7 +9,7 @@ from mapchete.errors import JobCancelledError
 from mapchete.path import MPath
 
 from mapchete_hub import __version__
-from mapchete_hub.cluster import get_dask_executor
+from mapchete_hub.cluster import cluster_adapt, get_dask_executor
 from mapchete_hub.db import BaseStatusHandler
 from mapchete_hub.models import JobEntry, MapcheteJob
 from mapchete_hub.observers import DBUpdater, SlackMessenger
@@ -69,7 +69,10 @@ def job_wrapper(
             mapchete_config.model_dump(),
             retries=mhub_settings.cancellederror_tries,
             executor_getter=partial(
-                get_dask_executor, job.job_id, job_config.params.get("dask_specs")
+                get_dask_executor,
+                job_id=job.job_id,
+                dask_specs=job_config.params.get("dask_specs"),
+                dask_settings=job_config.params.get("dask_settings"),
             ),
             observers=[db_updater, slack_messenger],
             cancel_on_exception=JobCancelledError,
