@@ -1,6 +1,7 @@
 import datetime
 import json
 import time
+from copy import deepcopy
 
 import pytest
 
@@ -15,11 +16,6 @@ def test_get_conformance(client):
     # TODO
     with pytest.raises(NotImplementedError):
         client.get("/conformance")
-
-
-def test_get_dask_specs(client):
-    response = client.get("/dask_specs")
-    assert "default" in response.json()
 
 
 def test_get_processes(client):
@@ -492,3 +488,17 @@ def test_dask_dashboard_link(client, test_process_id, example_config_json):
     # make sure custom parameter was passed on
     response = client.get(f"/jobs/{job_id}")
     assert response.json()["properties"].get("dask_dashboard_link")
+
+
+def test_dask_specs(client, test_process_id, example_config_json):
+    job_config = deepcopy(example_config_json)
+    job_config["config"]["dask_specs"] = dict(worker_memory=20)
+    response = client.post(
+        f"/processes/{test_process_id}/execution", data=json.dumps(job_config)
+    )
+    job_id = response.json()["id"]
+    response = client.get(f"/jobs/{job_id}")
+    dask_specs = response.json()["properties"].get("dask_specs")
+    assert dask_specs
+    assert dask_specs["worker_memory"] == 20
+    assert "image" in dask_specs

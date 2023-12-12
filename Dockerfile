@@ -2,7 +2,6 @@ ARG BASE_IMAGE_NAME=mapchete
 ARG BASE_IMAGE_TAG=2023.12.1
 
 
-FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
 # use builder to build python wheels #
 ######################################
 # NOTE:
@@ -16,25 +15,25 @@ FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG
 # FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
 # ARG EOX_PYPI_TOKEN
 
-ENV BUILD_DIR /usr/local
-ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
-ENV WHEEL_DIR /usr/local/wheels
+# ENV BUILD_DIR /usr/local
+# ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
+# ENV WHEEL_DIR /usr/local/wheels
 
-RUN apt-get update && \
-    apt-get install --yes --no-install-recommends build-essential gcc g++ git && \
-    rm -rf /var/lib/apt/lists/* && \
-    pip install --upgrade pip
+# RUN apt-get update && \
+#     apt-get install --yes --no-install-recommends build-essential gcc g++ git && \
+#     rm -rf /var/lib/apt/lists/* && \
+#     pip install --upgrade pip
 
-RUN mkdir -p $MHUB_DIR $WHEEL_DIR
+# RUN mkdir -p $MHUB_DIR $WHEEL_DIR
 
-# Build wheels either for packages which need to always be built or for packages which are
-# under current development and where a specific branch is required.
-RUN pip install --upgrade pip setuptools wheel && \
-    pip wheel \
-    --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-    git+https://github.com/ungarj/mapchete.git@3c03b634b30c5600bdbf323cd75c82665b821c26 \
-    --wheel-dir $WHEEL_DIR \
-    --no-deps
+# # Build wheels either for packages which need to always be built or for packages which are
+# # under current development and where a specific branch is required.
+# RUN pip install --upgrade pip setuptools wheel && \
+#     pip wheel \
+#     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+#     git+https://github.com/ungarj/mapchete.git@3c03b634b30c5600bdbf323cd75c82665b821c26 \
+#     --wheel-dir $WHEEL_DIR \
+#     --no-deps
 
 # build image using pre-built libraries and wheels #
 ####################################################
@@ -46,11 +45,10 @@ ENV C_FORCE_ROOT "yes"
 ENV GML_SKIP_CORRUPTED_FEATURES YES
 ENV BUILD_DIR /usr/local
 ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
-ENV MP_SATELLITE_REMOTE_TIMEOUT=30
 ENV WHEEL_DIR /usr/local/wheels
 
 # get wheels from builder
-COPY --from=builder $WHEEL_DIR $WHEEL_DIR
+# COPY --from=builder $WHEEL_DIR $WHEEL_DIR
 
 # get requirements from mhub
 COPY pypi_dont_update.sh $MHUB_DIR/
@@ -60,10 +58,10 @@ COPY requirements.in $MHUB_DIR/
 RUN pip install --upgrade pip && \
     pip uninstall -y numcodecs && \
     # install previously built wheels
-    pip install \
-    --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-    --force-reinstall \
-    $WHEEL_DIR/*.whl && \
+    # pip install \
+    # --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+    # --force-reinstall \
+    # $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
     affine \
@@ -74,7 +72,7 @@ RUN pip install --upgrade pip && \
     dask-gateway \
     dask-gateway-server \
     fiona \
-    # fsspec \
+    fsspec \
     gdal \
     mapchete \
     numcodecs \
@@ -83,7 +81,7 @@ RUN pip install --upgrade pip && \
     rasterio \
     shapely \
     snuggs \
-    # s3fs \
+    s3fs \
     tblib \
     tqdm \
     tilematrix \

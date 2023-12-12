@@ -6,6 +6,7 @@ import os
 from typing import Optional, Union
 
 from dask_gateway.options import Options
+from mapchete.config.models import DaskAdaptOptions, DaskSpecs
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -47,13 +48,7 @@ class MHubSettings(BaseSettings):
 mhub_settings: MHubSettings = MHubSettings()
 
 
-class DaskAdaptOptions(BaseModel):
-    minimum: int = mhub_settings.dask_min_workers
-    maximum: int = mhub_settings.dask_max_workers
-    active: bool = mhub_settings.dask_adaptive_scaling
-
-
-class DaskDefaultSpecs(BaseModel):
+class DaskDefaultSpecs(DaskSpecs):
     worker_cores: float = 0.87
     worker_cores_limit: float = 2.0
     worker_memory: float = 2.1
@@ -63,41 +58,25 @@ class DaskDefaultSpecs(BaseModel):
     scheduler_cores: int = 1
     scheduler_cores_limit: float = 1.0
     scheduler_memory: float = 1.0
-    image: str = (
-        f"{mhub_settings.worker_default_image}:{mhub_settings.worker_image_tag}"
+    image: Optional[
+        str
+    ] = f"{mhub_settings.worker_default_image}:{mhub_settings.worker_image_tag}"
+    adapt_options: DaskAdaptOptions = DaskAdaptOptions(
+        minimum=mhub_settings.dask_min_workers,
+        maximum=mhub_settings.dask_max_workers,
+        active=mhub_settings.dask_adaptive_scaling,
     )
-    adapt_options: DaskAdaptOptions = DaskAdaptOptions()
 
 
-DASK_DEFAULT_SPECS = {
-    "default": DaskDefaultSpecs(),
-    "s2_16bit_regular": DaskDefaultSpecs(
-        worker_cores=1,
-        worker_memory=4.0,
-        worker_threads=1,
-        scheduler_cores=1,
-        scheduler_memory=2.0,
-    ),
-    "s2_16bit_large": DaskDefaultSpecs(
-        worker_cores=1,
-        worker_memory=8.0,
-        worker_threads=1,
-        scheduler_cores=1,
-        scheduler_memory=4.0,
-    ),
-}
-
-
-def get_dask_specs(specs: Union[str, dict]) -> DaskDefaultSpecs:
-    if isinstance(specs, str):
-        return DASK_DEFAULT_SPECS[specs]
+def get_dask_specs(specs: Optional[Union[DaskSpecs, dict]] = None) -> DaskDefaultSpecs:
+    if specs is None:
+        return DaskDefaultSpecs()
+    elif isinstance(specs, DaskSpecs):
+        return DaskDefaultSpecs(**specs.model_dump())
     elif isinstance(specs, dict):
         return DaskDefaultSpecs(**specs)
-    else:
-        raise TypeError(
-            "specs must refer to a predefined spec "
-            f"({', '.join(DASK_DEFAULT_SPECS.keys())}) or a dictionary"
-        )
+    else:  # pragma: no cover
+        raise TypeError(f"unparsable dask specs: {specs}")
 
 
 def update_gateway_cluster_options(

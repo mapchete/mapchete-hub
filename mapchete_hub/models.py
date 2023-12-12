@@ -6,10 +6,9 @@ from enum import Enum
 from typing import List, Optional
 
 from mapchete.config import ProcessConfig
+from mapchete.config.models import DaskSpecs
 from mapchete.enums import Status
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
-
-from mapchete_hub.settings import DaskDefaultSpecs
 
 
 class MapcheteCommand(str, Enum):
@@ -87,7 +86,7 @@ class JobEntry(BaseModel):
     finished: Optional[datetime.datetime] = None
     updated: Optional[datetime.datetime] = None
     runtime: Optional[float] = None
-    dask_specs: DaskDefaultSpecs = DaskDefaultSpecs()
+    dask_specs: DaskSpecs = DaskSpecs()
     command: Optional[MapcheteCommand] = MapcheteCommand.execute
     job_name: Optional[str] = None
     dask_dashboard_link: Optional[str] = None
