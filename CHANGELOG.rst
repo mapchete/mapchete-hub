@@ -3,6 +3,20 @@ Changelog
 #########
 
 
+2023.12.2 - 2023-12-12
+----------------------
+* CI
+    * use base image ``2023.12.2``
+
+* core
+    * adaptive `DaskSpecs` and `DaskSettings` now can also be passed to `mapchete` under `dask_specs` in the yaml config
+
+
+* packaging
+    * use base image ``2023.12.2``
+    * bump ``mapchete`` to ``2023.12.2``
+
+
 2023.12.1 - 2023-12-11
 ----------------------
 * CI
