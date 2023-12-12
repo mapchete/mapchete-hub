@@ -69,6 +69,8 @@ def get_dask_executor(
     job_id: str,
     dask_specs: DaskDefaultSpecs = DaskDefaultSpecs(),
     dask_settings: DaskSettings = DaskSettings(),
+    preprocessing_tasks: Optional[int] = None,
+    tile_tasks: Optional[int] = None,
     **kwargs,
 ) -> DaskExecutor:
     logger.info("requesting dask cluster and dask client...")
@@ -77,7 +79,14 @@ def get_dask_executor(
         logger.info("job %s cluster: %s", job_id, cluster)
         with dask_client(cluster_setup, cluster=cluster) as client:
             logger.info("job %s client: %s", job_id, client)
-            cluster_adapt(cluster_setup, cluster, dask_specs, dask_settings)
+            cluster_adapt(
+                cluster_setup,
+                cluster,
+                dask_specs,
+                dask_settings,
+                preprocessing_tasks=preprocessing_tasks,
+                tile_tasks=tile_tasks,
+            )
             with DaskExecutor(dask_client=client) as executor:
                 yield executor
 
@@ -145,41 +154,49 @@ def cluster_adapt(
     cluster: Union[LocalCluster, GatewayCluster, None],
     dask_specs: DaskDefaultSpecs,
     dask_settings: DaskSettings,
+    preprocessing_tasks: Optional[int] = None,
+    tile_tasks: Optional[int] = None,
 ):
     if cluster is None:  # pragma: no cover
         logger.debug("cluster does not support adaption")
         return
 
-    logger.debug("adapt options: %s", dask_specs.adapt_options)
+    adapt_options = dask_specs.adapt_options.model_copy()
+    logger.debug("adapt options: %s", adapt_options)
 
-    # TODO: somehow get current task count in here (requires a core update)
+    if preprocessing_tasks is not None and tile_tasks is not None:
+        if dask_settings.process_graph:
+            # the minimum should not be larger than the expected number of job tasks
+            min_workers = min([dask_specs.adapt_options.minimum, tile_tasks])
+            # the maximum should also not be larger than one eigth of the expected number of tasks
+            max_workers = min(
+                [
+                    dask_specs.adapt_options.maximum,
+                    len(preprocessing_tasks + tile_tasks) // 8,
+                ]
+            )
 
-    # if dask_settings.process_graph:
-    #     # the minimum should not be larger than the expected number of job tasks
-    #     min_workers = min(
-    #         [dask_specs.adapt_options.minimum, job.tiles_tasks]
-    #     )
-    #     # the maximum should also not be larger than one eigth of the expected number of tasks
-    #     max_workers = min([dask_specs.adapt_options.maximum, len(job) // 8])
-
-    # else:  # pragma: no cover
-    #     # the minimum should not be larger than the expected number of job tasks
-    #     min_workers = min(
-    #         [dask_specs.adapt_options.minimum, job.tiles_tasks]
-    #     )
-    #     # the maximum should also not be larger than the expected number of job tasks
-    #     max_workers = min(
-    #         [
-    #             dask_specs.adapt_options.maximum,
-    #             max([job.preprocessing_tasks, job.tiles_tasks]),
-    #         ]
-    #     )
-    # if max_workers < min_workers:
-    #     max_workers = min_workers
-    # adapt_options.update(
-    #     minimum=min_workers,
-    #     maximum=max_workers,
-    # )
+        else:  # pragma: no cover
+            # the minimum should not be larger than the expected number of job tasks
+            min_workers = min([dask_specs.adapt_options.minimum, tile_tasks])
+            # the maximum should also not be larger than the expected number of job tasks
+            max_workers = min(
+                [
+                    dask_specs.adapt_options.maximum,
+                    max([preprocessing_tasks, tile_tasks]),
+                ]
+            )
+        if max_workers < min_workers:
+            max_workers = min_workers
+        logger.debug(
+            "set minimum workers to %s and maximum workers to %s",
+            min_workers,
+            max_workers,
+        )
+        adapt_options.update(
+            minimum=min_workers,
+            maximum=max_workers,
+        )
 
     adapt_options = dask_specs.adapt_options.model_dump()
     logger.debug("set cluster adapt to %s", adapt_options)
