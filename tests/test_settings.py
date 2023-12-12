@@ -1,6 +1,7 @@
 from dask_gateway.options import Float, Integer, Mapping, Options, String
+from mapchete.config.models import DaskSpecs
 
-from mapchete_hub.settings import update_gateway_cluster_options
+from mapchete_hub.settings import get_dask_specs, update_gateway_cluster_options
 
 
 def test_update_gateway_cluster_options():
@@ -32,3 +33,14 @@ def test_update_gateway_cluster_options():
         assert options[k] == v
     assert isinstance(options.environment, dict)
     assert options.environment["MHUB_ENV"] == "testing"
+
+
+def test_get_dask_specs():
+    specs = get_dask_specs()
+    assert specs.image
+    specs = get_dask_specs(dict(worker_cores=20))
+    assert specs.image
+    assert specs.worker_cores == 20
+    specs = get_dask_specs(DaskSpecs(worker_cores=20, image=None))
+    assert specs.image
+    assert specs.worker_cores == 20

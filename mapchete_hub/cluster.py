@@ -5,12 +5,12 @@ from typing import Optional, Union
 
 from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import BasicAuth, Gateway, GatewayCluster
-from mapchete.config.models import DaskSettings
+from mapchete.config.models import DaskSettings, DaskSpecs
 from mapchete.executor import DaskExecutor
 from pydantic import BaseModel, ConfigDict, Field
 
 from mapchete_hub.settings import (
-    DaskDefaultSpecs,
+    dask_default_specs,
     mhub_settings,
     update_gateway_cluster_options,
 )
@@ -67,7 +67,7 @@ def get_dask_cluster_setup() -> ClusterSetup:
 @contextmanager
 def get_dask_executor(
     job_id: str,
-    dask_specs: DaskDefaultSpecs = DaskDefaultSpecs(),
+    dask_specs: DaskSpecs = DaskSpecs(**dask_default_specs),
     dask_settings: DaskSettings = DaskSettings(),
     preprocessing_tasks: Optional[int] = None,
     tile_tasks: Optional[int] = None,
@@ -93,9 +93,9 @@ def get_dask_executor(
 
 @contextmanager
 def dask_cluster(
-    cluster_setup: ClusterSetup, dask_specs: Optional[DaskDefaultSpecs] = None
+    cluster_setup: ClusterSetup, dask_specs: Optional[DaskSpecs] = None
 ) -> Union[LocalCluster, GatewayCluster, None]:
-    dask_specs = dask_specs or DaskDefaultSpecs()
+    dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
 
     if cluster_setup.type == ClusterType.local:
         logger.info("use existing %s", cluster_setup.cluster)
@@ -152,7 +152,7 @@ def dask_client(
 def cluster_adapt(
     cluster_setup: ClusterSetup,
     cluster: Union[LocalCluster, GatewayCluster, None],
-    dask_specs: DaskDefaultSpecs,
+    dask_specs: DaskSpecs,
     dask_settings: DaskSettings,
     preprocessing_tasks: Optional[int] = None,
     tile_tasks: Optional[int] = None,

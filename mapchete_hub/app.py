@@ -182,13 +182,11 @@ async def post_job(
         job_config.params["dask_specs"] = get_dask_specs(
             job_config.config.dask_specs or job_config.params.get("dask_specs")
         )
-
         job_config.params["dask_settings"] = DaskSettings(
             **job_config.params.pop("dask_settings")
             if "dask_settings" in job_config.params
             else {}
         )
-
         # create new entry in database
         job = backend_db.new(job_config=job_config)
         # send task to background to be able to quickly return a message

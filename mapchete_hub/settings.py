@@ -48,41 +48,41 @@ class MHubSettings(BaseSettings):
 mhub_settings: MHubSettings = MHubSettings()
 
 
-class DaskDefaultSpecs(DaskSpecs):
-    worker_cores: float = 0.87
-    worker_cores_limit: float = 2.0
-    worker_memory: float = 2.1
-    worker_memory_limit: float = 12.0
-    worker_threads: int = 2
-    worker_environment: dict = Field(default_factory=dict)
-    scheduler_cores: int = 1
-    scheduler_cores_limit: float = 1.0
-    scheduler_memory: float = 1.0
-    image: Optional[
-        str
-    ] = f"{mhub_settings.worker_default_image}:{mhub_settings.worker_image_tag}"
-    adapt_options: DaskAdaptOptions = DaskAdaptOptions(
+dask_default_specs = dict(
+    worker_cores=0.87,
+    worker_cores_limit=2.0,
+    worker_memory=2.1,
+    worker_memory_limit=12.0,
+    worker_threads=2,
+    worker_environment={},
+    scheduler_cores=1,
+    scheduler_cores_limit=1.0,
+    scheduler_memory=1.0,
+    image=f"{mhub_settings.worker_default_image}:{mhub_settings.worker_image_tag}",
+    adapt_options=DaskAdaptOptions(
         minimum=mhub_settings.dask_min_workers,
         maximum=mhub_settings.dask_max_workers,
         active=mhub_settings.dask_adaptive_scaling,
-    )
+    ),
+)
 
 
-def get_dask_specs(specs: Optional[Union[DaskSpecs, dict]] = None) -> DaskDefaultSpecs:
+def get_dask_specs(specs: Optional[Union[DaskSpecs, dict]] = None) -> DaskSpecs:
     if specs is None:
-        return DaskDefaultSpecs()
+        return DaskSpecs(**dask_default_specs)
     elif isinstance(specs, DaskSpecs):
-        return DaskDefaultSpecs(**specs.model_dump())
+        specs_dict = {k: v for k, v in specs.model_dump().items() if v is not None}
+        return DaskSpecs(**dict(dask_default_specs, **specs_dict))
     elif isinstance(specs, dict):
-        return DaskDefaultSpecs(**specs)
+        return DaskSpecs(**dict(dask_default_specs, **specs))
     else:  # pragma: no cover
         raise TypeError(f"unparsable dask specs: {specs}")
 
 
 def update_gateway_cluster_options(
-    options: Options, dask_specs: Optional[DaskDefaultSpecs] = None
+    options: Options, dask_specs: Optional[DaskSpecs] = None
 ) -> Options:
-    dask_specs = dask_specs or DaskDefaultSpecs()
+    dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
 
     options.update(
         {
