@@ -14,34 +14,25 @@ ARG BASE_IMAGE_TAG=2023.12.1
 # FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
 # ARG EOX_PYPI_TOKEN
 
-# ENV BUILD_DIR /usr/local
-# ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
-# ENV WHEEL_DIR /usr/local/wheels
+ENV BUILD_DIR /usr/local
+ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
+ENV WHEEL_DIR /usr/local/wheels
 
-# RUN apt-get update && \
-#     apt-get install --yes --no-install-recommends build-essential gcc g++ git && \
-#     rm -rf /var/lib/apt/lists/* && \
-#     pip install --upgrade pip
+RUN apt-get update && \
+    apt-get install --yes --no-install-recommends build-essential gcc g++ git && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip
 
-# RUN mkdir -p $MHUB_DIR $WHEEL_DIR
+RUN mkdir -p $MHUB_DIR $WHEEL_DIR
 
 # Build wheels either for packages which need to always be built or for packages which are
 # under current development and where a specific branch is required.
-# RUN pip install --upgrade pip setuptools wheel && \
-#     pip wheel \
-#     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-#     # git+https://github.com/ungarj/mapchete.git@master \
-#     # git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master \
-#     # git+http://gitlab.eox.at/maps/mapchete_satellite.git@80b1f351091e5ef68cf9619e9e4b342283508057 \
-#     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
-#     # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
-#     # git+http://gitlab+deploy-token-114:Z5BGRFqisidtaryTcJoe@gitlab.eox.at/eox/hub/agri/planet-signals-generation.git@master \
-#     # git+https://github.com/wankoelias/mapchete_xarray.git@master \
-#     # git+https://github.com/dask/distributed.git@master \
-#     # git+https://github.com/dask/dask.git@master \
-#     # jenkspy==0.2.0 \
-#     --wheel-dir $WHEEL_DIR \
-#     --no-deps
+RUN pip install --upgrade pip setuptools wheel && \
+    pip wheel \
+    --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+    git+https://github.com/ungarj/mapchete.git@e2b17c4ccbeaf82e6eaef06ad1241df8ee6cf641 \
+    --wheel-dir $WHEEL_DIR \
+    --no-deps
 
 # build image using pre-built libraries and wheels #
 ####################################################
@@ -82,7 +73,7 @@ RUN pip install --upgrade pip && \
     fiona \
     fsspec \
     gdal \
-    mapchete \
+    # mapchete \
     numcodecs \
     numpy \
     psutil \
