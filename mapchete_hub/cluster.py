@@ -161,7 +161,7 @@ def cluster_adapt(
         logger.debug("cluster does not support adaption")
         return
 
-    adapt_options = dask_specs.adapt_options.model_copy()
+    adapt_options = dask_specs.adapt_options.model_dump()
     logger.debug("adapt options: %s", adapt_options)
 
     if preprocessing_tasks is not None and tile_tasks is not None:
@@ -172,7 +172,7 @@ def cluster_adapt(
             max_workers = min(
                 [
                     dask_specs.adapt_options.maximum,
-                    len(preprocessing_tasks + tile_tasks) // 8,
+                    preprocessing_tasks + tile_tasks // 8,
                 ]
             )
 
@@ -198,7 +198,6 @@ def cluster_adapt(
             maximum=max_workers,
         )
 
-    adapt_options = dask_specs.adapt_options.model_dump()
     logger.debug("set cluster adapt to %s", adapt_options)
 
     if cluster_setup.type == ClusterType.local or isinstance(

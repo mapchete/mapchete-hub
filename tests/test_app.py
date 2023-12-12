@@ -47,7 +47,9 @@ def test_post_job(client, test_process_id, example_config_json):
             dict(
                 example_config_json,
                 params=dict(
-                    example_config_json["params"], zoom=2, dask_specs="s2_16bit_regular"
+                    example_config_json["params"],
+                    zoom=2,
+                    dask_specs=dict(worker_cores=1),
                 ),
             )
         ),
