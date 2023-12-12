@@ -132,7 +132,6 @@ class MemoryStatusHandler(BaseStatusHandler):
             if v is not None
         }
         timestamp = datetime.utcnow()
-        logger.debug("update timestamp: %s", timestamp)
         if status:
             new_attributes.update(status=Status[status])
             if status == Status.done:
