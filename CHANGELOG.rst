@@ -15,6 +15,7 @@ Changelog
 * packaging
     * use base image ``2023.12.2``
     * bump ``mapchete`` to ``2023.12.2``
+    * add ``eox_preprocessing`` version ``2023.12.0`` for backwards compability
 
 
 2023.12.1 - 2023-12-11
