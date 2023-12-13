@@ -70,7 +70,7 @@ from mapchete_hub.cluster import get_dask_cluster_setup
 from mapchete_hub.db import BaseStatusHandler, init_backenddb
 from mapchete_hub.job_wrapper import job_wrapper
 from mapchete_hub.models import MapcheteJob
-from mapchete_hub.settings import DASK_DEFAULT_SPECS, get_dask_specs, mhub_settings
+from mapchete_hub.settings import get_dask_specs, mhub_settings
 from mapchete_hub.slack import send_slack_message
 from mapchete_hub.timetools import str_to_date
 
@@ -140,11 +140,6 @@ async def get_conformance():
     raise NotImplementedError()
 
 
-@app.get("/dask_specs")
-async def get_dask_specs_presets() -> dict:
-    return DASK_DEFAULT_SPECS
-
-
 @app.get("/processes")
 async def get_processes() -> dict:
     """Lists the processes this API offers."""
@@ -185,14 +180,13 @@ async def post_job(
     try:
         # get dask specs and settings
         job_config.params["dask_specs"] = get_dask_specs(
-            job_config.params.get("dask_specs", "default")
+            job_config.config.dask_specs or job_config.params.get("dask_specs")
         )
         job_config.params["dask_settings"] = DaskSettings(
             **job_config.params.pop("dask_settings")
             if "dask_settings" in job_config.params
             else {}
         )
-
         # create new entry in database
         job = backend_db.new(job_config=job_config)
         # send task to background to be able to quickly return a message

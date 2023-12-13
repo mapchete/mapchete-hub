@@ -1,6 +1,7 @@
 ARG BASE_IMAGE_NAME=mapchete
 ARG BASE_IMAGE_TAG=2023.12.1
 
+
 # use builder to build python wheels #
 ######################################
 # NOTE:
@@ -25,21 +26,12 @@ ARG BASE_IMAGE_TAG=2023.12.1
 
 # RUN mkdir -p $MHUB_DIR $WHEEL_DIR
 
-# Build wheels either for packages which need to always be built or for packages which are
-# under current development and where a specific branch is required.
+# # Build wheels either for packages which need to always be built or for packages which are
+# # under current development and where a specific branch is required.
 # RUN pip install --upgrade pip setuptools wheel && \
 #     pip wheel \
 #     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-#     # git+https://github.com/ungarj/mapchete.git@master \
-#     # git+http://gitlab+deploy-token-4:9wY1xu44PggPQKZLmNxj@gitlab.eox.at/maps/orgonite.git@master \
-#     # git+http://gitlab.eox.at/maps/mapchete_satellite.git@80b1f351091e5ef68cf9619e9e4b342283508057 \
-#     # git+http://gitlab+deploy-token-9:91czUKTs2wF2-UpcDcMG@gitlab.eox.at/maps/preprocessing.git@0.10 \
-#     # git+http://gitlab+deploy-token-84:x-16dE-pd2ENHpmBiJf1@gitlab.eox.at/maps/s2brdf.git@master \
-#     # git+http://gitlab+deploy-token-114:Z5BGRFqisidtaryTcJoe@gitlab.eox.at/eox/hub/agri/planet-signals-generation.git@master \
-#     # git+https://github.com/wankoelias/mapchete_xarray.git@master \
-#     # git+https://github.com/dask/distributed.git@master \
-#     # git+https://github.com/dask/dask.git@master \
-#     # jenkspy==0.2.0 \
+#     git+https://github.com/ungarj/mapchete.git@3c03b634b30c5600bdbf323cd75c82665b821c26 \
 #     --wheel-dir $WHEEL_DIR \
 #     --no-deps
 
@@ -53,7 +45,6 @@ ENV C_FORCE_ROOT "yes"
 ENV GML_SKIP_CORRUPTED_FEATURES YES
 ENV BUILD_DIR /usr/local
 ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
-ENV MP_SATELLITE_REMOTE_TIMEOUT=30
 ENV WHEEL_DIR /usr/local/wheels
 
 # get wheels from builder
@@ -69,6 +60,7 @@ RUN pip install --upgrade pip && \
     # install previously built wheels
     # pip install \
     # --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
+    # --force-reinstall \
     # $WHEEL_DIR/*.whl && \
     # this is important so pip won't update our precious precompiled packages:
     ./$MHUB_DIR/pypi_dont_update.sh \
@@ -82,7 +74,7 @@ RUN pip install --upgrade pip && \
     fiona \
     fsspec \
     gdal \
-    mapchete \
+    # mapchete \
     numcodecs \
     numpy \
     psutil \
