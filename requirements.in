@@ -1,5 +1,6 @@
 bokeh
 blosc
+eox_preprocessing==2023.12.0
 dask==2023.12.0
 dask-gateway==2023.9.0
 dask-gateway-server==2023.9.0
