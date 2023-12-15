@@ -74,7 +74,7 @@ RUN pip install --upgrade pip && \
     fiona \
     fsspec \
     gdal \
-    mapchete \
+    # mapchete \
     numcodecs \
     numpy \
     psutil \
