@@ -75,9 +75,10 @@ from mapchete_hub.slack import send_slack_message
 from mapchete_hub.timetools import str_to_date
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
-sh = logging.StreamHandler()
-formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
-sh.setFormatter(formatter)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(
+    logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+)
 
 loggers = ["mapchete_hub"]
 if mhub_settings.add_mapchete_logger:  # pragma: no cover
@@ -86,11 +87,11 @@ for l in loggers:
     logger = logging.getLogger(l)
     if __name__ != "__main__":
         logger.setLevel(uvicorn_logger.level)
-        sh.setLevel(uvicorn_logger.level)
+        stream_handler.setLevel(uvicorn_logger.level)
     else:  # pragma: no cover
         logger.setLevel(logging.DEBUG)
-        sh.setLevel(logging.DEBUG)
-    logger.addHandler(sh)
+        stream_handler.setLevel(logging.DEBUG)
+    logger.addHandler(stream_handler)
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +174,6 @@ async def post_job(
     job_config: MapcheteJob,
     background_tasks: BackgroundTasks,
     backend_db: BaseStatusHandler = Depends(get_backend_db),
-    dask_cluster_setup: dict = Depends(get_dask_cluster_setup),
     response: Response = None,
 ) -> dict:
     """Executes a process, i.e. creates a new job."""
@@ -195,7 +195,6 @@ async def post_job(
             job,
             job_config,
             backend_db,
-            dask_cluster_setup,
         )
         response.headers["Location"] = f"/jobs/{job.job_id}"
 

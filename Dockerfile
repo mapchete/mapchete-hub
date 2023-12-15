@@ -47,6 +47,10 @@ ENV BUILD_DIR /usr/local
 ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
 ENV WHEEL_DIR /usr/local/wheels
 
+RUN apt-get update && \
+    apt-get install --yes htop && \
+    rm -rf /var/lib/apt/lists/*
+
 # get wheels from builder
 # COPY --from=builder $WHEEL_DIR $WHEEL_DIR
 
