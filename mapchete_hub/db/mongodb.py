@@ -5,11 +5,11 @@ from typing import List, Optional
 from uuid import uuid4
 
 import pymongo
-from mapchete.enums import Status
 from mapchete.types import Progress
 from shapely.geometry import box, mapping, shape
 
 from mapchete_hub.db.base import BaseStatusHandler
+from mapchete_hub.enums import Status
 from mapchete_hub.geometry import process_area_from_config
 from mapchete_hub.models import JobEntry, MapcheteJob
 from mapchete_hub.random_names import random_name
@@ -117,7 +117,7 @@ class MongoDBStatusHandler(BaseStatusHandler):
         entry = JobEntry(
             job_id=job_id,
             url=os.path.join(mhub_settings.self_url, "jobs", job_id),
-            status=Status.parsing,
+            status=Status.pending,
             geometry=process_area,
             bounds=shape(process_area).bounds,
             mapchete=job_config,
