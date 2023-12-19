@@ -4,12 +4,12 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-from mapchete.enums import Status
 from mapchete.types import Progress
 from shapely import to_wkt
 from shapely.geometry import box, shape
 
 from mapchete_hub.db.base import BaseStatusHandler
+from mapchete_hub.enums import Status
 from mapchete_hub.geometry import process_area_from_config
 from mapchete_hub.models import JobEntry, MapcheteJob
 from mapchete_hub.random_names import random_name
@@ -92,7 +92,7 @@ class MemoryStatusHandler(BaseStatusHandler):
         job_entry = JobEntry(
             job_id=job_id,
             url=os.path.join(mhub_settings.self_url, "jobs", job_id),
-            status=Status.parsing,
+            status=Status.pending,
             geometry=process_area,
             bounds=shape(process_area).bounds,
             area=to_wkt(shape(process_area)),

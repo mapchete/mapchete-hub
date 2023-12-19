@@ -7,8 +7,9 @@ from typing import List, Optional
 
 from mapchete.config import ProcessConfig
 from mapchete.config.models import DaskSpecs
-from mapchete.enums import Status
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
+
+from mapchete_hub.enums import Status
 
 
 class MapcheteCommand(str, Enum):

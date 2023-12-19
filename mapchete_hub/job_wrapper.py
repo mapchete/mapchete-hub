@@ -4,13 +4,13 @@ from functools import partial
 
 from mapchete.commands import execute
 from mapchete.commands.observer import Observers
-from mapchete.enums import Status
 from mapchete.errors import JobCancelledError
 from mapchete.path import MPath
 
 from mapchete_hub import __version__
 from mapchete_hub.cluster import cluster_adapt, get_dask_executor
 from mapchete_hub.db import BaseStatusHandler
+from mapchete_hub.enums import Status
 from mapchete_hub.models import JobEntry, MapcheteJob
 from mapchete_hub.observers import DBUpdater, SlackMessenger
 from mapchete_hub.settings import mhub_settings
@@ -23,6 +23,9 @@ def job_wrapper(
     job_config: MapcheteJob = None,
     backend_db: BaseStatusHandler = None,
 ):
+    logger.info("start fastAPI background task with job %s", job.job_id)
+    mapchete_config = job_config.config
+
     # prepare observers for job:
     db_updater = DBUpdater(
         backend_db=backend_db,
@@ -32,32 +35,38 @@ def job_wrapper(
     slack_messenger = SlackMessenger(
         mhub_settings.self_instance_name, job.url, job.job_name
     )
+    observers = Observers([db_updater, slack_messenger])
+
+    # handle observers and job states while job is not being executed
     try:
-        logger.info("start fastAPI background task with job %s", job.job_id)
-
-        mapchete_config = job_config.config
-
         # relative output paths are not useful, so raise exception
         out_path = MPath.from_inp(dict(mapchete_config.output))
         if not out_path.is_absolute():  # pragma: no cover
             raise ValueError(f"process output path must be absolute: {out_path}")
 
         # if there are too many jobs in parallel, wait
-        while (
-            len(
-                backend_db.jobs(
-                    state=[
-                        Status.parsing,
-                        Status.initializing,
-                        Status.running,
-                        Status.retrying,
-                    ]
-                )
+        while running_jobs(backend_db, job.job_id) >= mhub_settings.max_parallel_jobs:
+            logger.info(
+                "%s waiting %s seconds for other jobs to finish ...",
+                job.job_id,
+                mhub_settings.max_parallel_jobs_interval_seconds,
             )
-            >= mhub_settings.max_parallel_jobs
-        ):
             time.sleep(mhub_settings.max_parallel_jobs_interval_seconds)
 
+    except JobCancelledError:
+        logger.info("%s got cancelled.", job.job_id)
+        observers.notify(status=Status.cancelled)
+        return
+
+    except Exception as exc:
+        logger.exception(exc)
+        observers.notify(status=Status.failed, exception=exc)
+        raise
+    finally:
+        logger.info("%s end fastAPI background task with job", job.job_id)
+
+    # observers and job states are handled by execute() from now on
+    try:
         execute(
             mapchete_config.model_dump(),
             retries=mhub_settings.cancellederror_tries,
@@ -86,8 +95,26 @@ def job_wrapper(
             },
         )
     except JobCancelledError:
-        pass
+        logger.info("%s got cancelled.", job.job_id)
     except Exception as exc:
         logger.exception(exc)
     finally:
-        logger.info("end fastAPI background task with job %s", job.job_id)
+        logger.info("%s end fastAPI background task with job", job.job_id)
+
+
+def running_jobs(backend_db: BaseStatusHandler, job_id: str = None) -> int:
+    if job_id:
+        if backend_db.job(job_id=job_id).status == Status.cancelled:
+            raise JobCancelledError
+    jobs_count = len(
+        backend_db.jobs(
+            status=[
+                Status.parsing,
+                Status.initializing,
+                Status.running,
+                Status.retrying,
+            ]
+        )
+    )
+    logger.info("currently running %s jobs", jobs_count)
+    return jobs_count
