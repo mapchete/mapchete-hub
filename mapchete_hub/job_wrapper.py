@@ -22,7 +22,6 @@ def job_wrapper(
     job: JobEntry,
     job_config: MapcheteJob = None,
     backend_db: BaseStatusHandler = None,
-    dask_cluster_setup: dict = None,
 ):
     # prepare observers for job:
     db_updater = DBUpdater(
@@ -33,15 +32,10 @@ def job_wrapper(
     slack_messenger = SlackMessenger(
         mhub_settings.self_instance_name, job.url, job.job_name
     )
-    observers = Observers([db_updater, slack_messenger])
     try:
         logger.info("start fastAPI background task with job %s", job.job_id)
 
         mapchete_config = job_config.config
-
-        # TODO: this needs to be fixed in the core package
-        if mapchete_config.process_parameters is None:
-            mapchete_config.process_parameters = {}
 
         # relative output paths are not useful, so raise exception
         out_path = MPath.from_inp(dict(mapchete_config.output))
@@ -50,7 +44,6 @@ def job_wrapper(
 
         # if there are too many jobs in parallel, wait
         while (
-            # TODO: verify job states can be compared
             len(
                 backend_db.jobs(
                     state=[
@@ -95,7 +88,6 @@ def job_wrapper(
     except JobCancelledError:
         pass
     except Exception as exc:
-        observers.notify(status=Status.failed, exception=exc)
         logger.exception(exc)
     finally:
         logger.info("end fastAPI background task with job %s", job.job_id)
