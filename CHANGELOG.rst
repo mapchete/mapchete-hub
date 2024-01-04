@@ -9,6 +9,8 @@ Changelog
 
 * packaging
     * use base image ``2024.1.0``
+    * bump ``mapchete`` to ``2024.1.0``    
+    * bump ``mapchete_eo`` to ``2024.1.0``    
 
 2023.12.2 - 2023-12-13
 ----------------------
