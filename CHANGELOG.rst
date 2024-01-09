@@ -2,6 +2,12 @@
 Changelog
 #########
 
+
+2024.1.1 - 2024-01-09
+----------------------
+* CI
+    * add pushing to aws registry to eox gitlab CI
+
 2024.1.0 - 2024-01-04
 ----------------------
 * CI

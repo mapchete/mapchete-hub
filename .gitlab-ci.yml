@@ -5,8 +5,12 @@ stages:
   - test
   - push
 
+.login_registries:
+  before_script:
+    - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_673042305043} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_673042305043} aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 673042305043.dkr.ecr.eu-central-1.amazonaws.com
+
 before_script:
-  - echo -n $CI_JOB_TOKEN | podman login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+  - echo -n $CI_JOB_TOKEN | podman login -u gitlab-ci-token --password-stdin $CI_REGISTRY    
 
 # build python packages
 build_python_package:
@@ -74,7 +78,7 @@ test_unit:
 build_image:
   image: quay.io/podman/stable
   tags:
-    - podman
+    - 'podman'
   stage: push
   artifacts:
     paths:
@@ -115,6 +119,28 @@ build_image:
         -t ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} \
         /bin/bash -c "pip freeze" > pip/mhub_installed.txt
     - less pip/mhub_installed.txt
+
+build-push-mhub-image:
+  extends: .login_registries
+  stage: build
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375
+    AWS_DEFAULT_REGION: eu-central-1   
+  tags:
+    - dind
+  only:
+    - tags
+  image:
+    name: registry.gitlab.eox.at/eox/hub/qhub-images/aws-gitlab:0-2.7.35
+    entrypoint: [""]
+  services:
+    - docker:dind
+  script:
+    - docker pull 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest || true
+    - docker build -t mhub:${CI_COMMIT_TAG} . --file Dockerfile.mhub --cache-from 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest    - docker tag mhub:${CI_COMMIT_TAG} 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest
+    - docker push 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest    - docker tag mhub:${CI_COMMIT_TAG} 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:${CI_COMMIT_TAG}
+    - docker push 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:${CI_COMMIT_TAG}     
 
 # # test mapchete_hub package in built images
 # test_integration:
