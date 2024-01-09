@@ -5,10 +5,6 @@ stages:
   - test
   - push
 
-.login_registries:
-  before_script:
-    - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_673042305043} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_673042305043} aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 673042305043.dkr.ecr.eu-central-1.amazonaws.com
-
 before_script:
   - echo -n $CI_JOB_TOKEN | podman login -u gitlab-ci-token --password-stdin $CI_REGISTRY    
 
@@ -121,7 +117,6 @@ build_image:
     - less pip/mhub_installed.txt
 
 build_image_push_to_aws_registry:
-  extends: .login_registries
   stage: push
   variables:
     DOCKER_TLS_CERTDIR: ""
@@ -137,11 +132,13 @@ build_image_push_to_aws_registry:
   services:
     - docker:dind
   script:
-    - docker pull 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest || true
-    - docker build -t mhub:${CI_COMMIT_TAG} . --file Dockerfile --cache-from 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest    
-    - docker tag mhub:${CI_COMMIT_TAG} 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest
-    - docker push 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest
-    - docker tag mhub:${CI_COMMIT_TAG} 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:${CI_COMMIT_TAG}
+    - docker pull ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
+    - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_673042305043} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_673042305043} aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 673042305043.dkr.ecr.eu-central-1.amazonaws.com  
+    # - docker pull 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest || true
+    # - docker build -t mhub:${CI_COMMIT_TAG} . --file Dockerfile --cache-from 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest
+    # - docker tag mhub:${CI_COMMIT_TAG} 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest
+    # - docker push 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest
+    - docker tag ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME} 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:${CI_COMMIT_TAG}
     - docker push 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:${CI_COMMIT_TAG}
 
 # # test mapchete_hub package in built images
@@ -159,15 +156,15 @@ build_image_push_to_aws_registry:
 #     - /bin/sh run_integration_tests.sh
 
 # release package
-push_python_package:
-  tags:
-    - podman
-  stage: push
-  before_script:
-    - pip install
-      --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple    
-      --upgrade pip hatch
-  script:
-    - hatch publish -r https://gitlab.eox.at/api/v4/projects/255/packages/pypi dist/mapchete_hub*
-  only:
-    - tags
+# push_python_package:
+#   tags:
+#     - podman
+#   stage: push
+#   before_script:
+#     - pip install
+#       --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple    
+#       --upgrade pip hatch
+#   script:
+#     - hatch publish -r https://gitlab.eox.at/api/v4/projects/255/packages/pypi dist/mapchete_hub*
+#   only:
+#     - tags
