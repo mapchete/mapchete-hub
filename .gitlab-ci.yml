@@ -120,7 +120,7 @@ build_image:
         /bin/bash -c "pip freeze" > pip/mhub_installed.txt
     - less pip/mhub_installed.txt
 
-build-push-mhub-image:
+build_image_push_to_aws_registry:
   extends: .login_registries
   stage: push
   variables:
