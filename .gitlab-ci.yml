@@ -3,10 +3,16 @@ image: registry.gitlab.eox.at/maps/docker-base/mapchete:2024.1.0
 stages:
   - build
   - test
+  - build_image
   - push
 
+.login_registries:
+  before_script:
+    - export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_673042305043}
+    - export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_673042305043}
+
 before_script:
-  - echo -n $CI_JOB_TOKEN | podman login -u gitlab-ci-token --password-stdin $CI_REGISTRY
+  - echo -n $CI_JOB_TOKEN | podman login -u gitlab-ci-token --password-stdin $CI_REGISTRY    
 
 # build python packages
 build_python_package:
@@ -74,8 +80,8 @@ test_unit:
 build_image:
   image: quay.io/podman/stable
   tags:
-    - podman
-  stage: push
+    - 'podman'
+  stage: build_image
   artifacts:
     paths:
       - pip/
@@ -116,19 +122,28 @@ build_image:
         /bin/bash -c "pip freeze" > pip/mhub_installed.txt
     - less pip/mhub_installed.txt
 
-# # test mapchete_hub package in built images
-# test_integration:
-#   stage: test
-#   needs: ["build_image"]
-#   timeout: 30m
-#   variables:
-#     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
-#     IMAGE_NAME: mhub
-#     BASE_IMAGE_NAME: mapchete
-#     MHUB_ENV: testing
-#   script:
-#     # run tests
-#     - /bin/sh run_integration_tests.sh
+build_image_push_to_aws_registry:
+  stage: push
+  extends: .login_registries
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375
+    AWS_DEFAULT_REGION: eu-central-1   
+  tags:
+    - dind
+  only:
+    - tags
+  image:
+    name: registry.gitlab.eox.at/eox/hub/qhub-images/aws-gitlab:0-2.7.35
+    entrypoint: [""]
+  services:
+    - docker:dind
+  script:
+    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY      
+    - docker pull ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin 673042305043.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
+    - docker tag ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME} 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:${CI_COMMIT_REF_NAME}
+    - docker push 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:${CI_COMMIT_REF_NAME}
 
 # release package
 push_python_package:
