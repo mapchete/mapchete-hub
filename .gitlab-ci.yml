@@ -130,8 +130,8 @@ build_image_push_to_aws_registry:
     AWS_DEFAULT_REGION: eu-central-1   
   tags:
     - dind
-  only:
-    - tags
+  # only:
+  #   - tags
   image:
     name: registry.gitlab.eox.at/eox/hub/qhub-images/aws-gitlab:0-2.7.35
     entrypoint: [""]
