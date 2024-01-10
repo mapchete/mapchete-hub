@@ -3,6 +3,7 @@ image: registry.gitlab.eox.at/maps/docker-base/mapchete:2024.1.0
 stages:
   - build
   - test
+  - build_image
   - push
 
 .login_registries:
@@ -79,7 +80,7 @@ build_image:
   image: quay.io/podman/stable
   tags:
     - 'podman'
-  stage: push
+  stage: build_image
   artifacts:
     paths:
       - pip/
