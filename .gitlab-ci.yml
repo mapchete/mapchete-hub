@@ -138,7 +138,7 @@ build_image_push_to_aws_registry:
   services:
     - docker:dind
   script:
-    - echo -n $CI_JOB_TOKEN | docker an login -u gitlab-ci-token --password-stdin $CI_REGISTRY      
+    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY      
     - docker pull ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
     - docker login --username AWS --password-stdin 673042305043.dkr.ecr.eu-central-1.amazonaws.com  
     # - docker pull 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest || true
