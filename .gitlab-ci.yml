@@ -140,6 +140,7 @@ build_image_push_to_aws_registry:
   script:
     - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY      
     - docker pull ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
+    - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID_673042305043} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_673042305043} aws ecr get-login-password --region eu-central-1
     - echo -n $CI_JOB_TOKEN | docker login --username AWS --password-stdin 673042305043.dkr.ecr.eu-central-1.amazonaws.com  
     # - docker pull 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest || true
     # - docker build -t mhub:${CI_COMMIT_TAG} . --file Dockerfile --cache-from 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:latest
