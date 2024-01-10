@@ -131,8 +131,8 @@ build_image_push_to_aws_registry:
     AWS_DEFAULT_REGION: eu-central-1   
   tags:
     - dind
-  # only:
-  #   - tags
+  only:
+    - tags
   image:
     name: registry.gitlab.eox.at/eox/hub/qhub-images/aws-gitlab:0-2.7.35
     entrypoint: [""]
@@ -145,30 +145,16 @@ build_image_push_to_aws_registry:
     - docker tag ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME} 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:${CI_COMMIT_REF_NAME}
     - docker push 673042305043.dkr.ecr.eu-central-1.amazonaws.com/mhub:${CI_COMMIT_REF_NAME}
 
-# # test mapchete_hub package in built images
-# test_integration:
-#   stage: test
-#   needs: ["build_image"]
-#   timeout: 30m
-#   variables:
-#     EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
-#     IMAGE_NAME: mhub
-#     BASE_IMAGE_NAME: mapchete
-#     MHUB_ENV: testing
-#   script:
-#     # run tests
-#     - /bin/sh run_integration_tests.sh
-
 # release package
-# push_python_package:
-#   tags:
-#     - podman
-#   stage: push
-#   before_script:
-#     - pip install
-#       --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple    
-#       --upgrade pip hatch
-#   script:
-#     - hatch publish -r https://gitlab.eox.at/api/v4/projects/255/packages/pypi dist/mapchete_hub*
-#   only:
-#     - tags
+push_python_package:
+  tags:
+    - podman
+  stage: push
+  before_script:
+    - pip install
+      --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple    
+      --upgrade pip hatch
+  script:
+    - hatch publish -r https://gitlab.eox.at/api/v4/projects/255/packages/pypi dist/mapchete_hub*
+  only:
+    - tags
