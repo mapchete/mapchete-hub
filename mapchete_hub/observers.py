@@ -113,16 +113,16 @@ class SlackMessenger(ObserverProtocol):
         exception: Optional[Exception] = None,
         **kwargs,
     ):
+        self.started = time.time()
         if status:
-            if status in [Status.done, Status.failed, Status.cancelled]:
-                send_slack_message(
-                    f"*{self.message_prefix} {status.value} after {pretty_seconds(time.time() - self.started)}*"
-                )
-            else:
-                send_slack_message(f"*{self.message_prefix} {status.value}*")
+            # if status in [Status.done, Status.failed, Status.cancelled]:
+            #     send_slack_message(
+            #         f"*{self.message_prefix} {status.value} after {pretty_seconds(time.time() - self.started)}*"
+            #     )
+            # else:
+            send_slack_message(f"*{self.message_prefix} {status.value} after {pretty_seconds(time.time() - self.started)}*")
         if exception:
             send_slack_message(
-                f"{exception}\n"
                 f"{''.join(traceback.format_tb(exception.__traceback__))}"
             )
         if executor:
