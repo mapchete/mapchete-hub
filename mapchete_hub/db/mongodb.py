@@ -5,11 +5,11 @@ from typing import List, Optional
 from uuid import uuid4
 
 import pymongo
+from mapchete.enums import Status
 from mapchete.types import Progress
 from shapely.geometry import box, mapping, shape
 
 from mapchete_hub.db.base import BaseStatusHandler
-from mapchete_hub.enums import Status
 from mapchete_hub.geometry import process_area_from_config
 from mapchete_hub.models import JobEntry, MapcheteJob
 from mapchete_hub.random_names import random_name
@@ -113,7 +113,7 @@ class MongoDBStatusHandler(BaseStatusHandler):
         process_area = process_area_from_config(
             job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
         )[0]
-        started = datetime.utcnow()
+        submitted = datetime.utcnow()
         entry = JobEntry(
             job_id=job_id,
             url=os.path.join(mhub_settings.self_url, "jobs", job_id),
@@ -122,8 +122,9 @@ class MongoDBStatusHandler(BaseStatusHandler):
             bounds=shape(process_area).bounds,
             mapchete=job_config,
             output_path=job_config.config.output["path"],
-            started=started,
-            updated=started,
+            submitted=submitted,
+            started=submitted,
+            updated=submitted,
             job_name=job_config.params.get("job_name") or random_name(),
             dask_specs=job_config.params.get("dask_specs", dict()),
         )
@@ -161,7 +162,9 @@ class MongoDBStatusHandler(BaseStatusHandler):
         timestamp = datetime.utcnow()
         if status:
             new_attributes.update(status=Status[status])
-            if status == Status.done:
+            if status == Status.initializing:
+                new_attributes.update(started=timestamp)
+            elif status == Status.done:
                 new_attributes.update(
                     runtime=(timestamp - self.job(job_id).started).total_seconds(),
                     finished=timestamp,

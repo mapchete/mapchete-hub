@@ -6,10 +6,9 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
+from mapchete.enums import Status
 from mapchete.types import Progress
-from pydantic import NonNegativeInt
 
-from mapchete_hub.enums import Status
 from mapchete_hub.models import JobEntry, MapcheteJob
 
 logger = logging.getLogger(__name__)
