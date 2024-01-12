@@ -272,6 +272,7 @@ async def cancel_job(
     try:
         job = backend_db.job(job_id)
         if job.status in [
+            Status.pending,
             Status.parsing,
             Status.initializing,
             Status.running,
