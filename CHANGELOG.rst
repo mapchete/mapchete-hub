@@ -5,11 +5,11 @@ Changelog
 2024.1.2 - 2024-01-12
 ----------------------
 * CI
-    * use base image ``2024.1.1``
+    * use base image ``2024.1.2``
 
-    * use base image ``2024.1.1``
-    * bump ``mapchete`` to ``2024.1.1``    
-    * bump ``mapchete_eo`` to ``2024.1.1``     
+    * use base image ``2024.1.2``
+    * bump ``mapchete`` to ``2024.1.2``    
+    * bump ``mapchete_eo`` to ``2024.1.2``     
 
 2024.1.1 - 2024-01-10
 ----------------------
