@@ -73,7 +73,7 @@ class DBUpdater(ObserverProtocol):
 
         if exception:
             set_kwargs.update(
-                exception=exception,
+                exception=repr(exception),
                 traceback="\n".join(traceback.format_tb(exception.__traceback__)),
             )
 
