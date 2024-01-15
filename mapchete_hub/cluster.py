@@ -3,11 +3,13 @@ from contextlib import contextmanager
 from enum import Enum
 from typing import Generator, Optional, Union
 
+from aiohttp import ServerConnectionError, ServerDisconnectedError, ServerTimeoutError
 from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import BasicAuth, Gateway, GatewayCluster
 from mapchete.config.models import DaskSettings, DaskSpecs
 from mapchete.executor import DaskExecutor
 from pydantic import BaseModel, ConfigDict, Field
+from retry import retry
 
 from mapchete_hub.settings import (
     dask_default_specs,
@@ -92,6 +94,12 @@ def get_dask_executor(
 
 
 @contextmanager
+@retry(
+    exceptions=(ServerDisconnectedError, ServerConnectionError, ServerTimeoutError),
+    tries=mhub_settings.dask_gateway_tries,
+    backoff=mhub_settings.dask_gateway_backoff,
+    delay=mhub_settings.dask_gateway_delay,
+)
 def dask_cluster(
     cluster_setup: ClusterSetup, dask_specs: Optional[DaskSpecs] = None
 ) -> Generator[Union[LocalCluster, GatewayCluster, None], None, None]:

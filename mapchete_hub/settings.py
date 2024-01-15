@@ -33,6 +33,9 @@ class MHubSettings(BaseSettings):
     max_parallel_jobs_interval_seconds: int = 10
     dask_gateway_url: Optional[str] = None
     dask_gateway_pass: Optional[str] = None
+    dask_gateway_tries: int = 1
+    dask_gateway_backoff: float = 1.0
+    dask_gateway_delay: float = 0.0
     dask_scheduler_url: Optional[str] = None
     dask_min_workers: int = 10
     dask_max_workers: int = 1000
