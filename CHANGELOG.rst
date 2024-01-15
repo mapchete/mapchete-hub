@@ -2,6 +2,15 @@
 Changelog
 #########
 
+2024.1.5 - 2024-01-15
+---------------------
+
+* core
+  * slack messages: also print exception representation, not just traceback
+
+* packaging
+    * bump ``mapchete`` to ``2024.1.3``
+
 
 2024.1.4 - 2024-01-15
 ---------------------
