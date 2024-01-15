@@ -61,13 +61,13 @@ from typing import Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Response
 from mapchete.config.models import DaskSettings
+from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings
 
 from mapchete_hub import __version__
 from mapchete_hub.cluster import get_dask_cluster_setup
 from mapchete_hub.db import BaseStatusHandler, init_backenddb
-from mapchete_hub.enums import Status
 from mapchete_hub.job_wrapper import job_wrapper
 from mapchete_hub.models import MapcheteJob
 from mapchete_hub.settings import get_dask_specs, mhub_settings
@@ -272,6 +272,7 @@ async def cancel_job(
     try:
         job = backend_db.job(job_id)
         if job.status in [
+            Status.pending,
             Status.parsing,
             Status.initializing,
             Status.running,

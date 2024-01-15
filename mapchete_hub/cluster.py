@@ -1,7 +1,7 @@
 import logging
 from contextlib import contextmanager
 from enum import Enum
-from typing import Optional, Union
+from typing import Generator, Optional, Union
 
 from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import BasicAuth, Gateway, GatewayCluster
@@ -72,7 +72,7 @@ def get_dask_executor(
     preprocessing_tasks: Optional[int] = None,
     tile_tasks: Optional[int] = None,
     **kwargs,
-) -> DaskExecutor:
+) -> Generator[DaskExecutor, None, None]:
     logger.info("requesting dask cluster and dask client...")
     cluster_setup = get_dask_cluster_setup()
     with dask_cluster(cluster_setup, dask_specs=dask_specs) as cluster:
@@ -94,7 +94,7 @@ def get_dask_executor(
 @contextmanager
 def dask_cluster(
     cluster_setup: ClusterSetup, dask_specs: Optional[DaskSpecs] = None
-) -> Union[LocalCluster, GatewayCluster, None]:
+) -> Generator[Union[LocalCluster, GatewayCluster, None], None, None]:
     dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
 
     if cluster_setup.type == ClusterType.local:
@@ -125,7 +125,7 @@ def dask_cluster(
 @contextmanager
 def dask_client(
     cluster_setup: ClusterSetup, cluster: Union[LocalCluster, GatewayCluster, None]
-) -> Client:
+) -> Generator[Client, None, None]:
     if cluster_setup.type == ClusterType.local:
         with Client(cluster, set_as_default=False) as client:
             logger.info("started client %s", client)
@@ -133,7 +133,9 @@ def dask_client(
             logger.info("closing client %s", client)
         logger.info("closed client %s", client)
 
-    elif cluster_setup.type == ClusterType.gateway:  # pragma: no cover
+    elif cluster_setup.type == ClusterType.gateway and isinstance(
+        cluster, GatewayCluster
+    ):  # pragma: no cover
         with cluster.get_client(set_as_default=False) as client:
             logger.info("started client %s", client)
             yield client

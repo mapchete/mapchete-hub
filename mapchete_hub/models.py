@@ -7,9 +7,10 @@ from typing import List, Optional
 
 from mapchete.config import ProcessConfig
 from mapchete.config.models import DaskSpecs
+from mapchete.enums import Status
 from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
 
-from mapchete_hub.enums import Status
+from mapchete_hub.random_names import random_name
 
 
 class MapcheteCommand(str, Enum):
@@ -83,13 +84,14 @@ class JobEntry(BaseModel):
     next_job_id: Optional[str] = None
     current_progress: Optional[NonNegativeInt] = None
     total_progress: Optional[NonNegativeInt] = None
+    submitted: Optional[datetime.datetime] = None
     started: Optional[datetime.datetime] = None
     finished: Optional[datetime.datetime] = None
     updated: Optional[datetime.datetime] = None
     runtime: Optional[float] = None
     dask_specs: DaskSpecs = DaskSpecs()
     command: Optional[MapcheteCommand] = MapcheteCommand.execute
-    job_name: Optional[str] = None
+    job_name: str = Field(default_factory=random_name)
     dask_dashboard_link: Optional[str] = None
     dask_scheduler_logs: Optional[list] = None
 

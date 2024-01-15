@@ -4,13 +4,13 @@ from functools import partial
 
 from mapchete.commands import execute
 from mapchete.commands.observer import Observers
+from mapchete.enums import Status
 from mapchete.errors import JobCancelledError
 from mapchete.path import MPath
 
 from mapchete_hub import __version__
 from mapchete_hub.cluster import cluster_adapt, get_dask_executor
 from mapchete_hub.db import BaseStatusHandler
-from mapchete_hub.enums import Status
 from mapchete_hub.models import JobEntry, MapcheteJob
 from mapchete_hub.observers import DBUpdater, SlackMessenger
 from mapchete_hub.settings import mhub_settings
@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 def job_wrapper(
     job: JobEntry,
-    job_config: MapcheteJob = None,
-    backend_db: BaseStatusHandler = None,
+    job_config: MapcheteJob,
+    backend_db: BaseStatusHandler,
 ):
     logger.info("start fastAPI background task with job %s", job.job_id)
     mapchete_config = job_config.config
