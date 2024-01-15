@@ -109,12 +109,12 @@ class SlackMessenger(ObserverProtocol):
 
     def update(
         self,
-        *args,
+        *_,
         status: Optional[Status] = None,
         executor: Optional[DaskExecutor] = None,
         exception: Optional[Exception] = None,
         message: Optional[str] = None,
-        **kwargs,
+        **__,
     ):
         if status:
             # count job runtime from initialization on
@@ -138,6 +138,7 @@ class SlackMessenger(ObserverProtocol):
 
         if exception:
             send_slack_message(
+                f"{repr(exception)}\n"
                 f"{''.join(traceback.format_tb(exception.__traceback__))}"
             )
 
