@@ -2,25 +2,42 @@
 Changelog
 #########
 
-2024.1.3 - 2024-01-12
-----------------------
+
+2024.1.4 - 2024-01-15
+---------------------
+
+* core
+  * allow aborting jobs in `pending` mode
+  * differentiate between `submitted` and `started` time stamps
+  * add retry mechanism on requesting the dask cluster
+  * track Exception in DB using `repr()` instead of `str()` to better keep track of exception type
+
 * packaging
-    * bump ``mapchete_eo`` to ``2024.1.3`` 
+    * bump ``mapchete_eo`` to ``2024.1.4``
+
+
+2024.1.3 - 2024-01-12
+---------------------
+* packaging
+    * bump ``mapchete_eo`` to ``2024.1.3``
+
 
 2024.1.2 - 2024-01-12
-----------------------
+---------------------
 * CI
     * use base image ``2024.1.2``
 
 * packaging
     * use base image ``2024.1.2``
-    * bump ``mapchete`` to ``2024.1.2``    
-    * bump ``mapchete_eo`` to ``2024.1.2``     
+    * bump ``mapchete`` to ``2024.1.2``
+    * bump ``mapchete_eo`` to ``2024.1.2``
+
 
 2024.1.1 - 2024-01-10
-----------------------
+---------------------
 * CI
     * add pushing to aws registry to eox gitlab CI
+
 
 2024.1.0 - 2024-01-04
 ----------------------
@@ -29,8 +46,9 @@ Changelog
 
 * packaging
     * use base image ``2024.1.0``
-    * bump ``mapchete`` to ``2024.1.0``    
-    * bump ``mapchete_eo`` to ``2024.1.0``    
+    * bump ``mapchete`` to ``2024.1.0``
+    * bump ``mapchete_eo`` to ``2024.1.0``
+
 
 2023.12.2 - 2023-12-13
 ----------------------
@@ -39,7 +57,6 @@ Changelog
 
 * core
     * adaptive `DaskSpecs` and `DaskSettings` now can also be passed to `mapchete` under `dask_specs` in the yaml config
-
 
 * packaging
     * use base image ``2023.12.2``
