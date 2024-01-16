@@ -2,6 +2,17 @@
 Changelog
 #########
 
+2024.1.6 - 2024-01-16
+---------------------
+
+* core
+  * slack messages: report in slack threads instead of single messages
+  * fix worker settings when adapting cluster
+
+* packaging
+    * replace ``Slacker`` dependency with ``slack_sdk``
+
+
 2024.1.5 - 2024-01-15
 ---------------------
 
