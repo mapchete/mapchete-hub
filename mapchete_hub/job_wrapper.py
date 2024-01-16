@@ -9,7 +9,7 @@ from mapchete.errors import JobCancelledError
 from mapchete.path import MPath
 
 from mapchete_hub import __version__
-from mapchete_hub.cluster import cluster_adapt, get_dask_executor
+from mapchete_hub.cluster import get_dask_executor
 from mapchete_hub.db import BaseStatusHandler
 from mapchete_hub.models import JobEntry, MapcheteJob
 from mapchete_hub.observers import DBUpdater, SlackMessenger

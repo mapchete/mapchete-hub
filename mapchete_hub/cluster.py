@@ -176,19 +176,23 @@ def cluster_adapt(
 
     if preprocessing_tasks is not None and tile_tasks is not None:
         if dask_settings.process_graph:
-            # the minimum should not be larger than the expected number of job tasks
+            # the minimum should be set to the provided minimum but not be larger than the
+            # expected number of job tasks
             min_workers = min([dask_specs.adapt_options.minimum, tile_tasks])
+
             # the maximum should also not be larger than one eigth of the expected number of tasks
             max_workers = min(
                 [
                     dask_specs.adapt_options.maximum,
-                    preprocessing_tasks + tile_tasks // 8,
+                    ((preprocessing_tasks + tile_tasks) // 8) or 1,
                 ]
             )
 
         else:  # pragma: no cover
-            # the minimum should not be larger than the expected number of job tasks
+            # the minimum should be set to the provided minimum but not be larger than the
+            # expected number of job tasks
             min_workers = min([dask_specs.adapt_options.minimum, tile_tasks])
+
             # the maximum should also not be larger than the expected number of job tasks
             max_workers = min(
                 [
@@ -196,8 +200,11 @@ def cluster_adapt(
                     max([preprocessing_tasks, tile_tasks]),
                 ]
             )
+
+        # max_workers should not be smaller than min_workers
         if max_workers < min_workers:
             max_workers = min_workers
+
         logger.debug(
             "set minimum workers to %s and maximum workers to %s",
             min_workers,
