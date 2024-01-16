@@ -92,14 +92,14 @@ class SlackMessenger(ObserverProtocol):
             if status == Status.retrying:
                 self.retries += 1
                 if message:
-                    self.send(f"*{status.value}*: {message}")
+                    self.send(f"{status.value}: {message}")
 
             # in final statuses, report runtime
             elif status in [Status.done, Status.failed, Status.cancelled]:
                 retry_text = (
                     "1 retry" if self.retries == 1 else f"{self.retries} retries"
                 )
-                self.send(f"{status.value}")
+                self.send(f"status changed to '{status.value}'")
                 self.update_message(
                     message=self.job_message.format(
                         status_emoji=status_emoji(status), status=status
@@ -108,7 +108,7 @@ class SlackMessenger(ObserverProtocol):
                 )
 
             elif status == Status.running:
-                self.send(f"{status.value}")
+                self.send(f"status changed to '{status.value}'")
                 self.update_message(
                     message=self.job_message.format(
                         status_emoji=status_emoji(status), status=status
@@ -124,7 +124,9 @@ class SlackMessenger(ObserverProtocol):
             )
 
         if executor:
-            self.send(f"<{executor._executor.dashboard_link}|cluster dashboard online>")
+            self.send(
+                f"dask scheduler online (see <{executor._executor.dashboard_link}|dashboard>)"
+            )
 
     def send(
         self,
