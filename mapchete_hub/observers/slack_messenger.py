@@ -28,6 +28,10 @@ class StatusEmojis(Enum):
     failed = ":red_circle:"
 
 
+def status_emoji(status: Status) -> str:
+    return StatusEmojis[status.name].value
+
+
 class SlackMessenger(ObserverProtocol):
     self_instance_name: str
     job: JobEntry
@@ -64,7 +68,7 @@ class SlackMessenger(ObserverProtocol):
         # send init message
         self.send(
             message=self.job_message.format(
-                status_emoji=StatusEmojis[Status.pending.name].value,
+                status_emoji=status_emoji(Status.pending),
                 status=Status.pending,
             )
         )
@@ -80,48 +84,44 @@ class SlackMessenger(ObserverProtocol):
         **__,
     ):
         if status:
-            # count job runtime from initialization on
+            self.send(f"*{status.value}*")
+
+            # remember job runtime from initialization on
             if status == Status.initializing:
                 self.started = time.time()
 
-            if status == Status.failed and isinstance(exception, JobCancelledError):
-                pass
+            # remember retries
+            if status == Status.retrying:
+                self.retries += 1
+                if message:
+                    self.send(f"*{status.value}*: {message}")
 
             # in final statuses, report runtime
             elif status in [Status.done, Status.failed, Status.cancelled]:
                 retry_text = (
                     "1 retry" if self.retries == 1 else f"{self.retries} retries"
                 )
-                self.send(
-                    f"*{status.value} after "
-                    f"{pretty_seconds(time.time() - self.started)} and {retry_text}*"
-                )
-                if exception:
-                    self.send(
-                        f"```\n"
-                        f"{repr(exception)}\n"
-                        f"{''.join(traceback.format_tb(exception.__traceback__))}"
-                        f"\n```"
-                    )
                 self.update_message(
                     message=self.job_message.format(
-                        status_emoji=StatusEmojis[status.name].value, status=status
+                        status_emoji=status_emoji(status), status=status
                     )
-                    + f" after {pretty_seconds(time.time() - self.started)}"
+                    + f" after {pretty_seconds(time.time() - self.started)} using {retry_text}"
                 )
 
-            elif status == Status.retrying:
-                self.retries += 1
-                if message:
-                    self.send(f"*{status.value}*: {message}")
-
-            elif status == Status.running:
-                self.send(f"*{status.value} ...*")
+            else:
                 self.update_message(
                     message=self.job_message.format(
-                        status_emoji=StatusEmojis[status.name].value, status=status
+                        status_emoji=status_emoji(status), status=status
                     )
                 )
+
+        if exception and status == Status.failed:
+            self.send(
+                f"```\n"
+                f"{repr(exception)}\n"
+                f"{''.join(traceback.format_tb(exception.__traceback__))}"
+                f"\n```"
+            )
 
         if executor:
             self.send(f"<{executor._executor.dashboard_link}|cluster dashboard online>")

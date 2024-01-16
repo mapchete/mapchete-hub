@@ -123,7 +123,10 @@ async def startup_event():
             client = WebClient(token=mhub_settings.slack_token)
             client.chat_postMessage(
                 channel=mhub_settings.slack_channel,
-                text=f":eox_eye: *{mhub_settings.self_instance_name} version {__version__} awaiting orders on* {mhub_settings.self_url}",
+                text=(
+                    f":eox_eye: *{mhub_settings.self_instance_name} version {__version__} "
+                    f"awaiting orders on* {mhub_settings.self_url}"
+                ),
             )
     except ImportError:  # pragma: no cover
         pass
@@ -200,6 +203,7 @@ async def post_job(
         )
         # create new entry in database
         job = backend_db.new(job_config=job_config)
+
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper,
