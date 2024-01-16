@@ -7,11 +7,9 @@ from mapchete.commands.observer import ObserverProtocol
 from mapchete.enums import Status
 from mapchete.errors import JobCancelledError
 from mapchete.executor import DaskExecutor
-from mapchete.pretty import pretty_seconds
 from mapchete.types import Progress
 
 from mapchete_hub.db import BaseStatusHandler
-from mapchete_hub.slack import send_slack_message
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +39,10 @@ class DBUpdater(ObserverProtocol):
 
         # check always if job was cancelled but respect the rate limit
         event_time_passed = time.time() - self.last_event
-        if event_time_passed > self.event_rate_limit:
+        if event_time_passed > self.event_rate_limit and status not in [
+            Status.failed,
+            Status.cancelled,
+        ]:
             current_status = self.backend_db.job(self.job_id).status
             # if job status was set to cancelled, raise a JobCancelledError
             if current_status == Status.cancelled:
@@ -83,66 +84,3 @@ class DBUpdater(ObserverProtocol):
     def set(self, **kwargs):
         if kwargs:
             self.backend_db.set(self.job_id, **kwargs)
-
-
-class SlackMessenger(ObserverProtocol):
-    self_instance_name: str
-    job_url: str
-    job_name: str
-    submitted: float
-    started: float
-
-    def __init__(
-        self,
-        self_instance_name: str,
-        job_url: str,
-        job_name: str,
-    ):
-        self.self_instance_name = self_instance_name
-        self.job_url = job_url
-        self.job_name = job_name
-        self.message_prefix = (
-            f"{self.self_instance_name}: <{self.job_url}|{self.job_name}>"
-        )
-        self.submitted = time.time()
-        self.started = self.submitted
-
-    def update(
-        self,
-        *_,
-        status: Optional[Status] = None,
-        executor: Optional[DaskExecutor] = None,
-        exception: Optional[Exception] = None,
-        message: Optional[str] = None,
-        **__,
-    ):
-        if status:
-            # count job runtime from initialization on
-            if status == Status.initializing:
-                self.started = time.time()
-
-            # in final statuses, report runtime
-            if status in [Status.done, Status.failed, Status.cancelled]:
-                send_slack_message(
-                    f"*{self.message_prefix} {status.value} after "
-                    f"{pretty_seconds(time.time() - self.started)}*"
-                )
-
-            else:
-                if status == Status.retrying and message:
-                    send_slack_message(
-                        f"*{self.message_prefix} {status.value}*: {message}"
-                    )
-                else:
-                    send_slack_message(f"*{self.message_prefix} {status.value}*")
-
-        if exception:
-            send_slack_message(
-                f"{repr(exception)}\n"
-                f"{''.join(traceback.format_tb(exception.__traceback__))}"
-            )
-
-        if executor:
-            send_slack_message(
-                f"*{self.message_prefix}*: <{executor._executor.dashboard_link}|cluster dashboard online>"
-            )

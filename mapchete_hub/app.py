@@ -70,8 +70,8 @@ from mapchete_hub.cluster import get_dask_cluster_setup
 from mapchete_hub.db import BaseStatusHandler, init_backenddb
 from mapchete_hub.job_wrapper import job_wrapper
 from mapchete_hub.models import MapcheteJob
+from mapchete_hub.observers import SlackMessenger
 from mapchete_hub.settings import get_dask_specs, mhub_settings
-from mapchete_hub.slack import send_slack_message
 from mapchete_hub.timetools import str_to_date
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
@@ -100,11 +100,6 @@ app = FastAPI()
 
 CACHE = dict()
 
-# mhub online message
-send_slack_message(
-    f"*{mhub_settings.self_instance_name} version {__version__} awaiting orders on* {mhub_settings.self_url}"
-)
-
 
 # dependencies
 def get_backend_db() -> BaseStatusHandler:  # pragma: no cover
@@ -116,6 +111,25 @@ def get_backend_db() -> BaseStatusHandler:  # pragma: no cover
             )
         CACHE["backend_db"] = init_backenddb(src=mhub_settings.backend_db)
     return CACHE["backend_db"]
+
+
+@app.on_event("startup")
+async def startup_event():
+    # mhub online message
+    try:
+        if mhub_settings.slack_token:  # pragma: no cover
+            from slack_sdk import WebClient
+
+            client = WebClient(token=mhub_settings.slack_token)
+            client.chat_postMessage(
+                channel=mhub_settings.slack_channel,
+                text=(
+                    f":eox_eye: *{mhub_settings.self_instance_name} version {__version__} "
+                    f"awaiting orders on* {mhub_settings.self_url}"
+                ),
+            )
+    except ImportError:  # pragma: no cover
+        pass
 
 
 # REST endpoints
@@ -189,6 +203,7 @@ async def post_job(
         )
         # create new entry in database
         job = backend_db.new(job_config=job_config)
+
         # send task to background to be able to quickly return a message
         background_tasks.add_task(
             job_wrapper,
@@ -202,13 +217,6 @@ async def post_job(
         job = backend_db.job(job.job_id)
         logger.debug("submitted job %s", job)
 
-        running = len(backend_db.jobs(status=Status.running))
-        logger.debug("currently running %s jobs", running)
-
-        # send message to Slack
-        send_slack_message(
-            f"*{mhub_settings.self_instance_name}: job '<{job.url}|{job.job_name}>' with ID {job.job_id} submitted ({running} running)*\n"
-        )
         return job.to_geojson_dict()
     except Exception as exc:  # pragma: no cover
         logger.exception(exc)
@@ -278,9 +286,7 @@ async def cancel_job(
             Status.running,
         ]:  # pragma: no cover
             backend_db.set(job_id, status=Status.cancelled)
-            send_slack_message(
-                f"*{mhub_settings.self_instance_name}: aborting <{job.url}|{job.job_name}>*"
-            )
+            SlackMessenger(mhub_settings.self_instance_name, job).send("aborting ...")
         return backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc

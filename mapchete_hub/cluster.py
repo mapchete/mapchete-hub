@@ -58,8 +58,8 @@ def get_dask_cluster_setup() -> ClusterSetup:
         else:
             logger.debug("creating LocalCluster")
             CACHE["cluster"] = LocalCluster(
-                processes=True,
-                n_workers=1,
+                processes=False,
+                n_workers=4,
                 # threads_per_worker=os.cpu_count()
                 threads_per_worker=8,
             )

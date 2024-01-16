@@ -23,8 +23,8 @@ class MHubSettings(BaseSettings):
     and the settings in uppercase, e.g. MHUB_SELF_URL.
     """
 
-    self_url: str = "/"
-    self_instance_name: str = "mapchete Hub"
+    self_url: str = "http://127.0.0.1:5000"
+    self_instance_name: str = "mapchete Hub (test instance)"
     add_mapchete_logger: bool = False
     backend_db: str = "memory"
     backend_db_event_rate_limit: float = 0.2
@@ -43,6 +43,8 @@ class MHubSettings(BaseSettings):
     worker_default_image: str = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
     worker_image_tag: str = __version__
     worker_propagate_env_prefixes: str = "AWS, DASK, GDAL, MHUB, MAPCHETE, MP"
+    slack_token: Optional[str] = None
+    slack_channel: Optional[str] = "mapchete_hub"
 
     # read from environment
     model_config = SettingsConfigDict(env_prefix="MHUB_")

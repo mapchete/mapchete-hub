@@ -94,6 +94,7 @@ class JobEntry(BaseModel):
     job_name: str = Field(default_factory=random_name)
     dask_dashboard_link: Optional[str] = None
     dask_scheduler_logs: Optional[list] = None
+    slack_thread_ds: Optional[str] = None
 
     def update(self, **new_data):
         for field, value in new_data.items():
