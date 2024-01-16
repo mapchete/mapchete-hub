@@ -1,7 +1,7 @@
 import logging
 import time
 import traceback
-from typing import Optional
+from typing import Any, Optional
 
 from mapchete.commands.observer import ObserverProtocol
 from mapchete.enums import Status
@@ -11,7 +11,7 @@ from mapchete.pretty import pretty_seconds
 from mapchete.types import Progress
 
 from mapchete_hub.db import BaseStatusHandler
-from mapchete_hub.slack import send_slack_message
+from mapchete_hub.settings import mhub_settings
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,10 @@ class DBUpdater(ObserverProtocol):
 
         # check always if job was cancelled but respect the rate limit
         event_time_passed = time.time() - self.last_event
-        if event_time_passed > self.event_rate_limit:
+        if event_time_passed > self.event_rate_limit and status not in [
+            Status.failed,
+            Status.cancelled,
+        ]:
             current_status = self.backend_db.job(self.job_id).status
             # if job status was set to cancelled, raise a JobCancelledError
             if current_status == Status.cancelled:
@@ -91,19 +94,30 @@ class SlackMessenger(ObserverProtocol):
     job_name: str
     submitted: float
     started: float
+    thread_ts: Optional[str] = None
+    client: Optional[Any] = None
 
     def __init__(
         self,
         self_instance_name: str,
-        job_url: str,
-        job_name: str,
+        job_url: Optional[str] = None,
+        job_name: Optional[str] = None,
     ):
         self.self_instance_name = self_instance_name
+        try:
+            if mhub_settings.slack_token:  # pragma: no cover
+                from slack_sdk import WebClient
+
+                self.client = WebClient(token=mhub_settings.slack_token)
+            else:  # pragma: no cover
+                logger.debug("no MHUB_SLACK_TOKEN env variable set.")
+        except ImportError:  # pragma: no cover
+            logger.debug(
+                "install 'slack' extra and set MHUB_SLACK_TOKEN to send messages to slack"
+            )
+
         self.job_url = job_url
         self.job_name = job_name
-        self.message_prefix = (
-            f"{self.self_instance_name}: <{self.job_url}|{self.job_name}>"
-        )
         self.submitted = time.time()
         self.started = self.submitted
         self.retries = 0
@@ -122,33 +136,43 @@ class SlackMessenger(ObserverProtocol):
             if status == Status.initializing:
                 self.started = time.time()
 
+            if status == Status.failed and isinstance(exception, JobCancelledError):
+                pass
+
             # in final statuses, report runtime
-            if status in [Status.done, Status.failed, Status.cancelled]:
+            elif status in [Status.done, Status.failed, Status.cancelled]:
                 retry_text = (
                     "1 retry" if self.retries == 1 else f"{self.retries} retries"
                 )
-                send_slack_message(
-                    f"*{self.message_prefix} {status.value} after "
+                self.send(
+                    f"*{status.value} after "
                     f"{pretty_seconds(time.time() - self.started)} and {retry_text}*"
                 )
+                if exception:
+                    self.send(
+                        f"{repr(exception)}\n"
+                        f"{''.join(traceback.format_tb(exception.__traceback__))}"
+                    )
 
-            else:
-                if status == Status.retrying:
-                    self.retries += 1
-                    if message:
-                        send_slack_message(
-                            f"*{self.message_prefix} {status.value}*: {message}"
-                        )
-                else:
-                    send_slack_message(f"*{self.message_prefix} {status.value}*")
-
-        if exception:
-            send_slack_message(
-                f"{repr(exception)}\n"
-                f"{''.join(traceback.format_tb(exception.__traceback__))}"
-            )
+            elif status == Status.retrying:
+                self.retries += 1
+                if message:
+                    self.send(f"*{status.value}*: {message}")
+            elif status == Status.running:
+                self.send(f"*{status.value} ...*")
 
         if executor:
-            send_slack_message(
-                f"*{self.message_prefix}*: <{executor._executor.dashboard_link}|cluster dashboard online>"
+            self.send(f"<{executor._executor.dashboard_link}|cluster dashboard online>")
+
+    def send(self, message: str, thread_ts: Optional[str] = None) -> None:
+        thread_ts = thread_ts or self.thread_ts
+        if self.client:
+            logger.debug("announce on slack, (thread: %s): %s", thread_ts, message)
+            response = self.client.chat_postMessage(
+                channel=mhub_settings.slack_channel, text=message, thread_ts=thread_ts
             )
+
+            if not response.get("ok"):
+                logger.debug("slack message not sent: %s", response.body)
+            elif thread_ts is None:
+                self.thread_ts = response.data.get("ts")

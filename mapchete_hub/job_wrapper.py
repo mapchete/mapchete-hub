@@ -24,6 +24,7 @@ def job_wrapper(
     backend_db: BaseStatusHandler,
 ):
     logger.info("start fastAPI background task with job %s", job.job_id)
+
     mapchete_config = job_config.config
 
     # prepare observers for job:
@@ -36,6 +37,17 @@ def job_wrapper(
         mhub_settings.self_instance_name, job.url, job.job_name
     )
     observers = Observers([db_updater, slack_messenger])
+
+    running = len(backend_db.jobs(status=Status.running))
+    logger.debug("currently running %s jobs", running)
+
+    # send message to Slack
+    slack_messenger.send(
+        f"*{mhub_settings.self_instance_name}: job '<{job.url}|{job.job_name}>' with ID "
+        f"{job.job_id} submitted ({running} running)*\n"
+    )
+    # once the first message is sent, we remember the thread ID for all follow-up messages
+    db_updater.set(slack_thread_ds=slack_messenger.thread_ts)
 
     # handle observers and job states while job is not being executed
     try:
@@ -62,8 +74,6 @@ def job_wrapper(
         logger.exception(exc)
         observers.notify(status=Status.failed, exception=exc)
         raise
-    finally:
-        logger.info("%s end fastAPI background task with job", job.job_id)
 
     # observers and job states are handled by execute() from now on
     try:
@@ -96,10 +106,11 @@ def job_wrapper(
         )
     except JobCancelledError:
         logger.info("%s got cancelled.", job.job_id)
+        observers.notify(status=Status.cancelled)
     except Exception as exc:
         logger.exception(exc)
     finally:
-        logger.info("%s end fastAPI background task with job", job.job_id)
+        logger.info("%s fastAPI background task finished", job.job_id)
 
 
 def running_jobs(backend_db: BaseStatusHandler, job_id: str = None) -> int:
