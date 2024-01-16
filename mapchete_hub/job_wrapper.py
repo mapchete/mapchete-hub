@@ -33,19 +33,12 @@ def job_wrapper(
         job_id=job.job_id,
         event_rate_limit=mhub_settings.backend_db_event_rate_limit,
     )
-    slack_messenger = SlackMessenger(
-        mhub_settings.self_instance_name, job.url, job.job_name
-    )
+    slack_messenger = SlackMessenger(mhub_settings.self_instance_name, job)
     observers = Observers([db_updater, slack_messenger])
 
     running = len(backend_db.jobs(status=Status.running))
     logger.debug("currently running %s jobs", running)
 
-    # send message to Slack
-    slack_messenger.send(
-        f"*{mhub_settings.self_instance_name}: job '<{job.url}|{job.job_name}>' with ID "
-        f"{job.job_id} submitted ({running} running)*\n"
-    )
     # once the first message is sent, we remember the thread ID for all follow-up messages
     db_updater.set(slack_thread_ds=slack_messenger.thread_ts)
 

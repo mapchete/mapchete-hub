@@ -99,7 +99,6 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 CACHE = dict()
-slack_messenger = SlackMessenger(mhub_settings.self_instance_name)
 
 
 # dependencies
@@ -117,9 +116,17 @@ def get_backend_db() -> BaseStatusHandler:  # pragma: no cover
 @app.on_event("startup")
 async def startup_event():
     # mhub online message
-    slack_messenger.send(
-        f"*{mhub_settings.self_instance_name} version {__version__} awaiting orders on* {mhub_settings.self_url}"
-    )
+    try:
+        if mhub_settings.slack_token:  # pragma: no cover
+            from slack_sdk import WebClient
+
+            client = WebClient(token=mhub_settings.slack_token)
+            client.chat_postMessage(
+                channel=mhub_settings.slack_channel,
+                text=f":eox_eye: *{mhub_settings.self_instance_name} version {__version__} awaiting orders on* {mhub_settings.self_url}",
+            )
+    except ImportError:  # pragma: no cover
+        pass
 
 
 # REST endpoints
@@ -275,7 +282,7 @@ async def cancel_job(
             Status.running,
         ]:  # pragma: no cover
             backend_db.set(job_id, status=Status.cancelled)
-            slack_messenger.send("*aborting ...*", thread_ts=job.slack_thread_ds)
+            SlackMessenger(mhub_settings.self_instance_name, job).send("*aborting ...*")
         return backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
