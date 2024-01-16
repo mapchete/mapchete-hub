@@ -11,15 +11,14 @@ logger = logging.getLogger(__name__)
 def send_slack_message(msg):
     """Post preview link on slack."""
     try:
-        from slacker import Slacker
+        from slack_sdk.webhook import WebhookClient
 
         if os.environ.get("SLACK_WEBHOOK_URL"):  # pragma: no cover
+            client = WebhookClient(url=os.environ.get("SLACK_WEBHOOK_URL"))
             logger.debug("announce on slack: %s", msg)
-            Slacker(
-                None, incoming_webhook_url=os.environ["SLACK_WEBHOOK_URL"]
-            ).incomingwebhook.post(
-                {"username": "mapchete_hub", "channel": "#mapchete_hub", "text": msg}
-            )
+            response = client.send(text=msg)
+            if response.body != "ok":
+                logger.debug("slack message not sent: %s", response.body)
         else:  # pragma: no cover
             logger.debug("no SLACK_WEBHOOK_URL env variable set.")
     except ImportError:  # pragma: no cover

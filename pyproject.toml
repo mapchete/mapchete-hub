@@ -51,11 +51,11 @@ complete = [
     "pydantic>=2.0.0",
     "pydantic_settings",
     "pymongo",
-    "Slacker",
+    "slack_sdk",
     "uvicorn",
 ]
 slack = [
-    "Slacker",
+    "slack_sdk",
 ]
 test = [
     "pytest",
