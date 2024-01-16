@@ -84,8 +84,6 @@ class SlackMessenger(ObserverProtocol):
         **__,
     ):
         if status:
-            self.send(f"*{status.value}*")
-
             # remember job runtime from initialization on
             if status == Status.initializing:
                 self.started = time.time()
@@ -101,6 +99,7 @@ class SlackMessenger(ObserverProtocol):
                 retry_text = (
                     "1 retry" if self.retries == 1 else f"{self.retries} retries"
                 )
+                self.send(f"{status.value}")
                 self.update_message(
                     message=self.job_message.format(
                         status_emoji=status_emoji(status), status=status
@@ -108,14 +107,15 @@ class SlackMessenger(ObserverProtocol):
                     + f" after {pretty_seconds(time.time() - self.started)} using {retry_text}"
                 )
 
-            else:
+            elif status == Status.running:
+                self.send(f"{status.value}")
                 self.update_message(
                     message=self.job_message.format(
                         status_emoji=status_emoji(status), status=status
                     )
                 )
 
-        if exception and status == Status.failed:
+        if exception and not isinstance(exception, JobCancelledError):
             self.send(
                 f"```\n"
                 f"{repr(exception)}\n"

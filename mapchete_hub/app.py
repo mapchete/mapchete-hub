@@ -286,7 +286,7 @@ async def cancel_job(
             Status.running,
         ]:  # pragma: no cover
             backend_db.set(job_id, status=Status.cancelled)
-            SlackMessenger(mhub_settings.self_instance_name, job).send("*aborting ...*")
+            SlackMessenger(mhub_settings.self_instance_name, job).send("aborting ...")
         return backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
