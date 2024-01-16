@@ -106,6 +106,7 @@ class SlackMessenger(ObserverProtocol):
         )
         self.submitted = time.time()
         self.started = self.submitted
+        self.retries = 0
 
     def update(
         self,
@@ -123,16 +124,21 @@ class SlackMessenger(ObserverProtocol):
 
             # in final statuses, report runtime
             if status in [Status.done, Status.failed, Status.cancelled]:
+                retry_text = (
+                    "1 retry" if self.retries == 1 else f"{self.retries} retries"
+                )
                 send_slack_message(
                     f"*{self.message_prefix} {status.value} after "
-                    f"{pretty_seconds(time.time() - self.started)}*"
+                    f"{pretty_seconds(time.time() - self.started)} and {retry_text}*"
                 )
 
             else:
-                if status == Status.retrying and message:
-                    send_slack_message(
-                        f"*{self.message_prefix} {status.value}*: {message}"
-                    )
+                if status == Status.retrying:
+                    self.retries += 1
+                    if message:
+                        send_slack_message(
+                            f"*{self.message_prefix} {status.value}*: {message}"
+                        )
                 else:
                     send_slack_message(f"*{self.message_prefix} {status.value}*")
 
