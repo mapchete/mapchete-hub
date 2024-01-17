@@ -12,7 +12,7 @@ stages:
     - export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY_673042305043}
 
 before_script:
-  - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY    
+  - podman --version && CONTAINER_ENGINE=${CONTAINER_ENGINE:="podman"} || CONTAINER_ENGINE=${CONTAINER_ENGINE:="docker"}   
 
 # build python packages
 build_python_package:
@@ -78,14 +78,13 @@ test_unit:
 
 # build image for mhub
 build_image:
+  image: docker.io/docker:latest
   tags:
     - 'privileged'
   stage: build_image
   artifacts:
     paths:
       - pip/
-  before_script:
-    - echo -n $CI_JOB_TOKEN | docker login -u gitlab-ci-token --password-stdin $CI_REGISTRY
   script:
     # build
     - >
