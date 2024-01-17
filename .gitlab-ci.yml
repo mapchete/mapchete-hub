@@ -85,6 +85,10 @@ build_image:
   artifacts:
     paths:
       - pip/
+  variables:
+    DOCKER_TLS_CERTDIR: ""      
+  before_script:
+    - podman --version && CONTAINER_ENGINE=${CONTAINER_ENGINE:="podman"} || CONTAINER_ENGINE=${CONTAINER_ENGINE:="docker"}        
   script:
     # build
     - >
@@ -120,7 +124,7 @@ build_image:
         /bin/bash -c "pip freeze" > pip/mhub_installed.txt
     - less pip/mhub_installed.txt
 
-build_image_push_to_aws_registry:
+build_push_to_aws_registry:
   stage: push
   extends: .login_registries
   variables:
