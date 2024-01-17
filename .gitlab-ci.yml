@@ -78,21 +78,16 @@ test_unit:
 
 # build image for mhub
 build_image:
-  image: docker.io/docker:latest
   tags:
     - 'privileged'
   stage: build_image
   artifacts:
     paths:
-      - pip/
-  variables:
-    DOCKER_TLS_CERTDIR: ""      
-  before_script:
-    - podman --version && CONTAINER_ENGINE=${CONTAINER_ENGINE:="podman"} || CONTAINER_ENGINE=${CONTAINER_ENGINE:="docker"}        
+      - pip/     
   script:
     # build
     - >
-      docker build \
+      podman build \
         --build-arg BASE_IMAGE_NAME=mapchete \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         --layers \
@@ -100,25 +95,25 @@ build_image:
         --cache-from ${CI_REGISTRY_IMAGE}/cache \
         -t ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} .
     # push
-    - docker push ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA}
+    - podman push ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA}
     - >
-      docker tag \
+      podman tag \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
     - >
-      docker push \
+      podman push \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
   after_script:
     # run pip check
     - >
-      docker run \
+      podman run \
         --rm \
         -t ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} \
         /bin/bash -c "pip check"
     # dump installed package versions as artefact
     - mkdir pip
     - >
-      docker run \
+      podman run \
         --rm \
         -t ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} \
         /bin/bash -c "pip freeze" > pip/mhub_installed.txt
