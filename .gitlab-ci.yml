@@ -85,6 +85,7 @@ build_image:
       - pip/
   before_script:
     - podman --version && CONTAINER_ENGINE=${CONTAINER_ENGINE:="podman"} || CONTAINER_ENGINE=${CONTAINER_ENGINE:="docker"}      
+    - echo -n $CI_JOB_TOKEN | $CONTAINER_ENGINE login -u gitlab-ci-token --password-stdin $CI_REGISTRY
   script:
     # build
     - >
