@@ -66,10 +66,10 @@ class SlackMessenger(ObserverProtocol):
             + "{status}*"
         )
         # send init message
-        self.send(
+        self.update(
             message=self.job_message.format(
                 status_emoji=status_emoji(Status.pending),
-                status=Status.pending,
+                status=Status.pending.value,
             )
         )
         self.send(message=f"job ID: <{job.url}|{job.job_id}>")
@@ -102,7 +102,7 @@ class SlackMessenger(ObserverProtocol):
                 self.send(f"status changed to '{status.value}'")
                 self.update_message(
                     message=self.job_message.format(
-                        status_emoji=status_emoji(status), status=status
+                        status_emoji=status_emoji(status), status=status.value
                     )
                     + f" after {pretty_seconds(time.time() - self.started)} using {retry_text}"
                 )
@@ -111,7 +111,7 @@ class SlackMessenger(ObserverProtocol):
                 self.send(f"status changed to '{status.value}'")
                 self.update_message(
                     message=self.job_message.format(
-                        status_emoji=status_emoji(status), status=status
+                        status_emoji=status_emoji(status), status=status.value
                     )
                 )
 
@@ -148,8 +148,11 @@ class SlackMessenger(ObserverProtocol):
 
     def update_message(self, message: str):
         if self.client:
-            self.client.chat_update(
-                text=message,
-                ts=self.thread_ts,
-                channel=self.channel_id,
-            )
+            if self.channel_id and self.thread_ts:
+                self.client.chat_update(
+                    text=message,
+                    ts=self.thread_ts,
+                    channel=self.channel_id,
+                )
+            else:
+                self.send(message)
