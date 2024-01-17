@@ -87,7 +87,7 @@ build_image:
   script:
     # build
     - >
-      podman build \
+      $CONTAINER_ENGINE build \
         --build-arg BASE_IMAGE_NAME=mapchete \
         --build-arg EOX_PYPI_TOKEN=${EOX_PYPI_TOKEN} \
         --layers \
@@ -95,25 +95,25 @@ build_image:
         --cache-from ${CI_REGISTRY_IMAGE}/cache \
         -t ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} .
     # push
-    - podman push ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA}
+    - $CONTAINER_ENGINE push ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA}
     - >
-      podman tag \
+      $CONTAINER_ENGINE tag \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
     - >
-      podman push \
+      $CONTAINER_ENGINE push \
         ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_REF_NAME}
   after_script:
     # run pip check
     - >
-      podman run \
+      $CONTAINER_ENGINE run \
         --rm \
         -t ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} \
         /bin/bash -c "pip check"
     # dump installed package versions as artefact
     - mkdir pip
     - >
-      podman run \
+      $CONTAINER_ENGINE run \
         --rm \
         -t ${CI_REGISTRY_IMAGE}/mhub:${CI_COMMIT_SHORT_SHA} \
         /bin/bash -c "pip freeze" > pip/mhub_installed.txt
