@@ -2,6 +2,15 @@
 Changelog
 #########
 
+2024.1.7 - 2024-01-17
+---------------------
+
+* CI
+    * run all jobs on `privileged`` runners with `docker`
+
+* packaging
+    * bump ``mapchete`` to ``2024.1.5``
+
 2024.1.6 - 2024-01-16
 ---------------------
 
