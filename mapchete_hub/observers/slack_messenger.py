@@ -66,7 +66,7 @@ class SlackMessenger(ObserverProtocol):
             + "{status}*"
         )
         # send init message
-        self.update(
+        self.send(
             message=self.job_message.format(
                 status_emoji=status_emoji(Status.pending),
                 status=Status.pending.value,
@@ -134,12 +134,17 @@ class SlackMessenger(ObserverProtocol):
     ) -> None:
         if self.client:
             logger.debug("announce on slack, (thread: %s): %s", self.thread_ts, message)
-            response = self.client.chat_postMessage(
-                channel=mhub_settings.slack_channel,
-                text=message,
-                thread_ts=self.thread_ts,
-            )
+            from slack_sdk.errors import SlackApiError
 
+            try:
+                response = self.client.chat_postMessage(
+                    channel=mhub_settings.slack_channel,
+                    text=message,
+                    thread_ts=self.thread_ts,
+                )
+            except SlackApiError as e:
+                logger.exception(e)
+                return
             if not response.get("ok"):
                 logger.debug("slack message not sent: %s", response.body)
             elif self.thread_ts is None:
