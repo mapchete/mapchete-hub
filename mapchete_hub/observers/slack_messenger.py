@@ -66,7 +66,7 @@ class SlackMessenger(ObserverProtocol):
             + "{status}*"
         )
         # send init message
-        self.update(
+        self.send(
             message=self.job_message.format(
                 status_emoji=status_emoji(Status.pending),
                 status=Status.pending.value,
