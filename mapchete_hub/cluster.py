@@ -113,14 +113,15 @@ def dask_cluster(
         with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
             logger.debug("connected to gateway %s", gateway)
             logger.info("use gateway cluster with %s specs", dask_specs)
-            with gateway.new_cluster(
+            cluster = gateway.new_cluster(
                 cluster_options=update_gateway_cluster_options(
                     gateway.cluster_options(), dask_specs=dask_specs
                 )
-            ) as cluster:
-                yield cluster
-                logger.info("closing cluster %s", cluster)
-            logger.info("closed cluster %s", cluster)
+            )
+        yield cluster
+        logger.info("closing cluster %s", cluster)
+        cluster.shutdown()
+        logger.info("closed cluster %s", cluster)
 
     elif cluster_setup.type == ClusterType.scheduler:  # pragma: no cover
         logger.info("cluster exists, connecting directly to scheduler")
