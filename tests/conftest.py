@@ -11,7 +11,6 @@ from mapchete_hub.db import init_backenddb
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 _fake_backend_db = init_backenddb("memory")
-_dask_cluster = LocalCluster()
 
 
 def fake_backend_db():
@@ -19,15 +18,13 @@ def fake_backend_db():
 
 
 def local_dask_cluster():
-    return {"flavor": "local_cluster", "cluster": _dask_cluster}
+    return {"flavor": "local_cluster", "cluster": LocalCluster()}
 
 
-app.dependency_overrides[get_backend_db] = fake_backend_db
-app.dependency_overrides[get_dask_cluster_setup] = local_dask_cluster
-
-
-@pytest.fixture
+@pytest.fixture(scope="session")
 def client():
+    app.dependency_overrides[get_backend_db] = fake_backend_db
+    app.dependency_overrides[get_dask_cluster_setup] = local_dask_cluster
     return TestClient(app)
 
 
