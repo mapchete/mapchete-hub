@@ -2,6 +2,14 @@
 Changelog
 #########
 
+
+2024.2.1 - 2024-02-13
+---------------------
+
+* core
+  * close connections to dask `Gateway` and `GatewayCluster` while not in use
+
+
 2024.2.0 - 2024-02-12
 ---------------------
 
