@@ -75,22 +75,62 @@ def get_dask_executor(
     tile_tasks: Optional[int] = None,
     **kwargs,
 ) -> Generator[DaskExecutor, None, None]:
-    logger.info("requesting dask cluster and dask client...")
+    logger.info("requesting dask cluster and dask client for job %s...", job_id)
     cluster_setup = get_dask_cluster_setup()
-    with dask_cluster(cluster_setup, dask_specs=dask_specs) as cluster:
-        logger.info("job %s cluster: %s", job_id, cluster)
-        with dask_client(cluster_setup, cluster=cluster) as client:
-            logger.info("job %s client: %s", job_id, client)
-            cluster_adapt(
-                cluster_setup,
-                cluster,
-                dask_specs,
-                dask_settings,
-                preprocessing_tasks=preprocessing_tasks,
-                tile_tasks=tile_tasks,
-            )
-            with DaskExecutor(dask_client=client) as executor:
-                yield executor
+
+    if cluster_setup.type == ClusterType.local:
+        with local_cluster_executor(
+            cluster_setup=cluster_setup,
+            dask_specs=dask_specs,
+            dask_settings=dask_settings,
+            preprocessing_tasks=preprocessing_tasks,
+            tile_tasks=tile_tasks,
+        ) as executor:
+            yield executor
+
+    elif cluster_setup.type == ClusterType.gateway:  # pragma: no cover
+        with gateway_cluster_executor(
+            cluster_setup=cluster_setup,
+            dask_specs=dask_specs,
+            dask_settings=dask_settings,
+            preprocessing_tasks=preprocessing_tasks,
+            tile_tasks=tile_tasks,
+        ) as executor:
+            yield executor
+
+    elif cluster_setup.type == ClusterType.scheduler:  # pragma: no cover
+        with existing_scheduler_executor(cluster_setup=cluster_setup) as executor:
+            yield executor
+
+    else:  # pragma: no cover
+        raise ValueError("invalid cluster setup: %s", cluster_setup)
+
+
+@contextmanager
+def local_cluster_executor(
+    cluster_setup: ClusterSetup,
+    dask_specs: Optional[DaskSpecs] = None,
+    dask_settings: DaskSettings = DaskSettings(),
+    preprocessing_tasks: Optional[int] = None,
+    tile_tasks: Optional[int] = None,
+) -> Generator[DaskExecutor, None, None]:
+    logger.info("use existing %s", cluster_setup.cluster)
+    with Client(cluster_setup.cluster, set_as_default=False) as client:
+        logger.info("started client %s", client)
+
+        cluster_adapt(
+            cluster_setup,
+            cluster_setup.cluster,
+            dask_specs,
+            dask_settings,
+            preprocessing_tasks=preprocessing_tasks,
+            tile_tasks=tile_tasks,
+        )
+
+        with DaskExecutor(dask_client=client) as executor:
+            yield executor
+        logger.info("closing client %s", client)
+    logger.info("closed client %s", client)
 
 
 @contextmanager
@@ -100,64 +140,78 @@ def get_dask_executor(
     backoff=mhub_settings.dask_gateway_backoff,
     delay=mhub_settings.dask_gateway_delay,
 )
-def dask_cluster(
-    cluster_setup: ClusterSetup, dask_specs: Optional[DaskSpecs] = None
-) -> Generator[Union[LocalCluster, GatewayCluster, None], None, None]:
+def gateway_cluster_executor(
+    cluster_setup: ClusterSetup,
+    dask_specs: Optional[DaskSpecs] = None,
+    dask_settings: DaskSettings = DaskSettings(),
+    preprocessing_tasks: Optional[int] = None,
+    tile_tasks: Optional[int] = None,
+) -> Generator[DaskExecutor, None, None]:
+    """
+    Triggers creation of a remote cluster and yields a connected DaskExecutor.
+    """
+
+    @retry(
+        exceptions=(ServerDisconnectedError, ServerConnectionError, ServerTimeoutError),
+        tries=mhub_settings.dask_gateway_tries,
+        backoff=mhub_settings.dask_gateway_backoff,
+        delay=mhub_settings.dask_gateway_delay,
+    )
+    def _stop_cluster(cluster_setup: ClusterSetup, cluster_name: str):
+        logger.info("stopping cluster %s...", cluster_name)
+        with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
+            gateway.stop_cluster(cluster_name)
+            logger.info("cluster %s stopped")
+
     dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
+    cluster_name = None
+    client = None
 
-    if cluster_setup.type == ClusterType.local:
-        logger.info("use existing %s", cluster_setup.cluster)
-        yield cluster_setup.cluster
-
-    elif cluster_setup.type == ClusterType.gateway:  # pragma: no cover
+    try:
+        # make sure no unused connections, i.e. to the Gateway as well as to the Cluster
+        # are kept open
         with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
             logger.debug("connected to gateway %s", gateway)
             logger.info("use gateway cluster with %s specs", dask_specs)
-            cluster = gateway.new_cluster(
+            with gateway.new_cluster(
                 cluster_options=update_gateway_cluster_options(
                     gateway.cluster_options(), dask_specs=dask_specs
+                ),
+                shutdown_on_close=False,
+            ) as cluster:
+                cluster_name = cluster.name
+                client = cluster.get_client(set_as_default=False)
+                logger.info("started client %s", client)
+                cluster_adapt(
+                    cluster_setup,
+                    cluster_setup.cluster,
+                    dask_specs,
+                    dask_settings,
+                    preprocessing_tasks=preprocessing_tasks,
+                    tile_tasks=tile_tasks,
                 )
-            )
-        yield cluster
-        logger.info("closing cluster %s", cluster)
-        cluster.shutdown()
-        logger.info("closed cluster %s", cluster)
+                logger.info("closing cluster %s connection ...", cluster)
+            logger.info("closed cluster %s connection", cluster)
+        with DaskExecutor(dask_client=client) as executor:
+            yield executor
 
-    elif cluster_setup.type == ClusterType.scheduler:  # pragma: no cover
-        logger.info("cluster exists, connecting directly to scheduler")
-        yield None
-
-    else:  # pragma: no cover
-        raise TypeError("cannot get cluster")
+    finally:
+        if cluster_name:
+            _stop_cluster(cluster_setup=cluster_setup, cluster_name=cluster_name)
+        if client:
+            logger.info("closing client %s", client)
+            client.close()
+            logger.info("closed client %s", client)
 
 
 @contextmanager
-def dask_client(
-    cluster_setup: ClusterSetup, cluster: Union[LocalCluster, GatewayCluster, None]
-) -> Generator[Client, None, None]:
-    if cluster_setup.type == ClusterType.local:
-        with Client(cluster, set_as_default=False) as client:
-            logger.info("started client %s", client)
-            yield client
-            logger.info("closing client %s", client)
-        logger.info("closed client %s", client)
-
-    elif cluster_setup.type == ClusterType.gateway and isinstance(
-        cluster, GatewayCluster
-    ):  # pragma: no cover
-        with cluster.get_client(set_as_default=False) as client:
-            logger.info("started client %s", client)
-            yield client
-            logger.info("closing client %s", client)
-        logger.info("closed client %s", client)
-
-    elif cluster_setup.type == ClusterType.scheduler:  # pragma: no cover
-        logger.info("connect to scheduler %s", cluster_setup.url)
-        yield get_client(cluster_setup.url)
-        logger.info("no client to close")
-        # NOTE: we don't close the client afterwards as it would affect other jobs using the same client
-    else:  # pragma: no cover
-        raise TypeError("cannot get client")
+def existing_scheduler_executor(
+    cluster_setup: ClusterSetup, **kwargs
+) -> Generator[DaskExecutor, None, None]:
+    logger.info("cluster exists, connecting directly to scheduler")
+    logger.info("connect to scheduler %s", cluster_setup.url)
+    yield get_client(cluster_setup.url)
+    logger.info("no client to close")
 
 
 def cluster_adapt(
