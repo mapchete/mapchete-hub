@@ -161,10 +161,10 @@ def gateway_cluster_executor(
         logger.info("stopping cluster %s...", cluster_name)
         with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
             gateway.stop_cluster(cluster_name)
-            logger.info("cluster %s stopped")
+        logger.info("cluster %s stopped")
 
     dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
-    cluster = None
+    cluster_name = None
     client = None
 
     try:
@@ -172,33 +172,42 @@ def gateway_cluster_executor(
         # are kept open
         with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
             logger.debug("connected to gateway %s", gateway)
-            logger.info("use gateway cluster with %s specs", dask_specs)
-            cluster = gateway.new_cluster(
+            logger.info("submit new cluster with %s specs", dask_specs)
+            cluster_name = gateway.submit(
                 cluster_options=update_gateway_cluster_options(
                     gateway.cluster_options(), dask_specs=dask_specs
                 ),
             )
-        logger.info("closed Gateway connection")
-        with cluster.get_client(set_as_default=False) as client:
-            logger.info("started client %s", client)
+            logger.info("connect to new cluster ...")
+            cluster = gateway.connect(
+                cluster_name=cluster_name, shutdown_on_close=False
+            )
+            logger.info("connected to %s", cluster)
             cluster_adapt(
                 cluster_setup,
-                cluster_setup.cluster,
+                cluster,
                 dask_specs,
                 dask_settings,
                 preprocessing_tasks=preprocessing_tasks,
                 tile_tasks=tile_tasks,
             )
-            with DaskExecutor(dask_client=client) as executor:
-                yield executor
+            logger.info("starting client ...")
+            client = cluster.get_client(set_as_default=False)
+            logger.info("started client %s", client)
+            logger.debug("closing connection to cluster %s ...", cluster)
+            cluster.close()
+        logger.info("closed connection to Gateway")
+
+        with DaskExecutor(dask_client=client) as executor:
+            yield executor
 
     finally:
         if client:
             logger.info("closing client %s", client)
             client.close()
             logger.info("closed client %s", client)
-        if cluster:
-            cluster.close(shutdown=True)
+        if cluster_name:
+            _stop_cluster(cluster_setup=cluster_setup, cluster_name=cluster_name)
 
 
 @contextmanager
