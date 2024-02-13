@@ -164,7 +164,7 @@ def gateway_cluster_executor(
             logger.info("cluster %s stopped")
 
     dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
-    cluster_name = None
+    cluster = None
     client = None
 
     try:
@@ -173,35 +173,32 @@ def gateway_cluster_executor(
         with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
             logger.debug("connected to gateway %s", gateway)
             logger.info("use gateway cluster with %s specs", dask_specs)
-            with gateway.new_cluster(
+            cluster = gateway.new_cluster(
                 cluster_options=update_gateway_cluster_options(
                     gateway.cluster_options(), dask_specs=dask_specs
                 ),
-                shutdown_on_close=False,
-            ) as cluster:
-                cluster_name = cluster.name
-                client = cluster.get_client(set_as_default=False)
-                logger.info("started client %s", client)
-                cluster_adapt(
-                    cluster_setup,
-                    cluster_setup.cluster,
-                    dask_specs,
-                    dask_settings,
-                    preprocessing_tasks=preprocessing_tasks,
-                    tile_tasks=tile_tasks,
-                )
-                logger.info("closing cluster %s connection ...", cluster)
-            logger.info("closed cluster %s connection", cluster)
-        with DaskExecutor(dask_client=client) as executor:
-            yield executor
+            )
+        logger.info("closed Gateway connection")
+        with cluster.get_client(set_as_default=False) as client:
+            logger.info("started client %s", client)
+            cluster_adapt(
+                cluster_setup,
+                cluster_setup.cluster,
+                dask_specs,
+                dask_settings,
+                preprocessing_tasks=preprocessing_tasks,
+                tile_tasks=tile_tasks,
+            )
+            with DaskExecutor(dask_client=client) as executor:
+                yield executor
 
     finally:
-        if cluster_name:
-            _stop_cluster(cluster_setup=cluster_setup, cluster_name=cluster_name)
         if client:
             logger.info("closing client %s", client)
             client.close()
             logger.info("closed client %s", client)
+        if cluster:
+            cluster.close(shutdown=True)
 
 
 @contextmanager
