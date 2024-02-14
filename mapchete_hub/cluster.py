@@ -194,8 +194,6 @@ def gateway_cluster_executor(
             logger.info("starting client ...")
             client = cluster.get_client(set_as_default=False)
             logger.info("started client %s", client)
-            logger.debug("closing connection to cluster %s ...", cluster)
-            cluster.close()
         logger.info("closed connection to Gateway")
 
         with DaskExecutor(dask_client=client) as executor:
