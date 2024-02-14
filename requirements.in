@@ -10,7 +10,7 @@ fastapi==0.104.1
 httpx
 jupyter-server-proxy
 lz4
-mapchete==2024.1.3
+mapchete==2024.2.0
 mapchete_eo==2024.2.1
 mapchete_xarray==2022.10.0
 mongomock
