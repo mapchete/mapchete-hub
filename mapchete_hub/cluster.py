@@ -151,20 +151,8 @@ def gateway_cluster_executor(
     Triggers creation of a remote cluster and yields a connected DaskExecutor.
     """
 
-    @retry(
-        exceptions=(ServerDisconnectedError, ServerConnectionError, ServerTimeoutError),
-        tries=mhub_settings.dask_gateway_tries,
-        backoff=mhub_settings.dask_gateway_backoff,
-        delay=mhub_settings.dask_gateway_delay,
-    )
-    def _stop_cluster(cluster_setup: ClusterSetup, cluster_name: str):
-        logger.info("stopping cluster %s...", cluster_name)
-        with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
-            gateway.stop_cluster(cluster_name)
-        logger.info("cluster %s stopped")
-
     dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
-    cluster_name = None
+    cluster = None
     client = None
 
     try:
@@ -173,14 +161,10 @@ def gateway_cluster_executor(
         with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
             logger.debug("connected to gateway %s", gateway)
             logger.info("submit new cluster with %s specs", dask_specs)
-            cluster_name = gateway.submit(
+            cluster = gateway.new_cluster(
                 cluster_options=update_gateway_cluster_options(
                     gateway.cluster_options(), dask_specs=dask_specs
                 ),
-            )
-            logger.info("connect to new cluster ...")
-            cluster = gateway.connect(
-                cluster_name=cluster_name, shutdown_on_close=False
             )
             logger.info("connected to %s", cluster)
             cluster_adapt(
@@ -204,8 +188,10 @@ def gateway_cluster_executor(
             logger.info("closing client %s", client)
             client.close()
             logger.info("closed client %s", client)
-        if cluster_name:
-            _stop_cluster(cluster_setup=cluster_setup, cluster_name=cluster_name)
+        if cluster:
+            logger.info("shutting down cluster %s", cluster)
+            cluster.shutdown()
+            logger.info("cluster %s shut down and connection closed", cluster)
 
 
 @contextmanager

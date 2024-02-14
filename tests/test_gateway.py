@@ -10,7 +10,6 @@ from mapchete_hub.settings import mhub_settings
     reason="MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS must be set",
 )
 def test_gateway_executor():
-
     def dummy_task(*_, **__):
         return True
 
@@ -20,5 +19,5 @@ def test_gateway_executor():
         tile_tasks=1,
     ) as executor:
         assert isinstance(executor, DaskExecutor)
-        for future in executor.map(dummy_task, range(10)):
-            assert future is True
+        for result in executor.map(dummy_task, range(10)):
+            assert result
