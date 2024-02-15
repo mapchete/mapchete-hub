@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2024.2.5 - 2024-02-15
+---------------------
+
+* core
+  * only close connections to dask `Gateway` while not in use
+
+* packaging
+    * bump ``mapchete`` to ``2024.2.0``
+    * bump ``mapchete-eo`` to ``2024.2.2``
+    * use base image ``2024.2.0``
+
+
 2024.2.4 - 2024-02-13
 ---------------------
 
