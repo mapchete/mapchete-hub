@@ -114,9 +114,9 @@ def local_cluster_executor(
     preprocessing_tasks: Optional[int] = None,
     tile_tasks: Optional[int] = None,
 ) -> Generator[DaskExecutor, None, None]:
-    logger.info("use existing %s", cluster_setup.cluster)
+    logger.debug("use existing %s", cluster_setup.cluster)
     with Client(cluster_setup.cluster, set_as_default=False) as client:
-        logger.info("started client %s", client)
+        logger.debug("started client %s", client)
 
         cluster_adapt(
             cluster_setup,
@@ -129,8 +129,8 @@ def local_cluster_executor(
 
         with DaskExecutor(dask_client=client) as executor:
             yield executor
-        logger.info("closing client %s", client)
-    logger.info("closed client %s", client)
+        logger.debug("closing client %s", client)
+    logger.debug("closed client %s", client)
 
 
 @contextmanager
@@ -149,59 +149,64 @@ def gateway_cluster_executor(
 ) -> Generator[DaskExecutor, None, None]:
     """
     Triggers creation of a remote cluster and yields a connected DaskExecutor.
+
+    This requires the following steps:
+        - connect to Gateway
+        - request a new GatewayCluster and connect to it
+        - create a new dask Client connected to the cluster
+        - use this client to yield a mapchete DaskExecutor
     """
 
     dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
-    cluster = None
-    client = None
 
-    try:
-        # make sure no unused connections, i.e. to the Gateway as well as to the Cluster
-        # are kept open
-        with Gateway(cluster_setup.url, **cluster_setup.kwargs) as gateway:
-            logger.debug("connected to gateway %s", gateway)
-            logger.info("submit new cluster with %s specs", dask_specs)
-            cluster = gateway.new_cluster(
-                cluster_options=update_gateway_cluster_options(
-                    gateway.cluster_options(), dask_specs=dask_specs
-                ),
-            )
-            logger.info("connected to %s", cluster)
-            cluster_adapt(
-                cluster_setup,
-                cluster,
-                dask_specs,
-                dask_settings,
-                preprocessing_tasks=preprocessing_tasks,
-                tile_tasks=tile_tasks,
-            )
-            logger.info("starting client ...")
-            client = cluster.get_client(set_as_default=False)
-            logger.info("started client %s", client)
-        logger.info("closed connection to Gateway")
+    # don't open Gateway connection in a context manager, because we don't need it
+    # after creating the client
+    gateway = Gateway(cluster_setup.url, **cluster_setup.kwargs)
+    logger.info("connected to gateway %s", gateway)
 
-        with DaskExecutor(dask_client=client) as executor:
-            yield executor
+    logger.info("submit new cluster with %s specs", dask_specs)
+    with gateway.new_cluster(
+        cluster_options=update_gateway_cluster_options(
+            gateway.cluster_options(), dask_specs=dask_specs
+        ),
+        shutdown_on_close=True,
+    ) as cluster:
+        logger.debug("connected to %s", cluster)
+        cluster_adapt(
+            cluster_setup,
+            cluster,
+            dask_specs,
+            dask_settings,
+            preprocessing_tasks=preprocessing_tasks,
+            tile_tasks=tile_tasks,
+        )
+        logger.info("starting client ...")
+        with cluster.get_client(set_as_default=False) as client:
+            logger.debug("started client %s", client)
 
-    finally:
-        if client:
-            logger.info("closing client %s", client)
-            client.close()
-            logger.info("closed client %s", client)
-        if cluster:
-            logger.info("shutting down cluster %s", cluster)
-            cluster.shutdown()
-            logger.info("cluster %s shut down and connection closed", cluster)
+            # close connection to Gateway because we don't need it anymore and
+            # don't want to rely on a stable connection
+            gateway.close()
+            logger.debug("closed connection to Gateway")
+
+            with DaskExecutor(dask_client=client) as executor:
+                yield executor
+
+            logger.debug("closing client %s", client)
+        logger.debug("closed client %s", client)
+
+        logger.debug("shutting down cluster %s", cluster)
+    logger.debug("cluster %s shut down and connection closed", cluster)
 
 
 @contextmanager
 def existing_scheduler_executor(
     cluster_setup: ClusterSetup, **kwargs
 ) -> Generator[DaskExecutor, None, None]:
-    logger.info("cluster exists, connecting directly to scheduler")
-    logger.info("connect to scheduler %s", cluster_setup.url)
+    logger.debug("cluster exists, connecting directly to scheduler")
+    logger.debug("connect to scheduler %s", cluster_setup.url)
     yield get_client(cluster_setup.url)
-    logger.info("no client to close")
+    logger.debug("no client to close")
 
 
 def cluster_adapt(
