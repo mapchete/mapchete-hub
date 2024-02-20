@@ -25,7 +25,15 @@ class MemoryStatusHandler(BaseStatusHandler):
     _jobs: Dict[str, JobEntry]
 
     def __init__(self, *args, **kwargs):
+        pass
+
+    def __enter__(self):
         self._jobs = {}
+        logger.debug("enter MemoryStatusHandler")
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        logger.debug("exit MemoryStatusHandler")
 
     def job(self, job_id) -> JobEntry:
         return self._jobs[job_id]

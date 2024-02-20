@@ -57,13 +57,16 @@ Trigger a job using a given process_id. This returns a job ID.
 """
 
 import logging
+from contextlib import asynccontextmanager
 from typing import Optional
 
+from dask.distributed import LocalCluster
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Response
 from mapchete.config.models import DaskSettings
 from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings
+from pydantic import BaseModel
 
 from mapchete_hub import __version__
 from mapchete_hub.cluster import get_dask_cluster_setup
@@ -96,25 +99,12 @@ for l in loggers:
 logger = logging.getLogger(__name__)
 
 
-app = FastAPI()
-
-CACHE = dict()
-
-
-# dependencies
-def get_backend_db() -> BaseStatusHandler:  # pragma: no cover
-    if "backend_db" not in CACHE:
-        logger.debug("no backend db found in cache, creating...")
-        if mhub_settings.backend_db == "memory":
-            logger.warning(
-                "MHUB_MONGODB_URL not provided; using in-memory metadata store"
-            )
-        CACHE["backend_db"] = init_backenddb(src=mhub_settings.backend_db)
-    return CACHE["backend_db"]
+# resources set by lifespan function
+resources = dict(backend_db=None, local_cluster=None)
 
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     # mhub online message
     try:
         if mhub_settings.slack_token:  # pragma: no cover
@@ -130,6 +120,18 @@ async def startup_event():
             )
     except ImportError:  # pragma: no cover
         pass
+
+    # set up backend DB
+    logger.debug("no backend db found in resources, creating...")
+    if mhub_settings.backend_db == "memory":
+        logger.warning("MHUB_MONGODB_URL not provided; using in-memory metadata store")
+    with init_backenddb(src=mhub_settings.backend_db) as backend_db:
+        resources["backend_db"] = backend_db
+
+        yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 # REST endpoints
@@ -187,10 +189,10 @@ async def post_job(
     process_id: str,
     job_config: MapcheteJob,
     background_tasks: BackgroundTasks,
-    backend_db: BaseStatusHandler = Depends(get_backend_db),
     response: Response = None,
 ) -> dict:
     """Executes a process, i.e. creates a new job."""
+    backend_db = resources.get("backend_db")
     try:
         # get dask specs and settings
         job_config.params["dask_specs"] = get_dask_specs(
@@ -232,9 +234,10 @@ async def list_jobs(
     bounds: Optional[str] = None,  # Field(None, example="0.0,1.0,2.0,3.0"),
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
-    backend_db: BaseStatusHandler = Depends(get_backend_db),
 ) -> dict:
     """Returns the running and finished jobs for a process."""
+    backend_db = resources.get("backend_db")
+
     bounds = tuple(map(float, bounds.split(","))) if bounds else None
     from_date = str_to_date(from_date) if from_date else None
     to_date = str_to_date(to_date) if to_date else None
@@ -264,8 +267,9 @@ async def list_jobs(
 
 
 @app.get("/jobs/{job_id}")
-async def get_job(job_id: str, backend_db: BaseStatusHandler = Depends(get_backend_db)):
+async def get_job(job_id: str):
     """Returns the status of a job."""
+    backend_db = resources.get("backend_db")
     try:
         return backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
@@ -274,9 +278,10 @@ async def get_job(job_id: str, backend_db: BaseStatusHandler = Depends(get_backe
 
 @app.delete("/jobs/{job_id}")
 async def cancel_job(
-    job_id: str, backend_db: BaseStatusHandler = Depends(get_backend_db)
+    job_id: str,
 ):
     """Cancel a job execution."""
+    backend_db = resources.get("backend_db")
     try:
         job = backend_db.job(job_id)
         if job.status in [
@@ -294,7 +299,7 @@ async def cancel_job(
 
 @app.get("/jobs/{job_id}/results")
 async def get_job_results(
-    job_id: str, backend_db: BaseStatusHandler = Depends(get_backend_db)
+    job_id: str,
 ):
     """
     Return the results of a job.
@@ -324,6 +329,7 @@ async def get_job_results(
             type: string
         additionalProperties: true
     """
+    backend_db = resources.get("backend_db")
     # raise if Job ID not found
     try:
         job = backend_db.job(job_id)
