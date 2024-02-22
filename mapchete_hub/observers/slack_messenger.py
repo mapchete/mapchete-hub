@@ -132,7 +132,7 @@ class SlackMessenger(ObserverProtocol):
         self,
         message: str,
     ) -> None:
-        if self.client:
+        if self.client:  # pragma: no cover
             logger.debug("announce on slack, (thread: %s): %s", self.thread_ts, message)
             from slack_sdk.errors import SlackApiError
 
@@ -152,7 +152,7 @@ class SlackMessenger(ObserverProtocol):
                 self.channel_id = response.data.get("channel")
 
     def update_message(self, message: str):
-        if self.client:
+        if self.client:  # pragma: no cover
             if self.channel_id and self.thread_ts:
                 self.client.chat_update(
                     text=message,
