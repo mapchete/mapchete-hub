@@ -59,7 +59,7 @@ Trigger a job using a given process_id. This returns a job ID.
 import logging
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Response
 from mapchete.commands.observer import Observers
 from mapchete.config.models import DaskSettings
 from mapchete.enums import Status
@@ -153,24 +153,12 @@ async def post_process(process_id: str):
 async def post_job(
     process_id: str,
     job_config: MapcheteJob,
+    background_tasks: BackgroundTasks,
     response: Response = None,
 ) -> dict:
     """Executes a process, i.e. creates a new job."""
-    try:
-        # get dask specs and settings
-        job_config.params["dask_specs"] = get_dask_specs(
-            job_config.config.dask_specs or job_config.params.get("dask_specs")
-        )
-        job_config.params["dask_settings"] = DaskSettings(
-            **job_config.params.pop("dask_settings")
-            if "dask_settings" in job_config.params
-            else {}
-        )
 
-        # create new entry in database
-        job_entry = resources.backend_db.new(job_config=job_config)
-        job_id = job_entry.job_id
-
+    def create_job(job_entry):
         # initialize DB observer
         job_db_updater = DBUpdater(
             backend_db=resources.backend_db,
@@ -188,17 +176,33 @@ async def post_job(
         # send task to background to be able to quickly return a message
         resources.thread_pool.submit(
             job_wrapper,
-            job_id,
+            job_entry.job_id,
             job_config,
             observers=Observers([job_db_updater, job_slack_messenger]),
         )
-        response.headers["Location"] = f"/jobs/{job_id}"
 
-        # return job
-        job = resources.backend_db.job(job_id)
-        logger.debug("submitted job %s", job)
+    try:
+        # get dask specs and settings
+        job_config.params["dask_specs"] = get_dask_specs(
+            job_config.config.dask_specs or job_config.params.get("dask_specs")
+        )
+        job_config.params["dask_settings"] = DaskSettings(
+            **job_config.params.pop("dask_settings")
+            if "dask_settings" in job_config.params
+            else {}
+        )
 
-        return job.to_geojson_dict()
+        # create new entry in database
+        job_entry = resources.backend_db.new(job_config=job_config)
+
+        # let observer preparation and final job submission be handled in the background
+        background_tasks.add_task(create_job, job_entry)
+        logger.debug("submitted job %s", job_entry)
+
+        # return job entry
+        response.headers["Location"] = f"/jobs/{job_entry.job_id}"
+        return job_entry.to_geojson_dict()
+
     except Exception as exc:  # pragma: no cover
         logger.exception(exc)
         raise HTTPException(400, str(exc)) from exc
