@@ -189,7 +189,8 @@ def existing_scheduler_executor(
 ) -> Generator[DaskExecutor, None, None]:  # pragma: no cover
     logger.debug("cluster exists, connecting directly to scheduler")
     logger.debug("connect to scheduler %s", cluster_setup.url)
-    yield get_client(cluster_setup.url)
+    with DaskExecutor(dask_client=get_client(cluster_setup.url)) as executor:
+        yield executor
     logger.debug("no client to close")
 
 
