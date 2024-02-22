@@ -1,5 +1,6 @@
 import logging
 from functools import partial
+from typing import Optional
 
 from mapchete.commands import execute
 from mapchete.commands.observer import Observers
@@ -20,26 +21,11 @@ logger = logging.getLogger(__name__)
 def job_wrapper(
     job: JobEntry,
     job_config: MapcheteJob,
-    backend_db: BaseStatusHandler,
+    observers: Optional[Observers] = Observers([]),
 ):
-    logger.info("start fastAPI background task with job %s", job.job_id)
+    logger.info("running job wrapper with job %s in background", job.job_id)
 
     mapchete_config = job_config.config
-
-    # prepare observers for job:
-    db_updater = DBUpdater(
-        backend_db=backend_db,
-        job_id=job.job_id,
-        event_rate_limit=mhub_settings.backend_db_event_rate_limit,
-    )
-    slack_messenger = SlackMessenger(mhub_settings.self_instance_name, job)
-    observers = Observers([db_updater, slack_messenger])
-
-    running = len(backend_db.jobs(status=Status.running))
-    logger.debug("currently running %s jobs", running)
-
-    # once the first message is sent, we remember the thread ID for all follow-up messages
-    db_updater.set(slack_thread_ds=slack_messenger.thread_ts)
 
     # handle observers and job states while job is not being executed
     try:
@@ -63,7 +49,7 @@ def job_wrapper(
                 dask_specs=job_config.params.get("dask_specs"),
                 dask_settings=job_config.params.get("dask_settings"),
             ),
-            observers=[db_updater, slack_messenger],
+            observers=observers.observers,
             cancel_on_exception=JobCancelledError,
             **{
                 k: v
@@ -73,7 +59,7 @@ def job_wrapper(
         )
 
         # NOTE: this is not ideal, as we have to get the STACTA path from the output
-        db_updater.set(
+        observers.notify(
             result={
                 "imagesOutput": {
                     "href": mapchete_config.output["path"],

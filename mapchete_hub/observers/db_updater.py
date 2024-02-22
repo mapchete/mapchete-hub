@@ -33,6 +33,7 @@ class DBUpdater(ObserverProtocol):
         progress: Optional[Progress] = None,
         executor: Optional[DaskExecutor] = None,
         exception: Optional[Exception] = None,
+        result: Optional[dict] = None,
         **kwargs,
     ):
         set_kwargs = dict()
@@ -77,6 +78,9 @@ class DBUpdater(ObserverProtocol):
                 exception=repr(exception),
                 traceback="\n".join(traceback.format_tb(exception.__traceback__)),
             )
+
+        if result:
+            set_kwargs.update(result=result)
 
         if set_kwargs:
             self.set(**set_kwargs)

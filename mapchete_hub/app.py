@@ -60,6 +60,7 @@ import logging
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Response
+from mapchete.commands.observer import Observers
 from mapchete.config.models import DaskSettings
 from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
@@ -69,7 +70,7 @@ from mapchete_hub import __version__
 from mapchete_hub.job_wrapper import job_wrapper
 from mapchete_hub.lifespan_resources import lifespan, resources
 from mapchete_hub.models import MapcheteJob
-from mapchete_hub.observers import SlackMessenger
+from mapchete_hub.observers import DBUpdater, SlackMessenger
 from mapchete_hub.settings import get_dask_specs, mhub_settings
 from mapchete_hub.timetools import str_to_date
 
@@ -168,12 +169,22 @@ async def post_job(
         # create new entry in database
         job = resources.backend_db.new(job_config=job_config)
 
+        # prepare observers for job:
+        db_updater = DBUpdater(
+            backend_db=resources.backend_db,
+            job_id=job.job_id,
+            event_rate_limit=mhub_settings.backend_db_event_rate_limit,
+        )
+        slack_messenger = SlackMessenger(mhub_settings.self_instance_name, job)
+        # once the first message is sent, we remember the thread ID for all follow-up messages
+        db_updater.set(slack_thread_ds=slack_messenger.thread_ts)
+
         # send task to background to be able to quickly return a message
         resources.thread_pool.submit(
             job_wrapper,
             job,
             job_config,
-            resources.backend_db,
+            observers=Observers([db_updater, slack_messenger]),
         )
         response.headers["Location"] = f"/jobs/{job.job_id}"
 
