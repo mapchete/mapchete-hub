@@ -10,9 +10,7 @@ from mapchete.path import MPath
 
 from mapchete_hub import __version__
 from mapchete_hub.cluster import get_dask_executor
-from mapchete_hub.db import BaseStatusHandler
-from mapchete_hub.models import JobEntry, MapcheteJob
-from mapchete_hub.observers import DBUpdater, SlackMessenger
+from mapchete_hub.models import MapcheteJob
 from mapchete_hub.settings import mhub_settings
 
 logger = logging.getLogger(__name__)

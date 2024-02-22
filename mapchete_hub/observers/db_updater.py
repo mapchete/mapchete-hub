@@ -35,13 +35,13 @@ class DBUpdater(ObserverProtocol):
 
     def update(
         self,
-        *args,
+        *_,
         status: Optional[Status] = None,
         progress: Optional[Progress] = None,
         executor: Optional[DaskExecutor] = None,
         exception: Optional[Exception] = None,
         result: Optional[dict] = None,
-        **kwargs,
+        **__,
     ):
         set_kwargs = dict()
 
