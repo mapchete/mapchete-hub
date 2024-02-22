@@ -7,7 +7,6 @@ from typing import Optional, Union
 
 from dask_gateway.options import Options
 from mapchete.config.models import DaskAdaptOptions, DaskSpecs
-from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from mapchete_hub import __version__

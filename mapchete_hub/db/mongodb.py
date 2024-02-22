@@ -42,6 +42,15 @@ class MongoDBStatusHandler(BaseStatusHandler):
 
         logger.debug("active client %s", self._client)
 
+    def __enter__(self):
+        logger.debug("enter MongoDBStatusHandler")
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        logger.debug("exit MongoDBStatusHandler")
+        if self._client:
+            self._client.close()
+
     def jobs(self, **kwargs) -> List[JobEntry]:
         query = {k: v for k, v in kwargs.items() if v is not None}
         logger.debug("raw query: %s", query)

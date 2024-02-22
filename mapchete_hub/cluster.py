@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from contextlib import contextmanager
 from enum import Enum
@@ -8,17 +10,18 @@ from dask.distributed import Client, LocalCluster, get_client
 from dask_gateway import BasicAuth, Gateway, GatewayCluster
 from mapchete.config.models import DaskSettings, DaskSpecs
 from mapchete.executor import DaskExecutor
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 from retry import retry
 
+from mapchete_hub.lifespan_resources import resources
 from mapchete_hub.settings import (
+    MHubSettings,
     dask_default_specs,
     mhub_settings,
     update_gateway_cluster_options,
 )
 
 logger = logging.getLogger(__name__)
-CACHE = {}
 
 
 class ClusterType(str, Enum):
@@ -27,43 +30,30 @@ class ClusterType(str, Enum):
     local = "local"
 
 
-class ClusterSetup(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
+class ClusterSetup:
     type: ClusterType = ClusterType.local
     url: Optional[str] = None
     kwargs: Optional[dict] = Field(default_factory=dict)
-    cluster: Optional[LocalCluster] = None
 
+    def __init__(self, settings: Optional[MHubSettings] = None):
+        """Load cluster setup from settings."""
+        settings = settings or mhub_settings
 
-def get_dask_cluster_setup() -> ClusterSetup:
-    """This allows lazily loading either a LocalCluster, a GatewayCluster or connection to a running scheduler."""
-    if mhub_settings.dask_gateway_url:  # pragma: no cover
-        return ClusterSetup(
-            type=ClusterType.gateway,
-            url=mhub_settings.dask_gateway_url,
-            kwargs=dict(auth=BasicAuth(password=mhub_settings.dask_gateway_pass)),
-        )
-    elif mhub_settings.dask_scheduler_url:
-        return ClusterSetup(
-            type=ClusterType.scheduler, url=mhub_settings.dask_scheduler_url
-        )
-    else:  # pragma: no cover
-        logger.warning(
-            "Either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set. "
-            "For now, a local cluster is being used."
-        )
-        if "cluster" in CACHE:
-            logger.debug("using cached LocalCluster")
+        if settings.dask_gateway_url:  # pragma: no cover
+            self.type = ClusterType.gateway
+            self.url = settings.dask_gateway_url
+            self.kwargs = dict(auth=BasicAuth(password=settings.dask_gateway_pass))
+
+        elif settings.dask_scheduler_url:  # pragma: no cover
+            self.type = ClusterType.scheduler
+            self.url = settings.dask_scheduler_url
+
         else:
-            logger.debug("creating LocalCluster")
-            CACHE["cluster"] = LocalCluster(
-                processes=False,
-                n_workers=4,
-                # threads_per_worker=os.cpu_count()
-                threads_per_worker=8,
+            logger.warning(
+                "Either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set. "
+                "For now, a LocalCluster is being used."
             )
-        return ClusterSetup(type=ClusterType.local, cluster=CACHE["cluster"])
+            self.type = ClusterType.local
 
 
 @contextmanager
@@ -73,10 +63,10 @@ def get_dask_executor(
     dask_settings: DaskSettings = DaskSettings(),
     preprocessing_tasks: Optional[int] = None,
     tile_tasks: Optional[int] = None,
+    cluster_setup: ClusterSetup = ClusterSetup(),
     **kwargs,
 ) -> Generator[DaskExecutor, None, None]:
     logger.info("requesting dask cluster and dask client for job %s...", job_id)
-    cluster_setup = get_dask_cluster_setup()
 
     if cluster_setup.type == ClusterType.local:
         with local_cluster_executor(
@@ -114,13 +104,13 @@ def local_cluster_executor(
     preprocessing_tasks: Optional[int] = None,
     tile_tasks: Optional[int] = None,
 ) -> Generator[DaskExecutor, None, None]:
-    logger.debug("use existing %s", cluster_setup.cluster)
-    with Client(cluster_setup.cluster, set_as_default=False) as client:
+    logger.debug("use existing %s", resources.local_cluster)
+    with Client(resources.local_cluster, set_as_default=False) as client:
         logger.debug("started client %s", client)
 
         cluster_adapt(
             cluster_setup,
-            cluster_setup.cluster,
+            resources.local_cluster,
             dask_specs,
             dask_settings,
             preprocessing_tasks=preprocessing_tasks,
@@ -192,35 +182,26 @@ def gateway_cluster_executor(
             with DaskExecutor(dask_client=client) as executor:
                 yield executor
 
-            logger.debug("closing client %s", client)
-        logger.debug("closed client %s", client)
-
-        logger.debug("shutting down cluster %s", cluster)
-    logger.debug("cluster %s shut down and connection closed", cluster)
-
 
 @contextmanager
 def existing_scheduler_executor(
     cluster_setup: ClusterSetup, **kwargs
-) -> Generator[DaskExecutor, None, None]:
+) -> Generator[DaskExecutor, None, None]:  # pragma: no cover
     logger.debug("cluster exists, connecting directly to scheduler")
     logger.debug("connect to scheduler %s", cluster_setup.url)
-    yield get_client(cluster_setup.url)
+    with DaskExecutor(dask_client=get_client(cluster_setup.url)) as executor:
+        yield executor
     logger.debug("no client to close")
 
 
 def cluster_adapt(
     cluster_setup: ClusterSetup,
-    cluster: Union[LocalCluster, GatewayCluster, None],
+    cluster: Union[LocalCluster, GatewayCluster],
     dask_specs: DaskSpecs,
     dask_settings: DaskSettings,
     preprocessing_tasks: Optional[int] = None,
     tile_tasks: Optional[int] = None,
 ):
-    if cluster is None:  # pragma: no cover
-        logger.debug("cluster does not support adaption")
-        return
-
     adapt_options = dask_specs.adapt_options.model_dump()
     logger.debug("adapt options: %s", adapt_options)
 
@@ -267,14 +248,9 @@ def cluster_adapt(
 
     logger.debug("set cluster adapt to %s", adapt_options)
 
-    if cluster_setup.type == ClusterType.local or isinstance(
-        cluster, LocalCluster
-    ):  # pragma: no cover
-        cluster.adapt(**{k: v for k, v in adapt_options.items() if k not in ["active"]})
+    # remove kwarg not supported by LocalCluster
+    if cluster_setup.type == ClusterType.local:
+        adapt_options.pop("active")
 
-    elif cluster_setup.type == ClusterType.gateway:  # pragma: no cover
-        logger.debug("adapt cluster: %s", adapt_options)
-        cluster.adapt(**adapt_options)
-
-    else:  # pragma: no cover
-        raise TypeError(f"cannot determine cluster type: {cluster}")
+    logger.debug("adapt cluster: %s", adapt_options)
+    cluster.adapt(**adapt_options)

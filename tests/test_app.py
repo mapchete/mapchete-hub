@@ -6,6 +6,27 @@ from copy import deepcopy
 import pytest
 
 
+def wait_for_job(
+    client,
+    job_id,
+    until_status=["done", "failed", "cancelled"],
+    max_wait_seconds: int = 120,
+    interval_seconds: int = 1,
+):
+    until_status = until_status if isinstance(until_status, list) else [until_status]
+    start = time.time()
+    while True:
+        time.sleep(interval_seconds)
+        response = client.get(f"/jobs/{job_id}", timeout=3)
+        status = response.json()["properties"]["status"]
+        if status in until_status:
+            return response
+        elif time.time() - start > max_wait_seconds:
+            raise RuntimeError(
+                f"job did not reach until_status in time, last status was '{status}'"
+            )
+
+
 def test_get_root(client):
     response = client.get("/")
     assert response.status_code == 200
@@ -115,7 +136,6 @@ def test_post_job_custom_process(
     job_id = response.json()["id"]
     response = client.get(f"/jobs/{job_id}")
     assert response.status_code == 200
-    assert response.json()["properties"]["status"] == "done"
 
 
 def test_list_jobs(client, test_process_id, example_config_json):
@@ -290,12 +310,16 @@ def test_list_jobs_status(client, test_process_id, example_config_json):
     assert response.status_code == 201
     job_id = response.json()["id"]
 
-    response = client.get("/jobs", params={"status": "done"})
+    response = client.get(f"/jobs/{job_id}")
+    assert response.status_code == 200
+
+    # single status
+    response = client.get("/jobs", params={"status": "cancelled"})
     assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
-    assert job_id in jobs
+    assert job_id not in jobs
 
-    response = client.get("/jobs", params={"status": "cancelled"})
+    response = client.get("/jobs", params={"status": "cancelled,failed"})
     assert response.status_code == 200
     jobs = [j["id"] for j in response.json()["features"]]
     assert job_id not in jobs
@@ -390,7 +414,6 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
 
 
 def test_send_cancel_signal(client, test_process_id, example_config_json):
-    """The background task does not run in the background in TestClient, therefore we can only test the request."""
     # make one long running job
     response = client.post(
         f"/processes/{test_process_id}/execution",
@@ -407,9 +430,13 @@ def test_send_cancel_signal(client, test_process_id, example_config_json):
     response = client.delete(f"/jobs/{job_id}")
     assert response.status_code == 200
 
+    response = wait_for_job(client, job_id)
+
+    assert response.json()["properties"]["status"] == "cancelled"
+
 
 def test_job_result(client, test_process_id, example_config_json):
-    result = client.post(
+    response = client.post(
         f"/processes/{test_process_id}/execution",
         data=json.dumps(
             dict(
@@ -417,12 +444,14 @@ def test_job_result(client, test_process_id, example_config_json):
             )
         ),
     )
-    job_id = result.json()["id"]
+    job_id = response.json()["id"]
 
-    result = client.get(f"/jobs/{job_id}/results")
-    assert result.status_code == 200
-    assert isinstance(result.json(), dict)
-    assert "tmp" in result.json()["imagesOutput"]["href"]
+    wait_for_job(client, job_id, until_status="done")
+
+    response = client.get(f"/jobs/{job_id}/results")
+    assert response.status_code == 200
+    assert isinstance(response.json(), dict)
+    assert "tmp" in response.json()["imagesOutput"]["href"]
 
 
 def test_errors(client, example_config_json):
@@ -449,8 +478,9 @@ def test_process_exception(
     assert response.status_code == 201
     job_id = response.json()["id"]
 
+    response = wait_for_job(client, job_id)
+
     # make sure job failed
-    response = client.get(f"/jobs/{job_id}")
     assert response.json()["properties"]["status"] == "failed"
     assert response.json()["properties"]["traceback"]
 
@@ -487,8 +517,9 @@ def test_dask_dashboard_link(client, test_process_id, example_config_json):
     )
     job_id = response.json()["id"]
 
+    response = wait_for_job(client, job_id)
+
     # make sure custom parameter was passed on
-    response = client.get(f"/jobs/{job_id}")
     assert response.json()["properties"].get("dask_dashboard_link")
 
 

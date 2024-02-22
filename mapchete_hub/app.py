@@ -59,16 +59,15 @@ Trigger a job using a given process_id. This returns a job ID.
 import logging
 from typing import Optional
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response
 from mapchete.config.models import DaskSettings
 from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings
 
 from mapchete_hub import __version__
-from mapchete_hub.cluster import get_dask_cluster_setup
-from mapchete_hub.db import BaseStatusHandler, init_backenddb
 from mapchete_hub.job_wrapper import job_wrapper
+from mapchete_hub.lifespan_resources import lifespan, resources
 from mapchete_hub.models import MapcheteJob
 from mapchete_hub.observers import SlackMessenger
 from mapchete_hub.settings import get_dask_specs, mhub_settings
@@ -96,40 +95,7 @@ for l in loggers:
 logger = logging.getLogger(__name__)
 
 
-app = FastAPI()
-
-CACHE = dict()
-
-
-# dependencies
-def get_backend_db() -> BaseStatusHandler:  # pragma: no cover
-    if "backend_db" not in CACHE:
-        logger.debug("no backend db found in cache, creating...")
-        if mhub_settings.backend_db == "memory":
-            logger.warning(
-                "MHUB_MONGODB_URL not provided; using in-memory metadata store"
-            )
-        CACHE["backend_db"] = init_backenddb(src=mhub_settings.backend_db)
-    return CACHE["backend_db"]
-
-
-@app.on_event("startup")
-async def startup_event():
-    # mhub online message
-    try:
-        if mhub_settings.slack_token:  # pragma: no cover
-            from slack_sdk import WebClient
-
-            client = WebClient(token=mhub_settings.slack_token)
-            client.chat_postMessage(
-                channel=mhub_settings.slack_channel,
-                text=(
-                    f":eox_eye: *{mhub_settings.self_instance_name} version {__version__} "
-                    f"awaiting orders on* {mhub_settings.self_url}"
-                ),
-            )
-    except ImportError:  # pragma: no cover
-        pass
+app = FastAPI(lifespan=lifespan)
 
 
 # REST endpoints
@@ -186,8 +152,6 @@ async def post_process(process_id: str):
 async def post_job(
     process_id: str,
     job_config: MapcheteJob,
-    background_tasks: BackgroundTasks,
-    backend_db: BaseStatusHandler = Depends(get_backend_db),
     response: Response = None,
 ) -> dict:
     """Executes a process, i.e. creates a new job."""
@@ -202,19 +166,19 @@ async def post_job(
             else {}
         )
         # create new entry in database
-        job = backend_db.new(job_config=job_config)
+        job = resources.backend_db.new(job_config=job_config)
 
         # send task to background to be able to quickly return a message
-        background_tasks.add_task(
+        resources.thread_pool.submit(
             job_wrapper,
             job,
             job_config,
-            backend_db,
+            resources.backend_db,
         )
         response.headers["Location"] = f"/jobs/{job.job_id}"
 
         # return job
-        job = backend_db.job(job.job_id)
+        job = resources.backend_db.job(job.job_id)
         logger.debug("submitted job %s", job)
 
         return job.to_geojson_dict()
@@ -232,7 +196,6 @@ async def list_jobs(
     bounds: Optional[str] = None,  # Field(None, example="0.0,1.0,2.0,3.0"),
     from_date: Optional[str] = None,
     to_date: Optional[str] = None,
-    backend_db: BaseStatusHandler = Depends(get_backend_db),
 ) -> dict:
     """Returns the running and finished jobs for a process."""
     bounds = tuple(map(float, bounds.split(","))) if bounds else None
@@ -259,42 +222,44 @@ async def list_jobs(
     logger.debug("job filter kwargs: %s", kwargs)
     return {
         "type": "FeatureCollection",
-        "features": [job.to_geojson_dict() for job in backend_db.jobs(**kwargs)],
+        "features": [
+            job.to_geojson_dict() for job in resources.backend_db.jobs(**kwargs)
+        ],
     }
 
 
 @app.get("/jobs/{job_id}")
-async def get_job(job_id: str, backend_db: BaseStatusHandler = Depends(get_backend_db)):
+async def get_job(job_id: str):
     """Returns the status of a job."""
     try:
-        return backend_db.job(job_id).to_geojson_dict()
+        return resources.backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
 
 
 @app.delete("/jobs/{job_id}")
 async def cancel_job(
-    job_id: str, backend_db: BaseStatusHandler = Depends(get_backend_db)
+    job_id: str,
 ):
     """Cancel a job execution."""
     try:
-        job = backend_db.job(job_id)
+        job = resources.backend_db.job(job_id)
         if job.status in [
             Status.pending,
             Status.parsing,
             Status.initializing,
             Status.running,
         ]:  # pragma: no cover
-            backend_db.set(job_id, status=Status.cancelled)
+            resources.backend_db.set(job_id, status=Status.cancelled)
             SlackMessenger(mhub_settings.self_instance_name, job).send("aborting ...")
-        return backend_db.job(job_id).to_geojson_dict()
+        return resources.backend_db.job(job_id).to_geojson_dict()
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
 
 
 @app.get("/jobs/{job_id}/results")
 async def get_job_results(
-    job_id: str, backend_db: BaseStatusHandler = Depends(get_backend_db)
+    job_id: str,
 ):
     """
     Return the results of a job.
@@ -326,13 +291,14 @@ async def get_job_results(
     """
     # raise if Job ID not found
     try:
-        job = backend_db.job(job_id)
+        job = resources.backend_db.job(job_id)
     except KeyError as exc:
         raise HTTPException(404, f"job {job_id} not found in the database") from exc
     if job.status == Status.done:
         return job.result
 
     elif job.status in [
+        Status.pending,
         Status.parsing,
         Status.initializing,
         Status.running,

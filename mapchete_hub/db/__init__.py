@@ -1,4 +1,5 @@
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, Generator
 
 import mongomock
 
@@ -7,12 +8,16 @@ from mapchete_hub.db.memory import MemoryStatusHandler
 from mapchete_hub.db.mongodb import MongoDBStatusHandler
 
 
-def init_backenddb(src: Any) -> BaseStatusHandler:
+@contextmanager
+def init_backenddb(src: Any) -> Generator[BaseStatusHandler, None, None]:
     if isinstance(src, str) and src.startswith("mongodb"):  # pragma: no cover
-        return MongoDBStatusHandler(db_uri=src)
+        with MongoDBStatusHandler(db_uri=src) as db:
+            yield db
     elif isinstance(src, mongomock.database.Database):
-        return MongoDBStatusHandler(database=src)
+        with MongoDBStatusHandler(database=src) as db:
+            yield db
     elif isinstance(src, str) and src == "memory":
-        return MemoryStatusHandler()
+        with MemoryStatusHandler() as db:
+            yield db
     else:  # pragma: no cover
         raise NotImplementedError(f"backend {src} of type {type(src)}")
