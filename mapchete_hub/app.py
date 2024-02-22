@@ -166,30 +166,36 @@ async def post_job(
             if "dask_settings" in job_config.params
             else {}
         )
-        # create new entry in database
-        job = resources.backend_db.new(job_config=job_config)
 
-        # prepare observers for job:
-        db_updater = DBUpdater(
+        # create new entry in database
+        job_entry = resources.backend_db.new(job_config=job_config)
+        job_id = job_entry.job_id
+
+        # initialize DB observer
+        job_db_updater = DBUpdater(
             backend_db=resources.backend_db,
-            job_id=job.job_id,
+            job_entry=job_entry,
             event_rate_limit=mhub_settings.backend_db_event_rate_limit,
         )
-        slack_messenger = SlackMessenger(mhub_settings.self_instance_name, job)
-        # once the first message is sent, we remember the thread ID for all follow-up messages
-        db_updater.set(slack_thread_ds=slack_messenger.thread_ts)
+        # initialize slack messenger
+        job_slack_messenger = SlackMessenger(
+            mhub_settings.self_instance_name, job_db_updater.job_entry
+        )
+        # once the initialization message is sent, we remember the thread ID
+        # for all follow-up messages, even if the job thread dies
+        job_db_updater.set(slack_thread_ds=job_slack_messenger.thread_ts)
 
         # send task to background to be able to quickly return a message
         resources.thread_pool.submit(
             job_wrapper,
-            job,
+            job_id,
             job_config,
-            observers=Observers([db_updater, slack_messenger]),
+            observers=Observers([job_db_updater, job_slack_messenger]),
         )
-        response.headers["Location"] = f"/jobs/{job.job_id}"
+        response.headers["Location"] = f"/jobs/{job_id}"
 
         # return job
-        job = resources.backend_db.job(job.job_id)
+        job = resources.backend_db.job(job_id)
         logger.debug("submitted job %s", job)
 
         return job.to_geojson_dict()

@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 def job_wrapper(
-    job: JobEntry,
+    job_id: str,
     job_config: MapcheteJob,
     observers: Optional[Observers] = Observers([]),
 ):
-    logger.info("running job wrapper with job %s in background", job.job_id)
+    logger.info("running job wrapper with job %s in background", job_id)
 
     mapchete_config = job_config.config
 
@@ -45,7 +45,7 @@ def job_wrapper(
             retries=mhub_settings.cancellederror_tries,
             executor_getter=partial(
                 get_dask_executor,
-                job_id=job.job_id,
+                job_id=job_id,
                 dask_specs=job_config.params.get("dask_specs"),
                 dask_settings=job_config.params.get("dask_settings"),
             ),
@@ -68,9 +68,9 @@ def job_wrapper(
             },
         )
     except JobCancelledError:
-        logger.info("%s got cancelled.", job.job_id)
+        logger.info("%s got cancelled.", job_id)
         observers.notify(status=Status.cancelled)
     except Exception as exc:
         logger.exception(exc)
     finally:
-        logger.info("%s background task finished", job.job_id)
+        logger.info("%s background task finished", job_id)
