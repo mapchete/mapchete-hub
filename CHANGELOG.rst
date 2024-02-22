@@ -7,6 +7,13 @@ Changelog
 ----------------------
 
 * core
+  * fix `slack_sdk.WebClient` call
+
+
+2024.2.10 - 2024-02-22
+----------------------
+
+* core
   * add lifespan resources for FastAPI app (status DB handler, job threadpool, optional local dask cluster)
   * use `concurrent.futures.ThreadPool` instead of FastAPI background tasks to run jobs
 

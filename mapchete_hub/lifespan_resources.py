@@ -35,14 +35,14 @@ async def lifespan(*args):
         if mhub_settings.slack_token:  # pragma: no cover
             from slack_sdk import WebClient
 
-            with WebClient(token=mhub_settings.slack_token) as client:
-                client.chat_postMessage(
-                    channel=mhub_settings.slack_channel,
-                    text=(
-                        f":eox_eye: *{mhub_settings.self_instance_name} version {__version__} "
-                        f"awaiting orders on* {mhub_settings.self_url}"
-                    ),
-                )
+            client = WebClient(token=mhub_settings.slack_token)
+            client.chat_postMessage(
+                channel=mhub_settings.slack_channel,
+                text=(
+                    f":eox_eye: *{mhub_settings.self_instance_name} version {__version__} "
+                    f"awaiting orders on* {mhub_settings.self_url}"
+                ),
+            )
     except ImportError:  # pragma: no cover
         pass
 
