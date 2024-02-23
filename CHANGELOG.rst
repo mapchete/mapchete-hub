@@ -3,7 +3,15 @@ Changelog
 #########
 
 
-2024.2.10 - 2024-02-22
+2024.2.12 - 2024-02-23
+----------------------
+
+* core
+  * fix slack messaging
+  * offload job creation to background task
+
+
+2024.2.11 - 2024-02-22
 ----------------------
 
 * core
