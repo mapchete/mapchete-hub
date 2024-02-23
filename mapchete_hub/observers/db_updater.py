@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import time
 import traceback
@@ -10,6 +12,8 @@ from mapchete.executor import DaskExecutor
 from mapchete.types import Progress
 
 from mapchete_hub.db import BaseStatusHandler
+from mapchete_hub.models import JobEntry, MapcheteJob
+from mapchete_hub.settings import mhub_settings
 
 logger = logging.getLogger(__name__)
 
@@ -20,20 +24,24 @@ class DBUpdater(ObserverProtocol):
     backend_db: BaseStatusHandler
 
     def __init__(
-        self, backend_db: BaseStatusHandler, job_id: str, event_rate_limit: float = 0.2
+        self,
+        backend_db: BaseStatusHandler,
+        job_entry: JobEntry,
+        event_rate_limit: float = 0.2,
     ):
         self.backend_db = backend_db
-        self.job_id = job_id
+        self.job_entry = job_entry
         self.event_rate_limit = event_rate_limit
 
     def update(
         self,
-        *args,
+        *_,
         status: Optional[Status] = None,
         progress: Optional[Progress] = None,
         executor: Optional[DaskExecutor] = None,
         exception: Optional[Exception] = None,
-        **kwargs,
+        result: Optional[dict] = None,
+        **__,
     ):
         set_kwargs = dict()
 
@@ -43,7 +51,7 @@ class DBUpdater(ObserverProtocol):
             Status.failed,
             Status.cancelled,
         ]:
-            current_status = self.backend_db.job(self.job_id).status
+            current_status = self.backend_db.job(self.job_entry.job_id).status
             # if job status was set to cancelled, raise a JobCancelledError
             if current_status == Status.cancelled:
                 raise JobCancelledError("job was cancelled")
@@ -51,7 +59,9 @@ class DBUpdater(ObserverProtocol):
         # job status always has to be updated
         if status:
             set_kwargs.update(status=status)
-            logger.debug("DB update: job %s status changed to %s", self.job_id, status)
+            logger.debug(
+                "DB update: job %s status changed to %s", self.job_entry.job_id, status
+            )
 
         if progress:
             # progress only at given minimal intervals
@@ -62,7 +72,7 @@ class DBUpdater(ObserverProtocol):
             ):
                 logger.debug(
                     "DB update: job %s progress changed to %s/%s",
-                    self.job_id,
+                    self.job_entry.job_id,
                     progress.current,
                     progress.total,
                 )
@@ -78,9 +88,12 @@ class DBUpdater(ObserverProtocol):
                 traceback="\n".join(traceback.format_tb(exception.__traceback__)),
             )
 
+        if result:
+            set_kwargs.update(result=result)
+
         if set_kwargs:
             self.set(**set_kwargs)
 
     def set(self, **kwargs):
         if kwargs:
-            self.backend_db.set(self.job_id, **kwargs)
+            self.backend_db.set(self.job_entry.job_id, **kwargs)

@@ -59,7 +59,8 @@ Trigger a job using a given process_id. This returns a job ID.
 import logging
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Response
+from mapchete.commands.observer import Observers
 from mapchete.config.models import DaskSettings
 from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
@@ -69,7 +70,7 @@ from mapchete_hub import __version__
 from mapchete_hub.job_wrapper import job_wrapper
 from mapchete_hub.lifespan_resources import lifespan, resources
 from mapchete_hub.models import MapcheteJob
-from mapchete_hub.observers import SlackMessenger
+from mapchete_hub.observers import DBUpdater, SlackMessenger
 from mapchete_hub.settings import get_dask_specs, mhub_settings
 from mapchete_hub.timetools import str_to_date
 
@@ -152,9 +153,34 @@ async def post_process(process_id: str):
 async def post_job(
     process_id: str,
     job_config: MapcheteJob,
+    background_tasks: BackgroundTasks,
     response: Response = None,
 ) -> dict:
     """Executes a process, i.e. creates a new job."""
+
+    def create_job(job_entry):
+        # initialize DB observer
+        job_db_updater = DBUpdater(
+            backend_db=resources.backend_db,
+            job_entry=job_entry,
+            event_rate_limit=mhub_settings.backend_db_event_rate_limit,
+        )
+        # initialize slack messenger
+        job_slack_messenger = SlackMessenger(
+            mhub_settings.self_instance_name, job_db_updater.job_entry
+        )
+        # once the initialization message is sent, we remember the thread ID
+        # for all follow-up messages, even if the job thread dies
+        job_db_updater.set(slack_thread_ds=job_slack_messenger.thread_ts)
+
+        # send task to background to be able to quickly return a message
+        resources.thread_pool.submit(
+            job_wrapper,
+            job_entry.job_id,
+            job_config,
+            observers=Observers([job_db_updater, job_slack_messenger]),
+        )
+
     try:
         # get dask specs and settings
         job_config.params["dask_specs"] = get_dask_specs(
@@ -165,23 +191,18 @@ async def post_job(
             if "dask_settings" in job_config.params
             else {}
         )
+
         # create new entry in database
-        job = resources.backend_db.new(job_config=job_config)
+        job_entry = resources.backend_db.new(job_config=job_config)
 
-        # send task to background to be able to quickly return a message
-        resources.thread_pool.submit(
-            job_wrapper,
-            job,
-            job_config,
-            resources.backend_db,
-        )
-        response.headers["Location"] = f"/jobs/{job.job_id}"
+        # let observer preparation and final job submission be handled in the background
+        background_tasks.add_task(create_job, job_entry)
+        logger.debug("submitted job %s", job_entry)
 
-        # return job
-        job = resources.backend_db.job(job.job_id)
-        logger.debug("submitted job %s", job)
+        # return job entry
+        response.headers["Location"] = f"/jobs/{job_entry.job_id}"
+        return job_entry.to_geojson_dict()
 
-        return job.to_geojson_dict()
     except Exception as exc:  # pragma: no cover
         logger.exception(exc)
         raise HTTPException(400, str(exc)) from exc

@@ -72,7 +72,6 @@ class SlackMessenger(ObserverProtocol):
                 status=Status.pending.value,
             )
         )
-        self.send(message=f"job ID: <{job.url}|{job.job_id}>")
 
     def update(
         self,
