@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.3.7 - 2024-03-29
+---------------------
+
+* packaging
+  * accidentally tagged 2024.3.5 with 2024.3.6, so fixing this by aligning both versions again
+
+
 2024.3.5 - 2024-03-29
 ---------------------
 
