@@ -3,7 +3,7 @@ Settings.
 """
 import logging
 import os
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Type, Union
 
 from aiohttp import (
     ClientResponseError,
@@ -37,7 +37,7 @@ class MHubSettings(BaseSettings):
     backend_db_event_rate_limit: float = 0.2
     cancellederror_tries: int = 1  # this is deprecated!
     retries: int = 1
-    retry_on_exception: Tuple[Exception, ...] = (
+    retry_on_exception: Tuple[Type[Exception], ...] = (
         CancelledError,
         ClientResponseError,
         CommClosedError,
