@@ -40,7 +40,6 @@ def job_wrapper(
     try:
         execute(
             mapchete_config.model_dump(),
-            retries=mhub_settings.cancellederror_tries,
             executor_getter=partial(
                 get_dask_executor,
                 job_id=job_id,
@@ -49,6 +48,10 @@ def job_wrapper(
             ),
             observers=observers.observers,
             cancel_on_exception=JobCancelledError,
+            retries=max(
+                [mhub_settings.retries, mhub_settings.cancellederror_tries]
+            ),  # this is a workaround to still respect the deprecated "cancellederror_tries" field
+            retry_on_exception=mhub_settings.retry_on_exception,
             **{
                 k: v
                 for k, v in job_config.params.items()
