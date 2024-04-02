@@ -1,3 +1,4 @@
+aiohttp
 bokeh
 blosc
 eox_preprocessing==2023.12.0
