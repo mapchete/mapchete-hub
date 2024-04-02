@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.4.0 - 2024-04-02
+---------------------
+
+* core
+  * `settings.MhubSettings`: replace `cancellederror_tries` setting with `retries` and add a `retry_on_exception` setting including more exceptions than just a `CancelledError`
+
+
 2024.3.7 - 2024-03-29
 ---------------------
 
