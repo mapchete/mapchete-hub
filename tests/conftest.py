@@ -1,13 +1,12 @@
 import os
 
 import pytest
-from dask.distributed import LocalCluster
 from fastapi.testclient import TestClient
-from mapchete.io import path_exists
+from mapchete.path import MPath
 
 from mapchete_hub.app import app
 
-SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+SCRIPT_DIR = MPath(os.path.dirname(os.path.realpath(__file__)))
 
 
 @pytest.fixture(scope="session")
@@ -26,8 +25,8 @@ def test_area_fgb():
     """
     Fixture for test area vector data.
     """
-    fgb_path = os.path.join(SCRIPT_DIR, "test_area.fgb")
-    if path_exists(fgb_path):
+    fgb_path = SCRIPT_DIR / "test_area.fgb"
+    if fgb_path.exists():
         return fgb_path.__str__()
     else:
         raise FileNotFoundError

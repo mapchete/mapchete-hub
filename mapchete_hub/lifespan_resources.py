@@ -29,7 +29,6 @@ async def lifespan(*args):
     """
     Setup and tear down of additional resources required by mapchete Hub.
     """
-
     # mhub is online message
     try:
         if mhub_settings.slack_token:  # pragma: no cover
@@ -71,7 +70,6 @@ async def lifespan(*args):
             resources.local_cluster = exit_stack.enter_context(
                 LocalCluster(processes=False, n_workers=4, threads_per_worker=8)
             )
-
         yield
 
         resources.thread_pool.shutdown()

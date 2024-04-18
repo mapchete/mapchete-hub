@@ -6,7 +6,7 @@ import time
 import pytest
 import requests
 
-from mapchete_hub.timetools import date_to_str, str_to_date
+from mapchete_hub.timetools import date_to_str
 
 TEST_ENDPOINT = os.environ.get("MHUB_HOST", "http://0.0.0.0:5000")
 
