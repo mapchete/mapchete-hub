@@ -90,13 +90,24 @@ dask_default_specs = dict(
 
 
 def get_dask_specs(specs: Optional[Union[DaskSpecs, dict]] = None) -> DaskSpecs:
+    def _enforce_strings_for_worker_env(specs: dict) -> dict:
+        if specs.get("worker_environment"):
+            specs["worker_environment"] = {
+                k: str(v) for k, v in specs["worker_environment"].items()
+            }
+        return specs
+
     if specs is None:
         return DaskSpecs(**dask_default_specs)
     elif isinstance(specs, DaskSpecs):
         specs_dict = {k: v for k, v in specs.model_dump().items() if v is not None}
-        return DaskSpecs(**dict(dask_default_specs, **specs_dict))
+        return DaskSpecs(
+            **dict(dask_default_specs, **_enforce_strings_for_worker_env(specs_dict))
+        )
     elif isinstance(specs, dict):
-        return DaskSpecs(**dict(dask_default_specs, **specs))
+        return DaskSpecs(
+            **dict(dask_default_specs, **_enforce_strings_for_worker_env(specs))
+        )
     else:  # pragma: no cover
         raise TypeError(f"unparsable dask specs: {specs}")
 

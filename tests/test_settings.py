@@ -44,3 +44,5 @@ def test_get_dask_specs():
     specs = get_dask_specs(DaskSpecs(worker_cores=20, image=None))
     assert specs.image
     assert specs.worker_cores == 20
+    specs = get_dask_specs(dict(worker_environment={"FOO": 0}))
+    assert specs.worker_environment["FOO"] == "0"
