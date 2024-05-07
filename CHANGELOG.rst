@@ -3,6 +3,16 @@ Changelog
 #########
 
 
+2024.5.2 - 2024-05-07
+---------------------
+
+* core
+    * `settings.get_das_specs()`: make sure `worker_environment` setting values are strings, otherwise k8s breaks
+
+* packaging
+    * bump ``mapchete-eo`` to ``2024.5.1``
+
+
 2024.5.1 - 2024-05-03
 ---------------------
 
