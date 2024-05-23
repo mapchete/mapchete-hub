@@ -12,7 +12,7 @@ httpx
 jupyter-server-proxy
 lz4
 mapchete==2024.5.0
-mapchete_eo==2024.5.8
+mapchete_eo==2024.5.9
 mapchete_xarray==2022.10.0
 mongomock
 orgonite==2023.10.0
