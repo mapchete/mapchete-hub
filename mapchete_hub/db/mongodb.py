@@ -105,7 +105,8 @@ class MongoDBStatusHandler(BaseStatusHandler):
         return jobs
 
     def job(self, job_id) -> JobEntry:
-        result = self._jobs.find_one({"job_id": job_id})
+        with pymongo.timeout(mhub_settings.mongodb_timeout):
+            result = self._jobs.find_one({"job_id": job_id})
         if result:
             return JobEntry(**result)
         else:  # pragma: no cover
@@ -137,7 +138,8 @@ class MongoDBStatusHandler(BaseStatusHandler):
             job_name=job_config.params.get("job_name") or random_name(),
             dask_specs=job_config.params.get("dask_specs", dict()),
         )
-        result = self._jobs.insert_one(entry.model_dump())
+        with pymongo.timeout(mhub_settings.mongodb_timeout):
+            result = self._jobs.insert_one(entry.model_dump())
         if result.acknowledged:
             return self.job(job_id)
         else:  # pragma: no cover
@@ -187,11 +189,12 @@ class MongoDBStatusHandler(BaseStatusHandler):
         # add timestamp to entry
         entry.update(updated=timestamp)
 
-        return JobEntry(
-            **self._jobs.find_one_and_update(
-                {"job_id": job_id},
-                {"$set": entry},
-                upsert=True,
-                return_document=pymongo.ReturnDocument.AFTER,
+        with pymongo.timeout(mhub_settings.mongodb_timeout):
+            return JobEntry(
+                **self._jobs.find_one_and_update(
+                    {"job_id": job_id},
+                    {"$set": entry},
+                    upsert=True,
+                    return_document=pymongo.ReturnDocument.AFTER,
+                )
             )
-        )
