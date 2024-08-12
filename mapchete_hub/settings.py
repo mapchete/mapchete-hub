@@ -35,6 +35,7 @@ class MHubSettings(BaseSettings):
     add_mapchete_logger: bool = False
     backend_db: str = "memory"
     backend_db_event_rate_limit: float = 0.2
+    mongodb_timeout: float = 5
     cancellederror_tries: int = 1  # this is deprecated!
     retries: int = 1
     retry_on_exception: Tuple[Type[Exception], ...] = (

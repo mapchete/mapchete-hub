@@ -105,7 +105,8 @@ class MongoDBStatusHandler(BaseStatusHandler):
         return jobs
 
     def job(self, job_id) -> JobEntry:
-        result = self._jobs.find_one({"job_id": job_id})
+        with pymongo.timeout(mhub_settings.mongodb_timeout):
+            result = self._jobs.find_one({"job_id": job_id})
         if result:
             return JobEntry(**result)
         else:  # pragma: no cover
@@ -122,7 +123,7 @@ class MongoDBStatusHandler(BaseStatusHandler):
         process_area = process_area_from_config(
             job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
         )[0]
-        submitted = datetime.utcnow()
+        submitted = datetime.now(datetime.UTC)
         entry = JobEntry(
             job_id=job_id,
             url=os.path.join(mhub_settings.self_url, "jobs", job_id),
@@ -137,7 +138,8 @@ class MongoDBStatusHandler(BaseStatusHandler):
             job_name=job_config.params.get("job_name") or random_name(),
             dask_specs=job_config.params.get("dask_specs", dict()),
         )
-        result = self._jobs.insert_one(entry.model_dump())
+        with pymongo.timeout(mhub_settings.mongodb_timeout):
+            result = self._jobs.insert_one(entry.model_dump())
         if result.acknowledged:
             return self.job(job_id)
         else:  # pragma: no cover
@@ -187,11 +189,12 @@ class MongoDBStatusHandler(BaseStatusHandler):
         # add timestamp to entry
         entry.update(updated=timestamp)
 
-        return JobEntry(
-            **self._jobs.find_one_and_update(
-                {"job_id": job_id},
-                {"$set": entry},
-                upsert=True,
-                return_document=pymongo.ReturnDocument.AFTER,
+        with pymongo.timeout(mhub_settings.mongodb_timeout):
+            return JobEntry(
+                **self._jobs.find_one_and_update(
+                    {"job_id": job_id},
+                    {"$set": entry},
+                    upsert=True,
+                    return_document=pymongo.ReturnDocument.AFTER,
+                )
             )
-        )
