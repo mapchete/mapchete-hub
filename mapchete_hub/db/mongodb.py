@@ -123,7 +123,7 @@ class MongoDBStatusHandler(BaseStatusHandler):
         process_area = process_area_from_config(
             job_config, dst_crs=os.environ.get("MHUB_BACKEND_CRS", "EPSG:4326")
         )[0]
-        submitted = datetime.now(datetime.UTC)
+        submitted = datetime.utcnow()
         entry = JobEntry(
             job_id=job_id,
             url=os.path.join(mhub_settings.self_url, "jobs", job_id),
