@@ -3,6 +3,24 @@ Changelog
 #########
 
 
+2024.9.0 - 2024-09-13
+---------------------
+
+* core
+  * add timeouts for pymongo connections
+
+* packaging
+    * use base image ``2024.9.1``
+    * bump ``dask`` to ``2024.8.2``
+    * bump ``dask-gateway`` to ``2024.1.0``
+    * bump ``dask-gateway-server`` to ``2024.1.0``
+    * bump ``dask-kubernetes`` to ``2024.8.0``
+    * bump ``distributed`` to ``2024.8.2``
+    * bump ``fastapi`` to ``0.114.1``
+    * bump ``mapchete`` to ``2024.9.0``
+    * bump ``mapchete_eo`` to ``2024.9.0``
+
+
 2024.6.0 - 2024-06-03
 ---------------------
 
