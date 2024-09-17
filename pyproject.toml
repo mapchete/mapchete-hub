@@ -39,7 +39,6 @@ dependencies = [
 complete = [
     "bokeh",
     "blosc",
-    "eox_preprocessing==2023.12.0",
     "dask",
     "dask-gateway",
     "distributed",
