@@ -3,6 +3,15 @@ Changelog
 #########
 
 
+2024.9.1 - 2024-09-18
+---------------------
+
+* packaging
+    * bump ``mapchete_eo`` to ``2024.9.1``
+    * removed ``eox_preprocessing``
+    * added ``mapchete_internal_processes``
+
+
 2024.9.0 - 2024-09-13
 ---------------------
 
