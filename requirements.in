@@ -11,8 +11,8 @@ httpx
 jupyter-server-proxy
 lz4
 mapchete==2024.9.0
-mapchete_eo==2024.9.2
-mapchete_internal_processes==2024.9.3
+mapchete_eo==2024.9.3
+mapchete_internal_processes==2024.9.4
 mapchete_xarray==2022.10.0
 mongomock
 orgonite==2023.10.0

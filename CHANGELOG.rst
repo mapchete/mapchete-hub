@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.9.5 - 2024-09-27
+---------------------
+
+* packaging
+    * bump ``mapchete_eo`` to ``2024.9.3``
+    * bump ``mapchete_internal_processes`` to ``2024.9.3``
+
+
 2024.9.4 - 2024-09-23
 ---------------------
 
