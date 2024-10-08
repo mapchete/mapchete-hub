@@ -3,6 +3,24 @@ Changelog
 #########
 
 
+2024.10.0 - 2024-10-08
+----------------------
+
+* core
+  * introduce `JobHandlers` to create abstraction layer between default background thread tasks, new kubernetes job tasks and mhub-worker tasks
+  * timestamps now all have UTC timezone
+  * 
+
+* CLI
+  * add `mhub-worker` command
+
+* packaging
+  * use ruff and mypy
+
+* CI/CD
+  * add codecheck stage
+
+
 2024.9.5 - 2024-09-27
 ---------------------
 
