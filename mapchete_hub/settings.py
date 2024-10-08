@@ -1,9 +1,10 @@
 """
 Settings.
 """
+
 import logging
 import os
-from typing import Optional, Tuple, Type, Union
+from typing import Dict, Literal, Optional, Tuple, Type, TypedDict, Union
 
 from aiohttp import (
     ClientResponseError,
@@ -22,6 +23,11 @@ from mapchete_hub import __version__
 logger = logging.getLogger(__name__)
 
 
+PodResources = TypedDict("PodResources", {"memory": str, "cpu": str})
+
+JobWorkerResources = Dict[Literal["requests", "limits"], PodResources]
+
+
 class MHubSettings(BaseSettings):
     """
     Combine default settings with env variables.
@@ -38,7 +44,7 @@ class MHubSettings(BaseSettings):
     mongodb_timeout: float = 5
     cancellederror_tries: int = 1  # this is deprecated!
     retries: int = 1
-    retry_on_exception: Tuple[Type[Exception], ...] = (
+    retry_on_exception: Union[Tuple[Type[Exception], ...], Type[Exception]] = (
         CancelledError,
         ClientResponseError,
         CommClosedError,
@@ -46,6 +52,9 @@ class MHubSettings(BaseSettings):
         ServerDisconnectedError,
         ServerTimeoutError,
         TimeoutError,
+    )
+    job_handler: Literal["background-thread", "mhub-worker", "k8s-job-worker"] = (
+        "background-thread"
     )
     max_parallel_jobs: int = 2
     max_parallel_jobs_interval_seconds: int = 10
@@ -58,6 +67,13 @@ class MHubSettings(BaseSettings):
     dask_min_workers: int = 10
     dask_max_workers: int = 1000
     dask_adaptive_scaling: bool = True
+    k8s_namespace: Optional[str] = None
+    k8s_image_pull_secret: Optional[str] = None
+    k8s_service_account_name: Optional[str] = None
+    k8s_worker_default_memory: str = "256Mi"
+    k8s_worker_default_cpu: str = "500m"
+    k8s_worker_default_memory_limit: str = "512Mi"
+    k8s_worker_default_cpu_limit: str = "1"
     worker_default_image: str = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
     worker_image_tag: str = __version__
     worker_propagate_env_prefixes: str = "AWS, DASK, GDAL, MHUB, MAPCHETE, MP"
@@ -67,11 +83,47 @@ class MHubSettings(BaseSettings):
     # read from environment
     model_config = SettingsConfigDict(env_prefix="MHUB_")
 
+    def to_k8s_job_worker_resources(self) -> JobWorkerResources:
+        return {
+            "requests": {
+                "memory": self.k8s_worker_default_memory,
+                "cpu": self.k8s_worker_default_cpu,
+            },
+            "limits": {
+                "memory": self.k8s_worker_default_memory_limit,
+                "cpu": self.k8s_worker_default_cpu_limit,
+            },
+        }
+
+    def to_env_vars(self) -> Dict[str, str]:
+        return {
+            f"MHUB_{key.upper()}": str(value)
+            for key, value in self.model_dump().items()
+            if key not in ["retry_on_exception"] and value is not None
+        }
+
+    def to_worker_env_vars(self) -> Dict[str, str]:
+        env_vars = {
+            key: value
+            for key, value in os.environ.items()
+            if key.startswith(
+                tuple(
+                    [
+                        prefix.strip()
+                        for prefix in mhub_settings.worker_propagate_env_prefixes.split(
+                            ","
+                        )
+                    ]
+                )
+            )
+        }
+        return dict(env_vars, **self.to_env_vars())
+
 
 mhub_settings: MHubSettings = MHubSettings()
 
 
-dask_default_specs = dict(
+DASK_DEFAULT_SPECS = DaskSpecs(
     worker_cores=0.87,
     worker_cores_limit=2.0,
     worker_memory=2.1,
@@ -99,15 +151,15 @@ def get_dask_specs(specs: Optional[Union[DaskSpecs, dict]] = None) -> DaskSpecs:
         return specs
 
     if specs is None:
-        return DaskSpecs(**dask_default_specs)
+        return DASK_DEFAULT_SPECS
     elif isinstance(specs, DaskSpecs):
         specs_dict = {k: v for k, v in specs.model_dump().items() if v is not None}
         return DaskSpecs(
-            **dict(dask_default_specs, **_enforce_strings_for_worker_env(specs_dict))
+            **dict(DASK_DEFAULT_SPECS, **_enforce_strings_for_worker_env(specs_dict))
         )
     elif isinstance(specs, dict):
         return DaskSpecs(
-            **dict(dask_default_specs, **_enforce_strings_for_worker_env(specs))
+            **dict(DASK_DEFAULT_SPECS, **_enforce_strings_for_worker_env(specs))
         )
     else:  # pragma: no cover
         raise TypeError(f"unparsable dask specs: {specs}")
@@ -116,7 +168,7 @@ def get_dask_specs(specs: Optional[Union[DaskSpecs, dict]] = None) -> DaskSpecs:
 def update_gateway_cluster_options(
     options: Options, dask_specs: Optional[DaskSpecs] = None
 ) -> Options:
-    dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
+    dask_specs = dask_specs or DASK_DEFAULT_SPECS
 
     options.update(
         {
@@ -141,3 +193,7 @@ def update_gateway_cluster_options(
 
     logger.debug("using cluster specs: %s", dict(options))
     return options
+
+
+def get_current_env_vars() -> Dict[str, str]:
+    return dict(os.environ)

@@ -28,6 +28,21 @@ Please consult the ``docker-compose.yml`` file to gather details.
 A mapchete process can be used in mapchete Hub if its inputs and outputs are not locally stored as we cannot be sure on which worker (or host) the process will run.
 
 
+Set up modes
+------------
+
+Easy try out mode
+~~~~~~~~~~~~~~~~~
+
+```bash
+$ mhub-server start
+```
+
+The most straight-forward variation is to run everything in one process. The command above will use an internal memory "database" which will be gone after the server process ends. It will also create a dask `LocalCluster` to do the actual processing. It will not scale and everything will run on your machine which, depending on the size of the job, won't run successfully.
+
+
+
+
 Configuration options
 ---------------------
 
@@ -124,6 +139,6 @@ License
 
 MIT License
 
-Copyright (c) 2018 - 2021 `EOX IT Services`_
+Copyright (c) 2018 - 2024 `EOX IT Services`_
 
 .. _`EOX IT Services`: https://eox.at/

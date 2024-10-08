@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from contextlib import contextmanager
 from enum import Enum
-from typing import Generator, Optional, Union
+from typing import Any, Dict, Generator, Optional, Union
 
 from aiohttp import ServerConnectionError, ServerDisconnectedError, ServerTimeoutError
 from dask.distributed import Client, LocalCluster, get_client
@@ -13,10 +13,9 @@ from mapchete.executor import DaskExecutor
 from pydantic import Field
 from retry import retry
 
-from mapchete_hub.lifespan_resources import resources
 from mapchete_hub.settings import (
     MHubSettings,
-    dask_default_specs,
+    DASK_DEFAULT_SPECS,
     mhub_settings,
     update_gateway_cluster_options,
 )
@@ -33,7 +32,7 @@ class ClusterType(str, Enum):
 class ClusterSetup:
     type: ClusterType = ClusterType.local
     url: Optional[str] = None
-    kwargs: Optional[dict] = Field(default_factory=dict)
+    kwargs: Dict[str, Any] = Field(default_factory=dict)
 
     def __init__(self, settings: Optional[MHubSettings] = None):
         """Load cluster setup from settings."""
@@ -59,15 +58,15 @@ class ClusterSetup:
 @contextmanager
 def get_dask_executor(
     job_id: str,
-    dask_specs: DaskSpecs = DaskSpecs(**dask_default_specs),
+    dask_specs: DaskSpecs = DASK_DEFAULT_SPECS,
     dask_settings: DaskSettings = DaskSettings(),
     preprocessing_tasks: Optional[int] = None,
     tile_tasks: Optional[int] = None,
     cluster_setup: ClusterSetup = ClusterSetup(),
+    local_cluster: Optional[LocalCluster] = None,
     **kwargs,
 ) -> Generator[DaskExecutor, None, None]:
     logger.info("requesting dask cluster and dask client for job %s...", job_id)
-
     if cluster_setup.type == ClusterType.local:
         with local_cluster_executor(
             cluster_setup=cluster_setup,
@@ -75,6 +74,7 @@ def get_dask_executor(
             dask_settings=dask_settings,
             preprocessing_tasks=preprocessing_tasks,
             tile_tasks=tile_tasks,
+            local_cluster=local_cluster,
         ) as executor:
             yield executor
 
@@ -99,28 +99,34 @@ def get_dask_executor(
 @contextmanager
 def local_cluster_executor(
     cluster_setup: ClusterSetup,
-    dask_specs: Optional[DaskSpecs] = None,
+    dask_specs: DaskSpecs = DaskSpecs(),
     dask_settings: DaskSettings = DaskSettings(),
     preprocessing_tasks: Optional[int] = None,
     tile_tasks: Optional[int] = None,
+    local_cluster: Optional[LocalCluster] = None,
 ) -> Generator[DaskExecutor, None, None]:
-    logger.debug("use existing %s", resources.local_cluster)
-    with Client(resources.local_cluster, set_as_default=False) as client:
-        logger.debug("started client %s", client)
+    if local_cluster:
+        logger.debug("use existing %s", local_cluster)
+        with Client(local_cluster, set_as_default=False) as client:
+            logger.debug("started client %s", client)
 
-        cluster_adapt(
-            cluster_setup,
-            resources.local_cluster,
-            dask_specs,
-            dask_settings,
-            preprocessing_tasks=preprocessing_tasks,
-            tile_tasks=tile_tasks,
+            cluster_adapt(
+                cluster_setup,
+                local_cluster,
+                dask_specs,
+                dask_settings,
+                preprocessing_tasks=preprocessing_tasks,
+                tile_tasks=tile_tasks,
+            )
+
+            with DaskExecutor(dask_client=client) as executor:
+                yield executor
+            logger.debug("closing client %s", client)
+        logger.debug("closed client %s", client)
+    else:
+        raise ValueError(
+            "getting LocalCluster is only supported if BackgroundThreadJobHandler is configured"
         )
-
-        with DaskExecutor(dask_client=client) as executor:
-            yield executor
-        logger.debug("closing client %s", client)
-    logger.debug("closed client %s", client)
 
 
 @contextmanager
@@ -147,7 +153,7 @@ def gateway_cluster_executor(
         - use this client to yield a mapchete DaskExecutor
     """
 
-    dask_specs = dask_specs or DaskSpecs(**dask_default_specs)
+    dask_specs = dask_specs or DASK_DEFAULT_SPECS
 
     # don't open Gateway connection in a context manager, because we don't need it
     # after creating the client
@@ -157,7 +163,8 @@ def gateway_cluster_executor(
     logger.info("submit new cluster with %s specs", dask_specs)
     with gateway.new_cluster(
         cluster_options=update_gateway_cluster_options(
-            gateway.cluster_options(), dask_specs=dask_specs
+            gateway.cluster_options(),  # type: ignore
+            dask_specs=dask_specs,
         ),
         shutdown_on_close=True,
     ) as cluster:

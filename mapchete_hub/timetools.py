@@ -1,7 +1,9 @@
 """
 Timestamp handling.
 """
-from datetime import datetime
+
+from datetime import datetime, timezone
+from typing import Union
 
 
 def date_to_str(date_obj, microseconds=True):
@@ -11,15 +13,19 @@ def date_to_str(date_obj, microseconds=True):
     )
 
 
-def str_to_date(date_str):
+def parse_to_date(date: Union[str, datetime], tzinfo=timezone.utc) -> datetime:
     """Convert string to datetime object."""
-    if isinstance(date_str, datetime):
-        return date_str
-    if "T" in date_str:
-        add_zulu = "Z" if date_str.endswith("Z") else ""
+    if isinstance(date, datetime):
+        out_date = date
+    elif "T" in date:
+        add_zulu = "Z" if date.endswith("Z") else ""
         try:
-            return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S.%f" + add_zulu)
+            out_date = datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%f" + add_zulu)
         except ValueError:
-            return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S" + add_zulu)
+            out_date = datetime.strptime(date, "%Y-%m-%dT%H:%M:%S" + add_zulu)
     else:
-        return datetime(*map(int, date_str.split("-")))
+        year, month, day = date.split("-")
+        out_date = datetime(year=int(year), month=int(month), day=int(day))
+    if out_date.tzinfo is None:
+        return out_date.replace(tzinfo=tzinfo)
+    return out_date

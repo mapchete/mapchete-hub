@@ -41,8 +41,11 @@ class SlackMessenger(ObserverProtocol):
     channel_id: Optional[str] = None
     client: Optional[Any] = None
 
-    def __init__(self, self_instance_name: str, job: JobEntry):
-        self.self_instance_name = self_instance_name
+    def __init__(
+        self,
+        self_instance_name: str,
+        job: JobEntry,
+    ):
         try:
             if mhub_settings.slack_token:  # pragma: no cover
                 from slack_sdk import WebClient
@@ -54,9 +57,10 @@ class SlackMessenger(ObserverProtocol):
             logger.debug(
                 "install 'slack' extra and set MHUB_SLACK_TOKEN to send messages to slack"
             )
-
+        self.self_instance_name = self_instance_name
         self.job = job
         self.thread_ts = job.slack_thread_ds
+        self.channel_id = job.slack_channel_id
         self.submitted = time.time()
         self.started = self.submitted
         self.retries = 0
@@ -65,13 +69,14 @@ class SlackMessenger(ObserverProtocol):
             + f"{mhub_settings.self_instance_name}: job *{self.job.job_name} "
             + "{status}*"
         )
-        # send init message
-        self.send(
-            message=self.job_message.format(
-                status_emoji=status_emoji(Status.pending),
-                status=Status.pending.value,
+        if self.thread_ts is None and self.channel_id is None:
+            # send init message
+            self.send(
+                message=self.job_message.format(
+                    status_emoji=status_emoji(Status.pending),
+                    status=Status.pending.value,
+                )
             )
-        )
 
     def update(
         self,
@@ -146,7 +151,7 @@ class SlackMessenger(ObserverProtocol):
                 return
             if not response.get("ok"):
                 logger.debug("slack message not sent: %s", response.body)
-            elif self.thread_ts is None:
+            elif self.thread_ts is None and self.channel_id is None:
                 self.thread_ts = response.data.get("ts")
                 self.channel_id = response.data.get("channel")
 

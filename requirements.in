@@ -9,6 +9,7 @@ distributed==2024.8.2
 fastapi==0.114.1
 httpx
 jupyter-server-proxy
+kubernetes
 lz4
 mapchete==2024.9.0
 mapchete_eo==2024.9.3

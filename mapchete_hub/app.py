@@ -59,20 +59,18 @@ Trigger a job using a given process_id. This returns a job ID.
 import logging
 from typing import Optional
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Response
-from mapchete.commands.observer import Observers
+from fastapi import FastAPI, HTTPException, Response
 from mapchete.config.models import DaskSettings
 from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
 from mapchete.processes import process_names_docstrings
 
 from mapchete_hub import __version__
-from mapchete_hub.job_wrapper import job_wrapper
-from mapchete_hub.lifespan_resources import lifespan, resources
-from mapchete_hub.models import MapcheteJob
-from mapchete_hub.observers import DBUpdater, SlackMessenger
+from mapchete_hub.lifespan_resources import resources, setup_lifespan_resources
+from mapchete_hub.models import MapcheteJob, to_status_list
+from mapchete_hub.observers import SlackMessenger
 from mapchete_hub.settings import get_dask_specs, mhub_settings
-from mapchete_hub.timetools import str_to_date
+from mapchete_hub.timetools import parse_to_date
 
 uvicorn_logger = logging.getLogger("uvicorn.access")
 stream_handler = logging.StreamHandler()
@@ -80,11 +78,11 @@ stream_handler.setFormatter(
     logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
 )
 
-loggers = ["mapchete_hub"]
+logger_names = ["mapchete_hub"]
 if mhub_settings.add_mapchete_logger:  # pragma: no cover
-    loggers.extend(list(all_mapchete_packages))
-for l in loggers:
-    logger = logging.getLogger(l)
+    logger_names.extend(list(all_mapchete_packages))
+for logger_name in logger_names:
+    logger = logging.getLogger(logger_name)
     if __name__ != "__main__":
         logger.setLevel(uvicorn_logger.level)
         stream_handler.setLevel(uvicorn_logger.level)
@@ -96,7 +94,7 @@ for l in loggers:
 logger = logging.getLogger(__name__)
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=setup_lifespan_resources)
 
 
 # REST endpoints
@@ -153,34 +151,9 @@ async def post_process(process_id: str):
 async def post_job(
     process_id: str,
     job_config: MapcheteJob,
-    background_tasks: BackgroundTasks,
-    response: Response = None,
+    response: Response,
 ) -> dict:
     """Executes a process, i.e. creates a new job."""
-
-    def create_job(job_entry):
-        # initialize DB observer
-        job_db_updater = DBUpdater(
-            backend_db=resources.backend_db,
-            job_entry=job_entry,
-            event_rate_limit=mhub_settings.backend_db_event_rate_limit,
-        )
-        # initialize slack messenger
-        job_slack_messenger = SlackMessenger(
-            mhub_settings.self_instance_name, job_db_updater.job_entry
-        )
-        # once the initialization message is sent, we remember the thread ID
-        # for all follow-up messages, even if the job thread dies
-        job_db_updater.set(slack_thread_ds=job_slack_messenger.thread_ts)
-
-        # send task to background to be able to quickly return a message
-        resources.thread_pool.submit(
-            job_wrapper,
-            job_entry.job_id,
-            job_config,
-            observers=Observers([job_db_updater, job_slack_messenger]),
-        )
-
     try:
         # get dask specs and settings
         job_config.params["dask_specs"] = get_dask_specs(
@@ -195,8 +168,8 @@ async def post_job(
         # create new entry in database
         job_entry = resources.backend_db.new(job_config=job_config)
 
-        # let observer preparation and final job submission be handled in the background
-        background_tasks.add_task(create_job, job_entry)
+        # pass on job to job handler
+        resources.job_handler.submit(job_entry)
         logger.debug("submitted job %s", job_entry)
 
         # return job entry
@@ -219,28 +192,22 @@ async def list_jobs(
     to_date: Optional[str] = None,
 ) -> dict:
     """Returns the running and finished jobs for a process."""
-    bounds = tuple(map(float, bounds.split(","))) if bounds else None
-    from_date = str_to_date(from_date) if from_date else None
-    to_date = str_to_date(to_date) if to_date else None
-    logger.debug(status)
     try:
-        if status is not None and "," in status:
-            status = status.split(",")
-        status = status if isinstance(status, list) else [status] if status else None
-        status = [Status[status] for status in status] if status else None
+        status_list = to_status_list(status) if status else None
     except KeyError as exc:
         raise HTTPException(400, f"invalid status: {status}") from exc
 
     kwargs = {
         "output_path": output_path,
-        "status": status,
+        "status": status_list,
         "command": command,
         "job_name": job_name,
-        "bounds": bounds,
-        "from_date": from_date,
-        "to_date": to_date,
+        "bounds": tuple(map(float, bounds.split(","))) if bounds else None,
+        "from_date": parse_to_date(from_date) if from_date else None,
+        "to_date": parse_to_date(to_date) if to_date else None,
     }
     logger.debug("job filter kwargs: %s", kwargs)
+
     return {
         "type": "FeatureCollection",
         "features": [

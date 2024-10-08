@@ -3,9 +3,7 @@
 import os
 
 import click
-import mongomock.database
 import uvicorn
-from dask.distributed import LocalCluster
 from mapchete.log import all_mapchete_packages
 
 from mapchete_hub import __version__
@@ -46,18 +44,17 @@ def main():  # pragma: no cover
     help="Set log level.",
 )
 def start(
-    host=None, port=None, log_level="error", add_mapchete_logger=False
+    host: str, port: int, log_level: str = "error", add_mapchete_logger: bool = False
 ):  # pragma: no cover
     # set up logging
-    log_level = log_level.upper()
     log_config = uvicorn.config.LOGGING_CONFIG
-    log_config["formatters"]["access"][
-        "fmt"
-    ] = "%(asctime)s %(levelname)s %(name)s %(message)s"
-    log_config["formatters"]["default"][
-        "fmt"
-    ] = "%(asctime)s %(levelname)s %(name)s %(message)s"
-    cfg = dict(handlers=["default"], level=log_level)
+    log_config["formatters"]["access"]["fmt"] = (
+        "%(asctime)s %(levelname)s %(name)s %(message)s"
+    )
+    log_config["formatters"]["default"]["fmt"] = (
+        "%(asctime)s %(levelname)s %(name)s %(message)s"
+    )
+    cfg = dict(handlers=["default"], level=log_level.upper())
 
     # add mapchete packages to default log handler
     if (
