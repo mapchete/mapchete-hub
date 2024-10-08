@@ -1,6 +1,7 @@
 """
 Random job name generator.
 """
+
 import random
 
 

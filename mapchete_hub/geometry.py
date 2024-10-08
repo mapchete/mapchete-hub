@@ -1,14 +1,16 @@
 """
 Geometry functions.
 """
+
 from mapchete.config.parse import get_zoom_levels
-from mapchete.io.vector import fiona_open, reproject_geometry
+from mapchete.io.vector import fiona_open
+from mapchete.geometry import reproject_geometry
 from mapchete.path import MPath
 from mapchete.tile import BufferedTilePyramid
 from rasterio.crs import CRS
 from shapely import from_wkt, intersection_all
 from shapely.geometry import box, mapping, shape
-from shapely.ops import cascaded_union
+from shapely.ops import unary_union
 
 from mapchete_hub.models import MapcheteJob
 
@@ -52,7 +54,7 @@ def process_area_from_config(job: MapcheteJob, dst_crs=None, **kwargs):
             with fiona_open(area_path, mode="r") as src:
                 for s in src:
                     all_geoms.append(shape(s["geometry"]))
-            geometry_area = cascaded_union(all_geoms)
+            geometry_area = unary_union(all_geoms)
         else:
             geometry_area = from_wkt(job.params.get("area"))
         geometry = intersection_all([geometry_bounds, geometry_area])
@@ -69,12 +71,12 @@ def process_area_from_config(job: MapcheteJob, dst_crs=None, **kwargs):
             with fiona_open(area_path, mode="r") as src:
                 for s in src:
                     all_geoms.append(shape(s["geometry"]))
-            geometry = cascaded_union(all_geoms)
+            geometry = unary_union(all_geoms)
         else:
             geometry = from_wkt(job.params.get("area"))
     # point
     elif job.params.get("point"):
-        x, y = job.params.get("point")
+        x, y = job.params["point"]
         zoom_levels = get_zoom_levels(
             process_zoom_levels=job.config.zoom_levels,
             init_zoom_levels=job.params.get("zoom"),
@@ -91,7 +93,7 @@ def process_area_from_config(job: MapcheteJob, dst_crs=None, **kwargs):
             with fiona_open(area_path, mode="r") as src:
                 for s in src:
                     all_geoms.append(shape(s["geometry"]))
-            geometry_area = cascaded_union(all_geoms)
+            geometry_area = unary_union(all_geoms)
         else:
             geometry_area = from_wkt(job.params.get("area"))
         geometry = intersection_all([geometry_bounds, geometry_area])
@@ -103,7 +105,7 @@ def process_area_from_config(job: MapcheteJob, dst_crs=None, **kwargs):
             with fiona_open(area_path, mode="r") as src:
                 for s in src:
                     all_geoms.append(shape(s["geometry"]))
-            geometry = cascaded_union(all_geoms)
+            geometry = unary_union(all_geoms)
         else:
             geometry = from_wkt(job.config.area)
     else:

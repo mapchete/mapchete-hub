@@ -1,16 +1,19 @@
 """
 Models and schemas.
 """
-import datetime
+
+from __future__ import annotations
+
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from mapchete.config import ProcessConfig
 from mapchete.config.models import DaskSpecs
 from mapchete.enums import Status
-from pydantic import BaseModel, ConfigDict, Field, NonNegativeInt
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, NonNegativeInt
 
 from mapchete_hub.random_names import random_name
+from mapchete_hub.timetools import parse_to_date
 
 
 class MapcheteCommand(str, Enum):
@@ -21,24 +24,26 @@ class MapcheteCommand(str, Enum):
 
 
 class MapcheteJob(BaseModel):
-    command: MapcheteCommand = Field(None, example="execute")
-    params: dict = Field(None, example={"zoom": 8, "bounds": [0, 1, 2, 3]})
+    command: MapcheteCommand = Field(None, examples=["execute"])
+    params: dict = Field(None, examples=[{"zoom": 8, "bounds": [0, 1, 2, 3]}])
     config: ProcessConfig = Field(
         None,
-        example={
-            "process": "mapchete.processes.convert",
-            "input": {
-                "inp": "https://ungarj.github.io/mapchete_testdata/tiled_data/raster/cleantopo/"
-            },
-            "output": {
-                "format": "GTiff",
-                "bands": 4,
-                "dtype": "uint16",
-                "path": "/tmp/mhub/",
-            },
-            "pyramid": {"grid": "geodetic", "metatiling": 2},
-            "zoom_levels": {"min": 0, "max": 13},
-        },
+        examples=[
+            {
+                "process": "mapchete.processes.convert",
+                "input": {
+                    "inp": "https://ungarj.github.io/mapchete_testdata/tiled_data/raster/cleantopo/"
+                },
+                "output": {
+                    "format": "GTiff",
+                    "bands": 4,
+                    "dtype": "uint16",
+                    "path": "/tmp/mhub/",
+                },
+                "pyramid": {"grid": "geodetic", "metatiling": 2},
+                "zoom_levels": {"min": 0, "max": 13},
+            }
+        ],
     )
 
 
@@ -46,8 +51,8 @@ class GeoJSON(BaseModel):
     type: str = "Feature"
     id: str
     geometry: dict
-    bounds: List[float] = None
-    area: str = None
+    bounds: Optional[List[float]] = None
+    area: Optional[str] = None
     properties: dict = Field(default_factory=dict)
 
     @property
@@ -84,10 +89,10 @@ class JobEntry(BaseModel):
     next_job_id: Optional[str] = None
     current_progress: Optional[NonNegativeInt] = None
     total_progress: Optional[NonNegativeInt] = None
-    submitted: Optional[datetime.datetime] = None
-    started: Optional[datetime.datetime] = None
-    finished: Optional[datetime.datetime] = None
-    updated: Optional[datetime.datetime] = None
+    submitted: Optional[AwareDatetime] = None
+    started: Optional[AwareDatetime] = None
+    finished: Optional[AwareDatetime] = None
+    updated: Optional[AwareDatetime] = None
     runtime: Optional[float] = None
     dask_specs: DaskSpecs = DaskSpecs()
     command: Optional[MapcheteCommand] = MapcheteCommand.execute
@@ -95,6 +100,7 @@ class JobEntry(BaseModel):
     dask_dashboard_link: Optional[str] = None
     dask_scheduler_logs: Optional[list] = None
     slack_thread_ds: Optional[str] = None
+    slack_channel_id: Optional[str] = None
 
     def update(self, **new_data):
         for field, value in new_data.items():
@@ -119,3 +125,30 @@ class JobEntry(BaseModel):
     @property
     def __geo_interface__(self):
         return self.geometry
+
+    @staticmethod
+    def from_dict(kwargs: dict) -> JobEntry:
+        # parse timestamps to timezone-aware datetime objects
+        for key in ["submitted", "started", "finished", "updated"]:
+            value = kwargs.get(key)
+            if value is not None:
+                kwargs[key] = parse_to_date(value)
+        return JobEntry(**kwargs)
+
+
+def to_status(status: Union[Status, str]) -> Status:
+    if isinstance(status, Status):
+        return status
+    return Status[status]
+
+
+def to_status_list(
+    statuses: Union[Status, str, List[Status], List[str]],
+) -> List[Status]:
+    if isinstance(statuses, str):
+        return [to_status(status_str) for status_str in statuses.split(",")]
+    elif isinstance(statuses, Status):
+        return [statuses]
+    elif isinstance(statuses, list):
+        return [to_status(status) for status in statuses]
+    raise TypeError(f"cannot convert {statuses} to list of Status instances")

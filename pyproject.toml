@@ -43,6 +43,7 @@ complete = [
     "dask-gateway",
     "distributed",
     "fastapi",
+    "kubernetes",
     "mapchete[contours,geobuf,http,s3,vrt]>=2024.2.1",
     "mapchete_eo>=2024.3.4",
     "mapchete_xarray>=2022.5.0",
@@ -52,6 +53,9 @@ complete = [
     "pymongo",
     "slack_sdk",
     "uvicorn",
+]
+kubernetes = [
+    "kubernetes",
 ]
 slack = [
     "slack_sdk",
@@ -71,7 +75,8 @@ eo = [
 ]
 
 [project.scripts]
-mhub-server = "mapchete_hub.cli:main"
+mhub-server = "mapchete_hub.cli.server:main"
+mhub-worker = "mapchete_hub.cli.worker:main"
 
 [project.urls]
 Homepage = "https://gitlab.eox.at/maps/mapchete_hub"
@@ -83,19 +88,3 @@ path = "mapchete_hub/__init__.py"
 include = [
     "/mapchete_hub",
 ]
-
-[tool.black]
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import time
 import traceback
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from mapchete.commands.observer import ObserverProtocol
 from mapchete.enums import Status
@@ -12,8 +12,7 @@ from mapchete.executor import DaskExecutor
 from mapchete.types import Progress
 
 from mapchete_hub.db import BaseStatusHandler
-from mapchete_hub.models import JobEntry, MapcheteJob
-from mapchete_hub.settings import mhub_settings
+from mapchete_hub.models import JobEntry
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +42,7 @@ class DBUpdater(ObserverProtocol):
         result: Optional[dict] = None,
         **__,
     ):
-        set_kwargs = dict()
+        set_kwargs: Dict[str, Any] = dict()
 
         # check always if job was cancelled but respect the rate limit
         event_time_passed = time.time() - self.last_event
