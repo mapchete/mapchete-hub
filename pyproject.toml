@@ -75,6 +75,7 @@ eo = [
 ]
 
 [project.scripts]
+mhub-manager = "mapchete_hub.cli.manager:main"
 mhub-server = "mapchete_hub.cli.server:main"
 mhub-worker = "mapchete_hub.cli.worker:main"
 

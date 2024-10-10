@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from mapchete.path import MPath
 
 from mapchete_hub.app import app
+from mapchete_hub.models import MapcheteJob
 
 SCRIPT_DIR = MPath(os.path.dirname(os.path.realpath(__file__)))
 
@@ -147,3 +148,8 @@ def example_config_process_exception_json(tmpdir):
             "zoom_levels": {"min": 0, "max": 13},
         },
     }
+
+
+@pytest.fixture
+def example_mapchete_job(example_config_json):
+    return MapcheteJob(**example_config_json)

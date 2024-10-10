@@ -101,6 +101,7 @@ class JobEntry(BaseModel):
     dask_scheduler_logs: Optional[list] = None
     slack_thread_ds: Optional[str] = None
     slack_channel_id: Optional[str] = None
+    submitted_to_k8s: bool = False
 
     def update(self, **new_data):
         for field, value in new_data.items():

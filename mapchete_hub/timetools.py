@@ -2,7 +2,9 @@
 Timestamp handling.
 """
 
-from datetime import datetime, timezone
+from mapchete.pretty import pretty_seconds
+
+from datetime import datetime, timedelta, timezone
 from typing import Union
 
 
@@ -29,3 +31,26 @@ def parse_to_date(date: Union[str, datetime], tzinfo=timezone.utc) -> datetime:
     if out_date.tzinfo is None:
         return out_date.replace(tzinfo=tzinfo)
     return out_date
+
+
+def interval_to_timedelta(interval: str) -> timedelta:
+    time_types = {
+        "w": "weeks",
+        "d": "days",
+        "h": "hours",
+        "m": "minutes",
+        "s": "seconds",
+    }
+    for key, value in time_types.items():
+        if interval.endswith(key):
+            return timedelta(**{value: float(interval[:-1])})
+    else:
+        raise ValueError(f"cannot not convert {interval} to timedelta")
+
+
+def passed_time_to_timestamp(passed_time: str) -> datetime:
+    return datetime.now(timezone.utc) - interval_to_timedelta(passed_time)
+
+
+def pretty_time_passed(timestamp: datetime) -> str:
+    return pretty_seconds((datetime.now(timezone.utc) - timestamp).total_seconds())

@@ -53,9 +53,9 @@ class MHubSettings(BaseSettings):
         ServerTimeoutError,
         TimeoutError,
     )
-    job_handler: Literal["background-thread", "mhub-worker", "k8s-job-worker"] = (
-        "background-thread"
-    )
+    job_handler: Literal[
+        "background-thread", "k8s-managed-worker", "k8s-job-worker"
+    ] = "background-thread"
     max_parallel_jobs: int = 2
     max_parallel_jobs_interval_seconds: int = 10
     dask_gateway_url: Optional[str] = None
