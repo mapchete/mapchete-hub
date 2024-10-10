@@ -170,7 +170,8 @@ async def post_job(
         job_entry = resources.backend_db.new(job_config=job_config)
 
         # pass on job to job handler
-        background_tasks.add_task(resources.job_handler.submit, job_entry)
+        # background_tasks.add_task(resources.job_handler.submit, job_entry)
+        resources.job_handler.submit(job_entry)
         logger.debug("submitted job %s", job_entry)
 
         # return job entry

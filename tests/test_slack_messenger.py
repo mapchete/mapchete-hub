@@ -18,4 +18,13 @@ def test_traceback_split(max_length):
     chunks = split_long_text(text, max_length=max_length)
     for chunk in chunks:
         assert len(chunk) <= max_length
-        print(chunk)
+
+    assert text.replace(" ", "").replace("\n", "") == "".join(chunks).replace(
+        " ", ""
+    ).replace("\n", "")
+
+
+def test_init_message():
+    assert split_long_text(
+        ":large_blue_circle: mapchete Hub (test instance): job *mhub_cli_test_run pending*"
+    )

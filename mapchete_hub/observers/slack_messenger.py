@@ -189,7 +189,7 @@ class SlackMessenger(ObserverProtocol):
                 self.send(message)
 
 
-def split_long_text(text: str, max_length: int = 150) -> List[str]:
+def split_long_text(text: str, max_length: int = 4000) -> List[str]:
     out_chunks = []
     for line_chunk in chunk_by_newlines(text, max_length):
         if len(line_chunk) > max_length:
@@ -235,8 +235,11 @@ def _split(text: str, max_length: int = 150, split_by: str = "\n") -> List[str]:
             out_chunks.append(element)
             chunk = ""
 
-        else:
+        # if adding then next element will exceed the max length, dump chunk now
+        elif len(chunk) + len(element) > max_length:
             out_chunks.append(chunk)
             chunk = element
+
+    out_chunks.append(chunk)
 
     return out_chunks
