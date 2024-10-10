@@ -7,8 +7,8 @@ Changelog
 ----------------------
 
 * core
-  * do not retry k8s jobs by default, we will have this in mhub itself; in job_handler.k8s_worker `backoff_limit=retry_job_x_times` (default: 0)
-  * terminate k8s job as soon as it finishes; in job_handler.k8s_worker `ttl_seconds_after_finished=remove_job_after_seconds` (default: 0)
+    * do not retry k8s jobs by default, we will have this in mhub itself; in job_handler.k8s_worker `backoff_limit=retry_job_x_times` (default: 0)
+    * terminate k8s job as soon as it finishes; in job_handler.k8s_worker `ttl_seconds_after_finished=remove_job_after_seconds` (default: 0)
 
        
 
@@ -16,38 +16,37 @@ Changelog
 ----------------------
 
 * core
-  * fix bug in `SlackMessenger` text split
+    * fix bug in `SlackMessenger` text split
 
 
 2024.10.2 - 2024-10-10
 ----------------------
 
 * core
-  * make sure there is always an init message on slack to append updates to
-  * split traceback messages to make sure it is properly formated (#247)
+    * make sure there is always an init message on slack to append updates to
+    * split traceback messages to make sure it is properly formated (#247)
 
 
 2024.10.1 - 2024-10-10
 ----------------------
 
 * core
-  * add `k8s-managed-worker` as `job_handler` setting
-  * submit jobs from app using a background task
+    * add `k8s-managed-worker` as `job_handler` setting
+    * submit jobs from app using a background task
 
 * CLI
-  * add `mhub-manager` command
+    * add `mhub-manager` command
 
 
 2024.10.0 - 2024-10-08
 ----------------------
 
 * core
-  * introduce `JobHandlers` to create abstraction layer between default background thread tasks, new kubernetes job tasks and mhub-worker tasks
-  * timestamps now all have UTC timezone
-  * 
+    * introduce `JobHandlers` to create abstraction layer between default background thread tasks, new kubernetes job tasks and mhub-worker tasks
+    * timestamps now all have UTC timezone 
 
 * CLI
-  * add `mhub-worker` command
+    * add `mhub-worker` command
 
 * packaging
   * use ruff and mypy
