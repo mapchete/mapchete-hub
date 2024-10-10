@@ -134,28 +134,46 @@ class SlackMessenger(ObserverProtocol):
                 f"dask scheduler online (see <{executor._executor.dashboard_link}|dashboard>)"
             )
 
-    def send(
-        self,
-        message: str,
-    ) -> None:
-        if self.client:  # pragma: no cover
-            logger.debug("announce on slack, (thread: %s): %s", self.thread_ts, message)
-            from slack_sdk.errors import SlackApiError
+    def _send_init_message(self):
+        # send first message which can be updated by subsequent ones
+        self._send(
+            message=self.job_message.format(
+                status_emoji=status_emoji(Status.pending),
+                status=Status.pending.value,
+            )
+        )
 
+    def _send(self, message: str):
+        if self.client:  # pragma: no cover
             try:
+                logger.debug(
+                    "announce on slack, (thread: %s): %s", self.thread_ts, message
+                )
+                from slack_sdk.errors import SlackApiError
+
                 response = self.client.chat_postMessage(
                     channel=mhub_settings.slack_channel,
                     text=message,
                     thread_ts=self.thread_ts,
                 )
+                if not response.get("ok"):
+                    logger.debug("slack message not sent: %s", response.body)
+                elif self.thread_ts is None and self.channel_id is None:
+                    self.thread_ts = response.data.get("ts")
+                    self.channel_id = response.data.get("channel")
             except SlackApiError as e:
                 logger.exception(e)
                 return
-            if not response.get("ok"):
-                logger.debug("slack message not sent: %s", response.body)
-            elif self.thread_ts is None and self.channel_id is None:
-                self.thread_ts = response.data.get("ts")
-                self.channel_id = response.data.get("channel")
+
+    def send(
+        self,
+        message: str,
+    ) -> None:
+        # special case if initialization message didn't get through:
+        if self.thread_ts is None and self.channel_id is None:
+            self._send_init_message()
+
+        self._send(message)
 
     def update_message(self, message: str):
         if self.client:  # pragma: no cover
