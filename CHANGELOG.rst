@@ -3,6 +3,17 @@ Changelog
 #########
 
 
+2024.10.1 - 2024-10-10
+----------------------
+
+* core
+  * add `k8s-managed-worker` as `job_handler` setting
+  * submit jobs from app using a background task
+
+* CLI
+  * add `mhub-manager` command
+
+
 2024.10.0 - 2024-10-08
 ----------------------
 
