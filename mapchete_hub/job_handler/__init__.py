@@ -18,7 +18,7 @@ def init_job_handler(
             settings=mhub_settings, status_handler=status_handler
         ) as handler:
             yield handler
-    elif mhub_settings.job_handler == "mhub-worker":
+    elif mhub_settings.job_handler == "k8s-managed-worker":
         with MHubWorkerJobHandler() as handler:
             yield handler
     elif mhub_settings.job_handler == "k8s-job-worker":

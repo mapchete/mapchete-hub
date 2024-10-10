@@ -69,7 +69,7 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
                 remove_job_after_seconds=40,
                 batch_v1_client=self._batch_v1_client,
             )
-            self.status_handler.set(job_id=job_entry.job_id, k8s_job=True)
+            self.status_handler.set(job_id=job_entry.job_id, submitted_to_k8s=True)
             logger.debug(
                 "job %s submitted and will be run as a kubernetes job"
                 % job_entry.job_id
