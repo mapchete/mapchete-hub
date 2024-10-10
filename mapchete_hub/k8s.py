@@ -157,11 +157,10 @@ def get_job_status(job_name: str, namespace: str) -> KubernetesJobStatus:
     batch_v1 = batch_client()
     try:
         # Get the Job status
-        k8s_job: client.V1Job = batch_v1.read_namespaced_job(
+        status: client.V1JobStatus = batch_v1.read_namespaced_job(
             name=job_name, namespace=namespace
         )  # type: ignore
-
-        return KubernetesJobStatus(**k8s_job.to_dict())
+        return KubernetesJobStatus(**status.to_dict())
 
         # just kept that here for future reference
         # status: client.V1JobStatus = job.status  # type: ignore

@@ -1,4 +1,3 @@
-from datetime import datetime
 import logging
 import time
 from typing import List
@@ -8,6 +7,7 @@ from mapchete.enums import Status
 
 from mapchete_hub import __version__
 from mapchete_hub.db import init_backenddb
+from mapchete_hub.job_handler import KubernetesWorkerJobHandler
 from mapchete_hub.models import JobEntry
 from mapchete_hub.settings import mhub_settings
 from mapchete_hub.timetools import (
@@ -57,34 +57,55 @@ def main(
     if mhub_settings.backend_db == "memory":
         raise ValueError("this command does not work with an in-memory db!")
 
-    with init_backenddb(mhub_settings.backend_db) as backend_db:
-        while True:
-            all_jobs = backend_db.jobs(
-                from_date=date_to_str(passed_time_to_timestamp(since))
-            )
-            queued = queued_jobs(
-                jobs=all_jobs,
-            )
-            if queued:
-                for job in queued:
-                    click.echo(job)
-            else:
-                click.echo(
-                    f"{datetime.now()}: no queued jobs found{f', next check in {watch_interval}' if watch else ''}"
+    with init_backenddb(mhub_settings.backend_db) as status_handler:
+        with KubernetesWorkerJobHandler.from_settings(
+            status_handler=status_handler, settings=mhub_settings
+        ) as job_handler:
+            while True:
+                # get all jobs from given time range at once to avoid unnecessary requests to DB
+                all_jobs = status_handler.jobs(
+                    from_date=date_to_str(passed_time_to_timestamp(since))
                 )
+                currently_running = len(running_jobs(all_jobs))
+                currently_queued = queued_jobs(jobs=all_jobs)
 
-            if watch:
-                time.sleep(interval_to_timedelta(watch_interval).seconds)
-                continue
-            else:
-                break
+                while currently_running < mhub_settings.max_parallel_jobs:
+                    if currently_queued:
+                        for job in currently_queued:
+                            click.echo(f"submitting job {job.job_id} to cluster")
+                            job_handler.submit(job)
+                            currently_running += 1
+                    else:
+                        click.echo(
+                            f"no queued jobs found{f', next check in {watch_interval}' if watch else ''}"
+                        )
+                        break
 
-
-def jobs_by_statuses(
-    jobs: List[JobEntry], statuses: List[Status] = list(Status)
-) -> List[JobEntry]:
-    return [job for job in jobs if job.status in statuses]
+                if watch:
+                    time.sleep(interval_to_timedelta(watch_interval).seconds)
+                else:
+                    break
 
 
 def queued_jobs(jobs: List[JobEntry]) -> List[JobEntry]:
-    return jobs_by_statuses(jobs, statuses=[Status.pending])
+    """Get jobs who are in pending state and not yet sent to kubernetes."""
+    return [
+        job for job in jobs if job.status == Status.pending and not job.submitted_to_k8s
+    ]
+
+
+def running_jobs(jobs: List[JobEntry]) -> List[JobEntry]:
+    """Jobs who are either in one of the running states or pending but already sent to kubernetes."""
+    return [
+        job
+        for job in jobs
+        if job.status
+        in [
+            Status.initializing,
+            Status.parsing,
+            Status.running,
+            Status.post_processing,
+            Status.retrying,
+        ]
+        or (job.status == Status.pending and job.submitted_to_k8s)
+    ]

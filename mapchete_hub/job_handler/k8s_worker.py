@@ -69,12 +69,9 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
                 remove_job_after_seconds=40,
                 batch_v1_client=self._batch_v1_client,
             )
-            # TODO: find out what to set here best to tag job as being submitted to kubernetes
-            # a simple flag?
-            # a reference to the kubernetes job for later lookup?
-            # self.status_handler.set()
+            self.status_handler.set(job_id=job_entry.job_id, k8s_job=True)
             logger.debug(
-                "job %s submitted and will be sent as a kubernetes job"
+                "job %s submitted and will be run as a kubernetes job"
                 % job_entry.job_id
             )
         except Exception as exc:
@@ -201,4 +198,5 @@ def create_k8s_job(
         namespace,
         k8s_job.status,
     )
-    return KubernetesJobStatus(**k8s_job.to_dict())
+    status: client.V1JobStatus = k8s_job.status  # type: ignore
+    return KubernetesJobStatus(**status.to_dict())
