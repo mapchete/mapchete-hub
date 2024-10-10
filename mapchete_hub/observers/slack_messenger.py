@@ -88,6 +88,8 @@ class SlackMessenger(ObserverProtocol):
         **__,
     ):
         if status:
+            if status == Status.pending and message:
+                self.send(message)
             # remember job runtime from initialization on
             if status == Status.initializing:
                 self.started = time.time()
