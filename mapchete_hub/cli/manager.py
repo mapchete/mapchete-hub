@@ -69,19 +69,20 @@ def main(
                 currently_running = len(running_jobs(all_jobs))
                 currently_queued = queued_jobs(jobs=all_jobs)
 
-                while currently_running < mhub_settings.max_parallel_jobs:
-                    if currently_queued:
-                        for job in currently_queued:
-                            click.echo(f"submitting job {job.job_id} to cluster")
-                            job_handler.submit(job)
-                            currently_running += 1
+                for job in currently_queued:
+                    click.echo(
+                        f"{currently_running}/{mhub_settings.max_parallel_jobs} jobs currently runnning"
+                    )
+                    if currently_running < mhub_settings.max_parallel_jobs:
+                        click.echo(f"submitting job {job.job_id} to cluster")
+                        job_handler.submit(job)
+                        currently_running += 1
                     else:
-                        click.echo(
-                            f"no queued jobs found{f', next check in {watch_interval}' if watch else ''}"
-                        )
+                        click.echo("maximum limit of running jobs reached")
                         break
 
                 if watch:
+                    click.echo(f"next check in {watch_interval}")
                     time.sleep(interval_to_timedelta(watch_interval).seconds)
                 else:
                     break
