@@ -26,6 +26,8 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
     image_pull_secret: str
     pod_env_vars: Optional[dict] = None
     backend_db_event_rate_limit: float
+    retry_job_x_times: int
+    remove_job_after_seconds: int
 
     _batch_v1_client: Optional[Any] = None
 
@@ -40,6 +42,8 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
         service_account_name: str,
         image_pull_secret: str,
         pod_env_vars: Optional[dict] = None,
+        retry_job_x_times: int = 0,
+        remove_job_after_seconds: int = 0,
     ):
         if not importlib.util.find_spec("kubernetes"):
             raise ImportError("please install the 'kubernetes' extra")
@@ -53,6 +57,8 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
         self.service_account_name = service_account_name
         self.image_pull_secret = image_pull_secret
         self.pod_env_vars = pod_env_vars
+        self.retry_job_x_times = retry_job_x_times
+        self.remove_job_after_seconds = remove_job_after_seconds
 
     def submit(self, job_entry: JobEntry) -> None:
         """Submit a job."""
@@ -66,7 +72,8 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
                 service_account_name=self.service_account_name,
                 image_pull_secret=self.image_pull_secret,
                 pod_env_vars=self.pod_env_vars,
-                remove_job_after_seconds=40,
+                retry_job_x_times=self.retry_job_x_times,
+                remove_job_after_seconds=self.remove_job_after_seconds,
                 batch_v1_client=self._batch_v1_client,
             )
             self.status_handler.set(job_id=job_entry.job_id, submitted_to_k8s=True)
@@ -113,6 +120,8 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
             service_account_name=settings.k8s_service_account_name,
             image_pull_secret=settings.k8s_image_pull_secret,
             pod_env_vars=settings.to_worker_env_vars(),
+            retry_job_x_times=settings.k8s_retry_job_x_times,
+            remove_job_after_seconds=settings.k8s_remove_job_after_seconds,
         )
 
 
@@ -125,7 +134,8 @@ def create_k8s_job(
     service_account_name: str,
     image_pull_secret: str,
     pod_env_vars: Optional[dict] = None,
-    remove_job_after_seconds: int = 20,
+    retry_job_x_times: int = 0,
+    remove_job_after_seconds: int = 0,
     batch_v1_client: Optional[Any] = None,
 ) -> KubernetesJobStatus:
     if not importlib.util.find_spec("kubernetes"):
@@ -171,8 +181,8 @@ def create_k8s_job(
     # Define Job spec
     job_spec = client.V1JobSpec(
         template=template,
-        backoff_limit=1,  # Retry the job x times on failure
-        ttl_seconds_after_finished=remove_job_after_seconds,  # Remove job from k8s after 100 seconds
+        backoff_limit=retry_job_x_times,
+        ttl_seconds_after_finished=remove_job_after_seconds,
     )
 
     # Define the Job manifest
