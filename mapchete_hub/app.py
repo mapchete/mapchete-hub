@@ -59,7 +59,7 @@ Trigger a job using a given process_id. This returns a job ID.
 import logging
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Response
 from mapchete.config.models import DaskSettings
 from mapchete.enums import Status
 from mapchete.log import all_mapchete_packages
@@ -152,6 +152,7 @@ async def post_job(
     process_id: str,
     job_config: MapcheteJob,
     response: Response,
+    background_tasks: BackgroundTasks,
 ) -> dict:
     """Executes a process, i.e. creates a new job."""
     try:
@@ -169,7 +170,7 @@ async def post_job(
         job_entry = resources.backend_db.new(job_config=job_config)
 
         # pass on job to job handler
-        resources.job_handler.submit(job_entry)
+        background_tasks.add_task(resources.job_handler.submit, job_entry)
         logger.debug("submitted job %s", job_entry)
 
         # return job entry
