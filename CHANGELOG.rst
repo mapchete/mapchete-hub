@@ -3,6 +3,15 @@ Changelog
 #########
 
 
+2024.10.4 - 2024-10-10
+----------------------
+
+* core
+  * do not retry k8s jobs by default, we will have this in mhub itself; in job_handler.k8s_worker `backoff_limit=retry_job_x_times` (default: 0)
+  * terminate k8s job as soon as it finishes; in job_handler.k8s_worker `ttl_seconds_after_finished=remove_job_after_seconds` (default: 0)
+
+       
+
 2024.10.3 - 2024-10-10
 ----------------------
 
