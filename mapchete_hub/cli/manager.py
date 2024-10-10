@@ -66,21 +66,24 @@ def main(
                 all_jobs = status_handler.jobs(
                     from_date=date_to_str(passed_time_to_timestamp(since))
                 )
-                currently_running = len(running_jobs(all_jobs))
+                # determine jobs
+                currently_running_count = len(running_jobs(all_jobs))
                 currently_queued = queued_jobs(jobs=all_jobs)
 
+                # iterate to queued jobs and try to submit them
                 for job in currently_queued:
                     click.echo(
-                        f"{currently_running}/{mhub_settings.max_parallel_jobs} jobs currently runnning"
+                        f"{currently_running_count}/{mhub_settings.max_parallel_jobs} jobs currently runnning"
                     )
-                    if currently_running < mhub_settings.max_parallel_jobs:
+                    if currently_running_count < mhub_settings.max_parallel_jobs:
                         click.echo(f"submitting job {job.job_id} to cluster")
                         job_handler.submit(job)
-                        currently_running += 1
+                        currently_running_count += 1
                     else:
                         click.echo("maximum limit of running jobs reached")
                         break
 
+                # if --watch is activated, repeat until infinity
                 if watch:
                     click.echo(f"next check in {watch_interval}")
                     time.sleep(interval_to_timedelta(watch_interval).seconds)
