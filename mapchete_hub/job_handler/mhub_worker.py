@@ -14,13 +14,19 @@ logger = logging.getLogger(__name__)
 
 class MHubWorkerJobHandler(JobHandlerBase):
     status_handler: BaseStatusHandler
+    self_instance_name: str
+    backend_db_event_rate_limit: float
 
     def __init__(
         self,
         status_handler: BaseStatusHandler,
+        self_instance_name: str,
+        backend_db_event_rate_limit: float,
         **kwargs,
     ):
         self.status_handler = status_handler
+        self.self_instance_name = self_instance_name
+        self.backend_db_event_rate_limit = backend_db_event_rate_limit
 
     def submit(self, job_entry: JobEntry) -> None:
         """Submit a job."""
@@ -29,8 +35,7 @@ class MHubWorkerJobHandler(JobHandlerBase):
             % job_entry.job_id
         )
         # this step is important to send the initialization message to slack:
-        observers = self.get_job_observers(job_entry)
-        observers.notify(
+        self.get_job_observers(job_entry).notify(
             message="job waiting in queue to be picked up by manager",
             status=Status.pending,
         )
@@ -49,4 +54,6 @@ class MHubWorkerJobHandler(JobHandlerBase):
     ) -> MHubWorkerJobHandler:
         return MHubWorkerJobHandler(
             status_handler=status_handler,
+            self_instance_name=settings.self_instance_name,
+            backend_db_event_rate_limit=settings.backend_db_event_rate_limit,
         )
