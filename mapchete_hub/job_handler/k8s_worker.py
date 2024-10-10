@@ -3,20 +3,17 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import logging
-from mapchete.enums import Status
-from typing import Any, Optional, TypedDict
+from typing import Any, Optional
 
+from mapchete.enums import Status
 
 from mapchete_hub.db.base import BaseStatusHandler
 from mapchete_hub.job_handler.base import JobHandlerBase
-from mapchete_hub.k8s import batch_client
+from mapchete_hub.k8s import KubernetesJobStatus, batch_client
 from mapchete_hub.models import JobEntry
 from mapchete_hub.settings import JobWorkerResources, MHubSettings
 
 logger = logging.getLogger(__name__)
-
-
-KubernetesJobStatus = TypedDict("KubernetesJobStatus", {"status": str, "job_name": str})
 
 
 class KubernetesWorkerJobHandler(JobHandlerBase):
@@ -72,6 +69,10 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
                 remove_job_after_seconds=40,
                 batch_v1_client=self._batch_v1_client,
             )
+            # TODO: find out what to set here best to tag job as being submitted to kubernetes
+            # a simple flag?
+            # a reference to the kubernetes job for later lookup?
+            # self.status_handler.set()
             logger.debug(
                 "job %s submitted and will be sent as a kubernetes job"
                 % job_entry.job_id
@@ -200,4 +201,4 @@ def create_k8s_job(
         namespace,
         k8s_job.status,
     )
-    return {"status": "created", "job_name": job_entry.job_id}
+    return KubernetesJobStatus(**k8s_job.to_dict())
