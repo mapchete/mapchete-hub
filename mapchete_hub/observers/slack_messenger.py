@@ -2,7 +2,7 @@ import logging
 import time
 import traceback
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 from mapchete.commands.observer import ObserverProtocol
 from mapchete.enums import Status
@@ -40,6 +40,7 @@ class SlackMessenger(ObserverProtocol):
     thread_ts: Optional[str] = None
     channel_id: Optional[str] = None
     client: Optional[Any] = None
+    slack_max_text_length: int = 4000
 
     def __init__(
         self,
@@ -122,40 +123,59 @@ class SlackMessenger(ObserverProtocol):
                 )
 
         if exception and not isinstance(exception, JobCancelledError):
-            self.send(
-                f"```\n"
+            traceback_text = (
                 f"{repr(exception)}\n"
                 f"{''.join(traceback.format_tb(exception.__traceback__))}"
-                f"\n```"
             )
+            self.send(traceback_text, prefix="```\n", postfix="\n```")
 
         if executor:
             self.send(
                 f"dask scheduler online (see <{executor._executor.dashboard_link}|dashboard>)"
             )
 
-    def send(
-        self,
-        message: str,
-    ) -> None:
-        if self.client:  # pragma: no cover
-            logger.debug("announce on slack, (thread: %s): %s", self.thread_ts, message)
-            from slack_sdk.errors import SlackApiError
+    def _send_init_message(self):
+        # send first message which can be updated by subsequent ones
+        self._send(
+            message=self.job_message.format(
+                status_emoji=status_emoji(Status.pending),
+                status=Status.pending.value,
+            )
+        )
 
-            try:
-                response = self.client.chat_postMessage(
-                    channel=mhub_settings.slack_channel,
-                    text=message,
-                    thread_ts=self.thread_ts,
-                )
-            except SlackApiError as e:
-                logger.exception(e)
-                return
-            if not response.get("ok"):
-                logger.debug("slack message not sent: %s", response.body)
-            elif self.thread_ts is None and self.channel_id is None:
-                self.thread_ts = response.data.get("ts")
-                self.channel_id = response.data.get("channel")
+    def _send(self, message: str, prefix: str = "", postfix: str = ""):
+        if self.client:  # pragma: no cover
+            # send message in chunks if necessary
+            for chunk in split_long_text(
+                message,
+                max_length=self.slack_max_text_length - len(prefix) - len(postfix),
+            ):
+                text = prefix + chunk + postfix
+                try:
+                    logger.debug(
+                        "announce on slack, (thread: %s): %s", self.thread_ts, text
+                    )
+                    from slack_sdk.errors import SlackApiError
+
+                    response = self.client.chat_postMessage(
+                        channel=mhub_settings.slack_channel,
+                        text=text,
+                        thread_ts=self.thread_ts,
+                    )
+                    if not response.get("ok"):
+                        logger.debug("slack message not sent: %s", response.body)
+                    elif self.thread_ts is None and self.channel_id is None:
+                        self.thread_ts = response.data.get("ts")
+                        self.channel_id = response.data.get("channel")
+                except SlackApiError as e:
+                    logger.exception(e)
+
+    def send(self, message: str, prefix: str = "", postfix: str = "") -> None:
+        # special case if initialization message didn't get through:
+        if self.thread_ts is None and self.channel_id is None:
+            self._send_init_message()
+
+        self._send(message, prefix=prefix, postfix=postfix)
 
     def update_message(self, message: str):
         if self.client:  # pragma: no cover
@@ -167,3 +187,56 @@ class SlackMessenger(ObserverProtocol):
                 )
             else:
                 self.send(message)
+
+
+def split_long_text(text: str, max_length: int = 150) -> List[str]:
+    out_chunks = []
+    for line_chunk in chunk_by_newlines(text, max_length):
+        if len(line_chunk) > max_length:
+            for space_chunk in chunk_by_spaces(line_chunk, max_length):
+                if len(space_chunk) > max_length:
+                    for length_chunk in chunk_by_length(space_chunk, max_length):
+                        out_chunks.append(length_chunk)
+                else:
+                    out_chunks.append(space_chunk)
+        else:
+            out_chunks.append(line_chunk)
+    return out_chunks
+
+
+def chunk_by_newlines(text: str, max_length: int = 150) -> List[str]:
+    return _split(text, max_length, split_by="\n")
+
+
+def chunk_by_spaces(text: str, max_length: int = 150) -> List[str]:
+    return _split(text, max_length, split_by=" ")
+
+
+def chunk_by_length(text: str, max_length: int = 150) -> List[str]:
+    return [
+        text[0 + chunk : max_length + chunk]
+        for chunk in range(0, len(text), max_length)
+    ]
+
+
+def _split(text: str, max_length: int = 150, split_by: str = "\n") -> List[str]:
+    out_chunks = []
+    chunk = ""
+    for element in text.split(split_by):
+        element += split_by
+
+        # let chunk grow as large as possible
+        if len(chunk) + len(element) <= max_length:
+            chunk += element
+
+        # if single element is longer than maximum, just append it and reset chunk
+        elif len(element) > max_length:
+            out_chunks.append(chunk)
+            out_chunks.append(element)
+            chunk = ""
+
+        else:
+            out_chunks.append(chunk)
+            chunk = element
+
+    return out_chunks
