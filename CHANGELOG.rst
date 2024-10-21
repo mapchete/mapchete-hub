@@ -3,6 +3,13 @@ Changelog
 #########
 
 
+2024.10.5 - 2024-10-21
+----------------------
+
+* packaging
+    * bump ``mapchete_eo`` to ``2024.10.0``
+
+
 2024.10.4 - 2024-10-10
 ----------------------
 
@@ -11,7 +18,6 @@ Changelog
     * terminate k8s job as soon as it finishes; in job_handler.k8s_worker `ttl_seconds_after_finished=remove_job_after_seconds` (default: 0)
 
        
-
 2024.10.3 - 2024-10-10
 ----------------------
 
