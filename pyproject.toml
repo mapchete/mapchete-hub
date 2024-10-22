@@ -45,7 +45,7 @@ complete = [
     "fastapi",
     "kubernetes",
     "mapchete[contours,geobuf,http,s3,vrt]>=2024.2.1",
-    "mapchete_eo>=2024.3.4",
+    "mapchete_eo>=2024.10.3",
     "mapchete_xarray>=2022.5.0",
     "mongomock",
     "pydantic>=2.0.0",
