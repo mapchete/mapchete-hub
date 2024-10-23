@@ -15,3 +15,11 @@ repos:
       verbose: true
       args: [--show-error-codes, --ignore-missing-imports, --disable-error-code=import-untyped]
       additional_dependencies: ["types-python-dateutil", "types-retry", "types-croniter"]
+- repo: local
+  hooks:
+  - id: rst
+    name: rst
+    entry: rst-lint --encoding utf-8
+    files: ^(CHANGELOG.rst|README.rst)$
+    language: python
+    additional_dependencies: [pygments, restructuredtext_lint]

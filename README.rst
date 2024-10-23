@@ -67,7 +67,7 @@ MHUB_DASK_GATEWAY_URL
 URL to dask gateway if available.
 
 MHUB_DASK_ADAPTIVE_SCALING
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Activate adaptive cluster scaling. (default: True)
 

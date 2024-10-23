@@ -29,7 +29,6 @@ def main():  # pragma: no cover
         ["critical", "error", "warning", "info", "debug", "notset"],
         case_sensitive=False,
     ),
-    default="error",
     help="Set log level.",
 )
 @click.option(
@@ -42,6 +41,7 @@ def run_job(
 ):
     """This will run a pending job."""
     setup_logger(log_level, add_mapchete_logger=add_mapchete_logger)
+    logger.info("mhub-worker online")
 
     try:
         if mhub_settings.backend_db == "memory":

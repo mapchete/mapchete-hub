@@ -2,6 +2,18 @@
 Changelog
 #########
 
+
+2024.10.9 - 2024-10-23
+----------------------
+
+* core
+
+  * add proper logging to mhub-manager and mhub-worker; also let log level be set via env settings
+
+* packaging
+    * bump ``mapchete_eo`` to ``2024.10.4``
+
+
 2024.10.8 - 2024-10-22
 ----------------------
 

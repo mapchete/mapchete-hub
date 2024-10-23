@@ -53,7 +53,6 @@ logger = logging.getLogger(__name__)
         ["critical", "error", "warning", "info", "debug", "notset"],
         case_sensitive=False,
     ),
-    default="error",
     help="Set log level.",
 )
 @click.option(
@@ -72,6 +71,7 @@ def main(
     add_mapchete_logger: bool = False,
 ):
     setup_logger(log_level, add_mapchete_logger=add_mapchete_logger)
+    logger.info("mhub-manager online")
 
     try:
         if mhub_settings.backend_db == "memory":
