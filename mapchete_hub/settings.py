@@ -27,6 +27,8 @@ PodResources = TypedDict("PodResources", {"memory": str, "cpu": str})
 
 JobWorkerResources = Dict[Literal["requests", "limits"], PodResources]
 
+LogLevels = Literal["notset", "debug", "info", "warning", "error", "critical"]
+
 
 class MHubSettings(BaseSettings):
     """
@@ -38,6 +40,7 @@ class MHubSettings(BaseSettings):
 
     self_url: str = "http://127.0.0.1:5000"
     self_instance_name: str = "mapchete Hub (test instance)"
+    log_level: LogLevels = "error"
     add_mapchete_logger: bool = False
     backend_db: str = "memory"
     backend_db_event_rate_limit: float = 0.2

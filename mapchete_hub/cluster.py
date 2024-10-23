@@ -48,10 +48,6 @@ class ClusterSetup:
             self.url = settings.dask_scheduler_url
 
         else:
-            logger.warning(
-                "Either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set. "
-                "For now, a LocalCluster is being used."
-            )
             self.type = ClusterType.local
 
 
@@ -68,6 +64,10 @@ def get_dask_executor(
 ) -> Generator[DaskExecutor, None, None]:
     logger.info("requesting dask cluster and dask client for job %s...", job_id)
     if cluster_setup.type == ClusterType.local:
+        logger.warning(
+            "Either MHUB_DASK_GATEWAY_URL and MHUB_DASK_GATEWAY_PASS or MHUB_DASK_SCHEDULER_URL have to be set. "
+            "A LocalCluster is now being used."
+        )
         with local_cluster_executor(
             cluster_setup=cluster_setup,
             dask_specs=dask_specs,
