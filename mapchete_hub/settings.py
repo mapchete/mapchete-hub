@@ -81,7 +81,7 @@ class MHubSettings(BaseSettings):
     k8s_remove_job_after_seconds: int = 0
     worker_default_image: str = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
     worker_image_tag: str = __version__
-    worker_propagate_env_prefixes: str = "AWS, DASK, GDAL, MHUB, MAPCHETE, MP"
+    worker_propagate_env_prefixes: str = "AWS, CPL, DASK, GDAL, MHUB, MAPCHETE, MP, VSI"
     slack_token: Optional[str] = None
     slack_channel: Optional[str] = "mapchete_hub"
 

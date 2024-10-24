@@ -29,7 +29,7 @@ class JobHandlerBase(ABC):
         return Observers([db_updater, slack_messenger])
 
     @abstractmethod
-    def submit(self, job_entry: JobEntry) -> None:
+    def submit(self, job_entry: JobEntry) -> JobEntry:
         """Submit a job."""
 
     def __enter__(self):

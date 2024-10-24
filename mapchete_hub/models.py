@@ -102,6 +102,7 @@ class JobEntry(BaseModel):
     slack_thread_ds: Optional[str] = None
     slack_channel_id: Optional[str] = None
     submitted_to_k8s: bool = False
+    k8s_attempts: int = 0
 
     def update(self, **new_data):
         for field, value in new_data.items():

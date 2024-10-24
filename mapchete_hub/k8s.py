@@ -86,6 +86,24 @@ class KubernetesJobStatus(BaseModel):
     # [optional]
     terminating: Optional[int]
 
+    def is_failed(self) -> bool:
+        if self.conditions:
+            for condition in self.conditions:
+                if condition.type == "Failed" and condition.status == "True":
+                    return True
+                elif condition.type == "Complete" and condition.status == "True":
+                    return False
+        return False
+
+    def is_done(self) -> bool:
+        if self.conditions:
+            for condition in self.conditions:
+                if condition.type == "Failed" and condition.status == "True":
+                    return False
+                elif condition.type == "Complete" and condition.status == "True":
+                    return True
+        return False
+
 
 class PodInfo(BaseModel):
     name: str
@@ -149,12 +167,12 @@ def check_k8s_connection():
 
 
 # Function to get the status of the Kubernetes Job
-def get_job_status(job_name: str, namespace: str) -> KubernetesJobStatus:
+def get_job_status(job_name: str, namespace: str, batch_v1=None) -> KubernetesJobStatus:
     if not importlib.util.find_spec("kubernetes"):
         raise ImportError("please install the 'kubernetes' extra")
     from kubernetes import client
 
-    batch_v1 = batch_client()
+    batch_v1 = batch_v1 or batch_client()
     try:
         # Get the Job status
         status: client.V1JobStatus = batch_v1.read_namespaced_job(
@@ -176,12 +194,12 @@ def get_job_status(job_name: str, namespace: str) -> KubernetesJobStatus:
 
 
 # Function to list Pods created by the Job and get their logs
-def get_job_pods_and_logs(job_name: str, namespace: str) -> List[PodInfo]:
+def get_job_pods_and_logs(job_name: str, namespace: str, core_v1=None) -> List[PodInfo]:
     if not importlib.util.find_spec("kubernetes"):
         raise ImportError("please install the 'kubernetes' extra")
     from kubernetes import client
 
-    core_v1 = core_client()
+    core_v1 = core_v1 or core_client()
 
     try:
         # List Pods created by the Job

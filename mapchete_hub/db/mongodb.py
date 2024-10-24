@@ -90,7 +90,6 @@ class MongoDBStatusHandler(BaseStatusHandler):
             )
             query.pop("from_date", None)
             query.pop("to_date", None)
-
         logger.debug("MongoDB query: %s", query)
         jobs = []
         for entry in self._jobs.find(query):
