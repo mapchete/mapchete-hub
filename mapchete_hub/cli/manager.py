@@ -216,12 +216,12 @@ def retry_stalled_jobs(
     logger.info("found %s jobs", len(jobs))
 
     out_jobs = []
-    running = set(running_jobs(jobs))
+    running = set([job.job_id for job in running_jobs(jobs)])
 
     for job in jobs:
         # check if inactive for too long
         if (
-            job in running
+            job.job_id in running
             and job.updated
             and passed_time_to_timestamp(inactive_since) > job.updated
         ):
@@ -242,7 +242,7 @@ def retry_stalled_jobs(
         # NOTE: jobs can be running without having a dashboard
         elif (
             check_inactive_dashboard
-            and job in running
+            and job.job_id in running
             and job.dask_dashboard_link
             and requests.get(job.dask_dashboard_link).status_code != 200
         ):
@@ -273,12 +273,12 @@ def submit_pending_jobs(
     # determine jobs
     currently_running_count = len(running_jobs(jobs))
     logger.debug("currently %s jobs running", currently_running_count)
-    currently_queued = set(queued_jobs(jobs=jobs))
+    currently_queued = set([job.job_id for job in queued_jobs(jobs=jobs)])
     logger.debug("currently %s jobs queued", len(currently_queued))
 
     # iterate to queued jobs and try to submit them
     for job in jobs:
-        if job in currently_queued:
+        if job.job_id in currently_queued:
             logger.info(
                 f"{currently_running_count}/{mhub_settings.max_parallel_jobs} jobs currently runnning"
             )
