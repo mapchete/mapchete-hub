@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import List
+from typing import List, Set
 
 import click
 from mapchete.enums import Status
@@ -216,7 +216,7 @@ def retry_stalled_jobs(
     logger.info("found %s jobs", len(jobs))
 
     out_jobs = []
-    running = set([job.job_id for job in running_jobs(jobs)])
+    running = running_jobs(jobs)
 
     for job in jobs:
         # check if inactive for too long
@@ -273,7 +273,7 @@ def submit_pending_jobs(
     # determine jobs
     currently_running_count = len(running_jobs(jobs))
     logger.debug("currently %s jobs running", currently_running_count)
-    currently_queued = set([job.job_id for job in queued_jobs(jobs=jobs)])
+    currently_queued = queued_jobs(jobs=jobs)
     logger.debug("currently %s jobs queued", len(currently_queued))
 
     # iterate to queued jobs and try to submit them
@@ -301,25 +301,31 @@ def submit_pending_jobs(
     return out_jobs
 
 
-def queued_jobs(jobs: List[JobEntry]) -> List[JobEntry]:
+def queued_jobs(jobs: List[JobEntry]) -> Set[str]:
     """Get jobs who are in pending state and not yet sent to kubernetes."""
-    return [
-        job for job in jobs if job.status == Status.pending and not job.submitted_to_k8s
-    ]
-
-
-def running_jobs(jobs: List[JobEntry]) -> List[JobEntry]:
-    """Jobs who are either in one of the running states or pending but already sent to kubernetes."""
-    return [
-        job
-        for job in jobs
-        if job.status
-        in [
-            Status.initializing,
-            Status.parsing,
-            Status.running,
-            Status.post_processing,
-            Status.retrying,
+    return set(
+        [
+            job.job_id
+            for job in jobs
+            if job.status == Status.pending and not job.submitted_to_k8s
         ]
-        or (job.status == Status.pending and job.submitted_to_k8s)
-    ]
+    )
+
+
+def running_jobs(jobs: List[JobEntry]) -> Set[str]:
+    """Jobs who are either in one of the running states or pending but already sent to kubernetes."""
+    return set(
+        [
+            job.job_id
+            for job in jobs
+            if job.status
+            in [
+                Status.initializing,
+                Status.parsing,
+                Status.running,
+                Status.post_processing,
+                Status.retrying,
+            ]
+            or (job.status == Status.pending and job.submitted_to_k8s)
+        ]
+    )
