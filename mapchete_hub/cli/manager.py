@@ -103,6 +103,9 @@ def main(
                             logger.info("submitting job %s to cluster", job.job_id)
                             job_handler.submit(job)
                             currently_running_count += 1
+                            logger.debug(
+                                "this is not my responsibility anymore but I'll keep my eyes on that"
+                            )
                         else:
                             logger.info("maximum limit of running jobs reached")
                             break
