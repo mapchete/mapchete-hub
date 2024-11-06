@@ -85,9 +85,10 @@ def watch(
                         from_date=date_to_str(passed_time_to_timestamp(since))
                     )
                     logger.info(
-                        "%s/%s jobs running",
+                        "%s/%s jobs running (%s queued)",
                         len(running_jobs(all_jobs)),
                         mhub_settings.max_parallel_jobs,
+                        len(queued_jobs(all_jobs)),
                     )
 
                     # check on running jobs and retry them if they are stalled
