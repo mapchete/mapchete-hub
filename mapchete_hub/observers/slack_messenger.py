@@ -11,6 +11,7 @@ from mapchete.executor import DaskExecutor
 from mapchete.pretty import pretty_seconds
 
 from mapchete_hub.models import JobEntry
+from mapchete_hub.observers.db_updater import DBUpdater
 from mapchete_hub.settings import mhub_settings
 
 logger = logging.getLogger(__name__)
@@ -41,11 +42,13 @@ class SlackMessenger(ObserverProtocol):
     channel_id: Optional[str] = None
     client: Optional[Any] = None
     slack_max_text_length: int = 4000
+    db_updater: Optional[DBUpdater] = None
 
     def __init__(
         self,
         self_instance_name: str,
         job: JobEntry,
+        db_updater: Optional[DBUpdater] = None,
     ):
         try:
             if mhub_settings.slack_token:  # pragma: no cover
@@ -70,14 +73,10 @@ class SlackMessenger(ObserverProtocol):
             + f"{mhub_settings.self_instance_name}: job *{self.job.job_name} "
             + "{status}*"
         )
+        self.db_updater = db_updater
         if self.thread_ts is None and self.channel_id is None:
-            # send init message
-            self.send(
-                message=self.job_message.format(
-                    status_emoji=status_emoji(Status.pending),
-                    status=Status.pending.value,
-                )
-            )
+            # this will set the init message if it is not already set
+            self.send(message=None)
 
     def update(
         self,
@@ -167,15 +166,24 @@ class SlackMessenger(ObserverProtocol):
                     elif self.thread_ts is None and self.channel_id is None:
                         self.thread_ts = response.data.get("ts")
                         self.channel_id = response.data.get("channel")
+                        if self.db_updater:
+                            # this will be set only once
+                            self.db_updater.set(
+                                slack_thread_ds=self.thread_ts,
+                                slack_channel_id=self.channel_id,
+                            )
                 except SlackApiError as e:
                     logger.exception(e)
 
-    def send(self, message: str, prefix: str = "", postfix: str = "") -> None:
+    def send(
+        self, message: Optional[str] = None, prefix: str = "", postfix: str = ""
+    ) -> None:
         # special case if initialization message didn't get through:
         if self.thread_ts is None and self.channel_id is None:
             self._send_init_message()
 
-        self._send(message, prefix=prefix, postfix=postfix)
+        if message:
+            self._send(message, prefix=prefix, postfix=postfix)
 
     def update_message(self, message: str):
         if self.client:  # pragma: no cover

@@ -13,18 +13,15 @@ class JobHandlerBase(ABC):
     backend_db_event_rate_limit: float
 
     def get_job_observers(self, job_entry: JobEntry) -> Observers:
+        # initialize database updater
         db_updater = DBUpdater(
             backend_db=self.status_handler,
             job_entry=job_entry,
             event_rate_limit=self.backend_db_event_rate_limit,
         )
         # initialize slack messenger
-        slack_messenger = SlackMessenger(self.self_instance_name, job_entry)
-        # once the initialization message is sent, we remember the thread ID
-        # and channel ID for all follow-up messages, even if the job thread dies
-        db_updater.set(
-            slack_thread_ds=slack_messenger.thread_ts,
-            slack_channel_id=slack_messenger.channel_id,
+        slack_messenger = SlackMessenger(
+            self.self_instance_name, job_entry, db_updater=db_updater
         )
         return Observers([db_updater, slack_messenger])
 

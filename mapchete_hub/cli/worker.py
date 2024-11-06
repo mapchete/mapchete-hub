@@ -55,6 +55,7 @@ def run_job(
             # only attempt to run job if its status is pending
             if job_entry.status == Status.pending:
                 logger.debug("job is in pending status, setting up observers")
+
                 # set up status updater observer
                 job_db_updater = DBUpdater(
                     backend_db=backend_db,
@@ -65,6 +66,7 @@ def run_job(
                 job_slack_messenger = SlackMessenger(
                     mhub_settings.self_instance_name,
                     job=job_entry,
+                    db_updater=job_db_updater,
                 )
                 observers = Observers([job_db_updater, job_slack_messenger])
                 logger.debug("observers created: %s", observers)
