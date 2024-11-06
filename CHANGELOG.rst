@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.11.2 - 2024-11-06
+----------------------
+
+* core
+
+  * `mhub-manager`: ignore job if job cannot be found on cluster
+
+
 2024.11.1 - 2024-11-06
 ----------------------
 

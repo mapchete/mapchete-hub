@@ -180,10 +180,14 @@ def retry_stalled_jobs(
             k8s_job_status = job_handler.job_status(job)
         except KeyError as exc:
             logger.info(
-                "job status cannot be fetched (%s), resubmitting to cluster ...",
-                str(exc),
+                "job status cannot be fetched (%s) ignoring for now...", str(exc)
             )
-            return job_handler.submit(job)
+            return job
+            # logger.info(
+            #     "job status cannot be fetched (%s), resubmitting to cluster ...",
+            #     str(exc),
+            # )
+            # return job_handler.submit(job)
 
         if k8s_job_status.is_failed():
             observers = job_handler.get_job_observers(job)
