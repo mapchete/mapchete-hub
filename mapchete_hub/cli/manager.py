@@ -84,6 +84,11 @@ def watch(
                     all_jobs = status_handler.jobs(
                         from_date=date_to_str(passed_time_to_timestamp(since))
                     )
+                    logger.info(
+                        "%s/%s jobs running",
+                        len(running_jobs(all_jobs)),
+                        mhub_settings.max_parallel_jobs,
+                    )
 
                     # check on running jobs and retry them if they are stalled
                     all_jobs = retry_stalled_jobs(
@@ -289,7 +294,12 @@ def submit_pending_jobs(
                 try:
                     out_jobs.append(job_handler.submit(job))
                     currently_running_count += 1
-                    logger.info("submitted job %s to cluster", job.job_id)
+                    logger.info(
+                        "submitted job %s to cluster (%s/%s running)",
+                        job.job_id,
+                        currently_running_count,
+                        mhub_settings.max_parallel_jobs,
+                    )
                     logger.debug(
                         "this is not my responsibility anymore but I'll keep my eyes on that"
                     )
@@ -301,12 +311,6 @@ def submit_pending_jobs(
                 out_jobs.append(job)
         else:
             out_jobs.append(job)
-
-    logger.info(
-        "%s/%s jobs running",
-        currently_running_count,
-        mhub_settings.max_parallel_jobs,
-    )
 
     return out_jobs
 
