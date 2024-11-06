@@ -3,6 +3,19 @@ Changelog
 #########
 
 
+2024.11.0 - 2024-11-06
+----------------------
+
+* core
+
+  * `mhub-manager` now has subcommands (`mhub-manager watch` replaces the current behavior using `mhub-manager --watch`)
+  * `mhub-manager clean` can now be run separately
+  * consolidate `mhub-*` logger configurations
+  * extend list of env var prefixes to be passed on to workers
+  * fix docker-compose backend db setting
+  * implement first version of kubernetes jobs retry mechanism (untested)
+
+
 2024.10.9 - 2024-10-23
 ----------------------
 
