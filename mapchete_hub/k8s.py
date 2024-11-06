@@ -4,7 +4,7 @@ import logging
 from typing import List, Literal, Optional
 
 from fastapi import HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 
 logger = logging.getLogger(__name__)
@@ -29,6 +29,30 @@ class V1JobCondition(BaseModel):
     type: Literal["Complete", "Failed"]
 
 
+# pydantic_core._pydantic_core.ValidationError: 8 validation errors for KubernetesJobStatus
+# 8 validation errors for KubernetesJobStatus
+# active
+#   Field required [type=missing, input_value={'api_version': 'batch/v1...ne, 'succeeded': None}}}, input_type=dict]
+#     For further information visit https://errors.pydantic.dev/2.9/v/missing
+# completion_time
+#   Field required [type=missing, input_value={'api_version': 'batch/v1...ne, 'succeeded': None}}}, input_type=dict]
+#     For further information visit https://errors.pydantic.dev/2.9/v/missing
+# conditions
+#   Field required [type=missing, input_value={'api_version': 'batch/v1...ne, 'succeeded': None}}}, input_type=dict]
+#     For further information visit https://errors.pydantic.dev/2.9/v/missing
+# failed
+#   Field required [type=missing, input_value={'api_version': 'batch/v1...ne, 'succeeded': None}}}, input_type=dict]
+#     For further information visit https://errors.pydantic.dev/2.9/v/missing
+# ready
+#   Field required [type=missing, input_value={'api_version': 'batch/v1...ne, 'succeeded': None}}}, input_type=dict]
+#     For further information visit https://errors.pydantic.dev/2.9/v/missing
+# start_time
+#   Field required [type=missing, input_value={'api_version': 'batch/v1...ne, 'succeeded': None}}}, input_type=dict]
+#     For further information visit https://errors.pydantic.dev/2.9/v/missing
+# succeeded
+#   Field required [type=missing, input_value={'api_version': 'batch/v1...ne, 'succeeded': None}}}, input_type=dict]
+#     For further information visit https://errors.pydantic.dev/2.9/v/missing
+# terminating
 class KubernetesJobStatus(BaseModel):
     # this is a selection of V1JobStatus metadata
     # from https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/V1JobStatus.md
@@ -191,6 +215,10 @@ def get_job_status(job_name: str, namespace: str, batch_v1=None) -> KubernetesJo
 
     except client.ApiException as e:
         raise HTTPException(status_code=500, detail=f"Error fetching job status: {e}")
+
+    except ValidationError:
+        logger.debug(status.to_dict())
+        raise
 
 
 # Function to list Pods created by the Job and get their logs
