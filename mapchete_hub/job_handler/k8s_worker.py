@@ -9,7 +9,7 @@ from mapchete.enums import Status
 
 from mapchete_hub.db.base import BaseStatusHandler
 from mapchete_hub.job_handler.base import JobHandlerBase
-from mapchete_hub.k8s import KubernetesJobStatus, batch_client
+from mapchete_hub.k8s import KubernetesJobStatus, batch_client, get_job_status
 from mapchete_hub.models import JobEntry
 from mapchete_hub.settings import JobWorkerResources, MHubSettings
 
@@ -60,7 +60,7 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
         self.retry_job_x_times = retry_job_x_times
         self.remove_job_after_seconds = remove_job_after_seconds
 
-    def submit(self, job_entry: JobEntry) -> None:
+    def submit(self, job_entry: JobEntry) -> JobEntry:
         """Submit a job."""
         observers = self.get_job_observers(job_entry)
         try:
@@ -76,14 +76,23 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
                 remove_job_after_seconds=self.remove_job_after_seconds,
                 batch_v1_client=self._batch_v1_client,
             )
-            self.status_handler.set(job_id=job_entry.job_id, submitted_to_k8s=True)
             logger.debug(
                 "job %s submitted and will be run as a kubernetes job"
                 % job_entry.job_id
             )
+            return self.status_handler.set(
+                job_id=job_entry.job_id,
+                submitted_to_k8s=True,
+                k8s_attempts=job_entry.k8s_attempts + 1,
+            )
         except Exception as exc:
             observers.notify(status=Status.failed, exception=exc)
             raise
+
+    def job_status(self, job_entry: JobEntry) -> KubernetesJobStatus:
+        return get_job_status(
+            job_entry.job_id, namespace=self.namespace, batch_v1=self._batch_v1_client
+        )
 
     def __enter__(self):
         """Enter context."""

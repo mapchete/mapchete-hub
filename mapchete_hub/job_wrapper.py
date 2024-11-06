@@ -24,7 +24,7 @@ def job_wrapper(
 ):
     job_id = job_entry.job_id
     job_config = job_entry.mapchete
-    logger.info("running job wrapper with job %s in background", job_id)
+    logger.info("running job wrapper with job %s", job_id)
 
     mapchete_config = job_config.config
 

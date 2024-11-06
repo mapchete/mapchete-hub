@@ -28,7 +28,7 @@ class MHubWorkerJobHandler(JobHandlerBase):
         self.self_instance_name = self_instance_name
         self.backend_db_event_rate_limit = backend_db_event_rate_limit
 
-    def submit(self, job_entry: JobEntry) -> None:
+    def submit(self, job_entry: JobEntry) -> JobEntry:
         """Submit a job."""
         logger.debug(
             "job %s submitted and will have to be processed separately by a worker"
@@ -39,6 +39,8 @@ class MHubWorkerJobHandler(JobHandlerBase):
             message="job waiting in queue to be picked up by manager",
             status=Status.pending,
         )
+        job_entry.status = Status.pending
+        return job_entry
 
     def __enter__(self):
         """Enter context."""

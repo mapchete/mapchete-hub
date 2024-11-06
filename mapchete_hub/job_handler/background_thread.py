@@ -62,7 +62,7 @@ class BackgroundThreadJobHandler(JobHandlerBase):
             logger.debug("closing dask LocalCluster ...")
             self.local_cluster.close()
 
-    def submit(self, job_entry: JobEntry) -> None:
+    def submit(self, job_entry: JobEntry) -> JobEntry:
         observers = self.get_job_observers(job_entry)
         try:
             # send task to background to be able to quickly return a message
@@ -72,6 +72,8 @@ class BackgroundThreadJobHandler(JobHandlerBase):
                 observers=observers,
                 local_cluster=self.local_cluster,
             )
+            job_entry.status = Status.pending
+            return job_entry
         except Exception as exc:
             observers.notify(status=Status.failed, exception=exc)
             raise

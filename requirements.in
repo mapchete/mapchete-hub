@@ -12,7 +12,7 @@ jupyter-server-proxy
 kubernetes
 lz4
 mapchete==2024.9.0
-mapchete_eo==2024.10.4
+mapchete_eo==2024.10.5
 mapchete_internal_processes==2024.9.4
 mapchete_xarray==2022.10.0
 mongomock

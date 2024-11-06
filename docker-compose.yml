@@ -13,6 +13,8 @@ services:
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
     volumes:
       - db-data:/data/db
+    ports:
+      - 27017:27017
     command: [ "--bind_ip_all" ]
 
   server:
@@ -29,7 +31,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REQUEST_PAYER=${AWS_REQUEST_PAYER}
       - MHUB_DASK_SCHEDULER_URL=tcp://dask_scheduler:8786
-      - MHUB_MONGODB_URL=mongodb://mhub:REDACTED_API_KEY@db:27017
+      - MHUB_BACKEND_DB=mongodb://mhub:REDACTED_API_KEY@db:27017
       - MHUB_ADD_MAPCHETE_LOGGER=true
     networks:
       - backend
