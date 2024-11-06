@@ -289,12 +289,7 @@ def submit_pending_jobs(
                 try:
                     out_jobs.append(job_handler.submit(job))
                     currently_running_count += 1
-                    logger.info(
-                        "submitted job %s to cluster (%s/%s running)",
-                        job.job_id,
-                        currently_running_count,
-                        mhub_settings.max_parallel_jobs,
-                    )
+                    logger.info("submitted job %s to cluster", job.job_id)
                     logger.debug(
                         "this is not my responsibility anymore but I'll keep my eyes on that"
                     )
@@ -306,7 +301,13 @@ def submit_pending_jobs(
                 out_jobs.append(job)
         else:
             out_jobs.append(job)
-    logger.debug("currently %s jobs running", currently_running_count)
+
+    logger.info(
+        "%s/%s jobs running",
+        currently_running_count,
+        mhub_settings.max_parallel_jobs,
+    )
+
     return out_jobs
 
 
