@@ -111,6 +111,7 @@ class KubernetesJobStatus(BaseModel):
     terminating: Optional[int]
 
     def is_failed(self) -> bool:
+        logger.debug("check if job is failed: %s", str(self))
         if self.conditions:
             for condition in self.conditions:
                 if condition.type == "Failed" and condition.status == "True":

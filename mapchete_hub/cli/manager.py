@@ -207,7 +207,7 @@ def retry_stalled_jobs(
             return job_handler.submit(job)
 
         logger.info(
-            "%s: job seems to be inactive, but kubernetes job %s has not failed yet: %s",
+            "%s: job seems to be inactive, but kubernetes job has not failed yet: %s",
             job.job_id,
             k8s_job_status,
         )
