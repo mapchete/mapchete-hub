@@ -3,8 +3,7 @@ import importlib.util
 import logging
 from typing import List, Literal, Optional
 
-from fastapi import HTTPException
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
 
 logger = logging.getLogger(__name__)
@@ -172,6 +171,7 @@ def get_job_status(job_name: str, namespace: str, batch_v1=None) -> KubernetesJo
     if not importlib.util.find_spec("kubernetes"):
         raise ImportError("please install the 'kubernetes' extra")
     from kubernetes import client
+    from kubernetes.client.exceptions import ApiException
 
     batch_v1 = batch_v1 or batch_client()
     try:
@@ -190,11 +190,9 @@ def get_job_status(job_name: str, namespace: str, batch_v1=None) -> KubernetesJo
         # else:
         #     return {"status": "Job is still running", "active": status.active}
 
-    except client.ApiException as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching job status: {e}")
-
-    except ValidationError:
-        logger.debug(status.to_dict())
+    except ApiException as exc:
+        if "404" in str(exc):
+            raise KeyError(f"job {job_name} cannot be found by Kubernetes")
         raise
 
 
@@ -202,25 +200,20 @@ def get_job_status(job_name: str, namespace: str, batch_v1=None) -> KubernetesJo
 def get_job_pods_and_logs(job_name: str, namespace: str, core_v1=None) -> List[PodInfo]:
     if not importlib.util.find_spec("kubernetes"):
         raise ImportError("please install the 'kubernetes' extra")
-    from kubernetes import client
 
     core_v1 = core_v1 or core_client()
 
-    try:
-        # List Pods created by the Job
-        pod_list = core_v1.list_namespaced_pod(
-            namespace=namespace, label_selector=f"job-name={job_name}"
+    # List Pods created by the Job
+    pod_list = core_v1.list_namespaced_pod(
+        namespace=namespace, label_selector=f"job-name={job_name}"
+    )
+    return [
+        PodInfo(
+            name=pod.metadata.name,
+            status=pod.status.phase,
+            logs=core_v1.read_namespaced_pod_log(
+                name=pod.metadata.name, namespace=namespace
+            ),
         )
-        return [
-            PodInfo(
-                name=pod.metadata.name,
-                status=pod.status.phase,
-                logs=core_v1.read_namespaced_pod_log(
-                    name=pod.metadata.name, namespace=namespace
-                ),
-            )
-            for pod in pod_list.items
-        ]
-
-    except client.ApiException as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching pods or logs: {e}")
+        for pod in pod_list.items
+    ]

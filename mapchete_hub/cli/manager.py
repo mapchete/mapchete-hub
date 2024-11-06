@@ -176,7 +176,14 @@ def retry_stalled_jobs(
 ) -> List[JobEntry]:
     # this only affects currently running jobs, so the maximum parallel jobs would not be exceeded
     def _resubmit_if_failed(job: JobEntry) -> JobEntry:
-        k8s_job_status = job_handler.job_status(job)
+        try:
+            k8s_job_status = job_handler.job_status(job)
+        except KeyError as exc:
+            logger.info(
+                "job status cannot be fetched (%s), resubmitting to cluster ...",
+                str(exc),
+            )
+            return job_handler.submit(job)
 
         if k8s_job_status.is_failed():
             observers = job_handler.get_job_observers(job)
@@ -202,7 +209,7 @@ def retry_stalled_jobs(
                 message=f"kubernetes job run failed (remaining retries: {remaining_retries})",
             )
             logger.info(
-                "%s: kubernetes job has failed, resubmitting to cluster:", job.job_id
+                "%s: kubernetes job has failed, resubmitting to cluster ...", job.job_id
             )
             return job_handler.submit(job)
 
