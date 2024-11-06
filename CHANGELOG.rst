@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.11.1 - 2024-11-06
+----------------------
+
+* core
+
+  * `mhub-manager`: submit job to k8s cluster if job cannot be found on cluster
+
+
 2024.11.0 - 2024-11-06
 ----------------------
 
