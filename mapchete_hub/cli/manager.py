@@ -84,6 +84,12 @@ def watch(
                     all_jobs = status_handler.jobs(
                         from_date=date_to_str(passed_time_to_timestamp(since))
                     )
+                    logger.info(
+                        "%s/%s jobs running (%s queued)",
+                        len(running_jobs(all_jobs)),
+                        mhub_settings.max_parallel_jobs,
+                        len(queued_jobs(all_jobs)),
+                    )
 
                     # check on running jobs and retry them if they are stalled
                     all_jobs = retry_stalled_jobs(
@@ -179,15 +185,10 @@ def retry_stalled_jobs(
         try:
             k8s_job_status = job_handler.job_status(job)
         except KeyError as exc:
-            logger.info(
+            logger.debug(
                 "job status cannot be fetched (%s) ignoring for now...", str(exc)
             )
             return job
-            # logger.info(
-            #     "job status cannot be fetched (%s), resubmitting to cluster ...",
-            #     str(exc),
-            # )
-            # return job_handler.submit(job)
 
         if k8s_job_status.is_failed():
             observers = job_handler.get_job_observers(job)
@@ -196,7 +197,7 @@ def retry_stalled_jobs(
             ) - job.k8s_attempts
 
             if remaining_retries <= 0:
-                logger.info(
+                logger.debug(
                     "maximum retries (%s) already met (%s)",
                     mhub_settings.k8s_retry_job_x_times,
                     job.k8s_attempts,
@@ -208,23 +209,23 @@ def retry_stalled_jobs(
                 job.status = Status.failed
                 return job
 
+            logger.info(
+                "%s: kubernetes job has failed, resubmitting to cluster ...", job.job_id
+            )
             observers.notify(
                 status=Status.retrying,
                 message=f"kubernetes job run failed (remaining retries: {remaining_retries})",
             )
-            logger.info(
-                "%s: kubernetes job has failed, resubmitting to cluster ...", job.job_id
-            )
             return job_handler.submit(job)
 
-        logger.info(
+        logger.debug(
             "%s: job seems to be inactive, but kubernetes job has not failed yet: %s",
             job.job_id,
             k8s_job_status,
         )
         return job
 
-    logger.info("found %s jobs", len(jobs))
+    logger.debug("found %s jobs", len(jobs))
 
     out_jobs = []
     running = running_jobs(jobs)
@@ -290,14 +291,16 @@ def submit_pending_jobs(
     # iterate to queued jobs and try to submit them
     for job in jobs:
         if job.job_id in currently_queued:
-            logger.info(
-                f"{currently_running_count}/{mhub_settings.max_parallel_jobs} jobs currently runnning"
-            )
             if currently_running_count < mhub_settings.max_parallel_jobs:
-                logger.info("submitting job %s to cluster", job.job_id)
                 try:
                     out_jobs.append(job_handler.submit(job))
                     currently_running_count += 1
+                    logger.info(
+                        "submitted job %s to cluster (%s/%s running)",
+                        job.job_id,
+                        currently_running_count,
+                        mhub_settings.max_parallel_jobs,
+                    )
                     logger.debug(
                         "this is not my responsibility anymore but I'll keep my eyes on that"
                     )
@@ -305,10 +308,11 @@ def submit_pending_jobs(
                     logger.exception(exc)
                     out_jobs.append(job)
             else:
-                logger.info("maximum limit of running jobs reached")
+                logger.debug("maximum limit of running jobs reached")
                 out_jobs.append(job)
         else:
             out_jobs.append(job)
+
     return out_jobs
 
 
