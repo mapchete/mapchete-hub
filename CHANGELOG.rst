@@ -3,6 +3,17 @@ Changelog
 #########
 
 
+2024.11.3 - 2024-11-08
+----------------------
+
+* core
+
+  * `mhub-manager`: improve log messages
+
+* packaging
+    * bump `mapchete_eo` to `2024.10.4`
+
+
 2024.11.2 - 2024-11-06
 ----------------------
 
