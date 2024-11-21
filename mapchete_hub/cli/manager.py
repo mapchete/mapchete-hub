@@ -184,18 +184,21 @@ def retry_stalled_jobs(
     def _resubmit_if_failed(job: JobEntry) -> JobEntry:
         try:
             k8s_job_status = job_handler.job_status(job)
+            something_went_wrong = k8s_job_status.is_failed()
         except KeyError as exc:
             logger.debug(
-                "job status cannot be fetched (%s) ignoring for now...", str(exc)
+                "job status cannot be fetched (%s), assuming job has failed...",
+                str(exc),
             )
-            return job
+            something_went_wrong = job.submitted_to_k8s
 
-        if k8s_job_status.is_failed():
+        if something_went_wrong:
             observers = job_handler.get_job_observers(job)
             remaining_retries = (
                 mhub_settings.k8s_retry_job_x_times + 1
             ) - job.k8s_attempts
 
+            # set job finally to failed
             if remaining_retries <= 0:
                 logger.debug(
                     "maximum retries (%s) already met (%s)",
@@ -209,6 +212,7 @@ def retry_stalled_jobs(
                 job.status = Status.failed
                 return job
 
+            # attempt a further retry
             logger.info(
                 "%s: kubernetes job has failed, resubmitting to cluster ...", job.job_id
             )

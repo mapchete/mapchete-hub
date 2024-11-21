@@ -61,6 +61,9 @@ class DBUpdater(ObserverProtocol):
             logger.debug(
                 "DB update: job %s status changed to %s", self.job_entry.job_id, status
             )
+            if status == Status.retrying:
+                logger.debug("job retrying, reset dashboard link to None")
+                self.set(dask_dashboard_link=None)
 
         if progress:
             # progress only at given minimal intervals
