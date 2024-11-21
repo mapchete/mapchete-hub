@@ -3,6 +3,16 @@ Changelog
 #########
 
 
+2024.11.4 - 2024-11-21
+----------------------
+
+* packaging
+
+  * use base image `2024.11.0`
+  * bump `mapchete` to `2024.11.0`
+  * bump `mapchete_eo` to `2024.11.3`
+
+
 2024.11.3 - 2024-11-08
 ----------------------
 
@@ -11,6 +21,7 @@ Changelog
   * `mhub-manager`: improve log messages
 
 * packaging
+
     * bump `mapchete_eo` to `2024.10.4`
 
 
