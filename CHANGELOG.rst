@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2024.11.5 - 2024-11-22
+----------------------
+
+* core
+
+  * `mhub-manager`: attempt to fix kubernetes job retry mechanism
+
+* packaging
+
+  * bump `mapchete_eo` to `2024.11.43`
+
+
 2024.11.4 - 2024-11-21
 ----------------------
 
