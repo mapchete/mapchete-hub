@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 from mapchete.commands.observer import Observers
 
 from mapchete_hub.db.base import BaseStatusHandler
@@ -26,7 +27,9 @@ class JobHandlerBase(ABC):
         return Observers([db_updater, slack_messenger])
 
     @abstractmethod
-    def submit(self, job_entry: JobEntry) -> JobEntry:
+    def submit(
+        self, job_entry: JobEntry, observers: Optional[Observers] = None
+    ) -> JobEntry:
         """Submit a job."""
 
     def __enter__(self):

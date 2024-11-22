@@ -3,15 +3,23 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import logging
-from typing import Any, Optional
+from typing import Any, List, Optional
 
+from mapchete.commands.observer import Observers
 from mapchete.enums import Status
+import requests
 
 from mapchete_hub.db.base import BaseStatusHandler
 from mapchete_hub.job_handler.base import JobHandlerBase
-from mapchete_hub.k8s import KubernetesJobStatus, batch_client, get_job_status
+from mapchete_hub.k8s import (
+    K8SJobNotFound,
+    KubernetesJobStatus,
+    batch_client,
+    get_job_status,
+)
 from mapchete_hub.models import JobEntry
-from mapchete_hub.settings import JobWorkerResources, MHubSettings
+from mapchete_hub.settings import JobWorkerResources, MHubSettings, mhub_settings
+from mapchete_hub.timetools import passed_time_to_timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +68,11 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
         self.retry_job_x_times = retry_job_x_times
         self.remove_job_after_seconds = remove_job_after_seconds
 
-    def submit(self, job_entry: JobEntry) -> JobEntry:
+    def submit(
+        self, job_entry: JobEntry, observers: Optional[Observers] = None
+    ) -> JobEntry:
         """Submit a job."""
-        observers = self.get_job_observers(job_entry)
+        observers = observers or self.get_job_observers(job_entry)
         try:
             create_k8s_job(
                 job_entry=job_entry,
@@ -89,10 +99,11 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
             observers.notify(status=Status.failed, exception=exc)
             raise
 
-    def job_status(self, job_entry: JobEntry) -> KubernetesJobStatus:
-        return get_job_status(
-            job_entry.job_id, namespace=self.namespace, batch_v1=self._batch_v1_client
-        )
+    def jobs(self, **kwargs) -> List[K8SJobEntry]:
+        return [
+            K8SJobEntry(**job_entry.model_dump(), k8s_job_handler=self)
+            for job_entry in self.status_handler.jobs(**kwargs)
+        ]
 
     def __enter__(self):
         """Enter context."""
@@ -132,6 +143,108 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
             retry_job_x_times=settings.k8s_retry_job_x_times,
             remove_job_after_seconds=settings.k8s_remove_job_after_seconds,
         )
+
+
+class K8SJobEntry(JobEntry):
+    """Special JobEntry class helping to interface with kubernetes."""
+
+    k8s_job_handler: KubernetesWorkerJobHandler
+
+    def k8s_submit(self):
+        self.update(
+            **self.k8s_job_handler.submit(JobEntry(**self.model_dump())).model_dump()
+        )
+
+    def k8s_retry(self):
+        observers = self.k8s_job_handler.get_job_observers(self)
+        remaining_retries = (
+            mhub_settings.k8s_retry_job_x_times + 1
+        ) - self.k8s_attempts
+
+        # set job finally to failed if no retries are left
+        if remaining_retries <= 0:
+            logger.debug(
+                "maximum retries (%s) already met (%s)",
+                mhub_settings.k8s_retry_job_x_times,
+                self.k8s_attempts,
+            )
+            observers.notify(
+                status=Status.failed,
+                exception=RuntimeError("too many kubernetes job attempts failed"),
+            )
+            self.update(status=Status.failed)
+
+        # attempt a further retry
+        logger.info(
+            "%s: kubernetes job has failed, resubmitting to cluster ...", self.job_id
+        )
+        observers.notify(
+            status=Status.retrying,
+            message=f"kubernetes job run failed (remaining retries: {remaining_retries})",
+        )
+        self.k8s_submit()
+
+    def k8s_job_status(self) -> KubernetesJobStatus:
+        return get_job_status(
+            self.job_id,
+            namespace=self.k8s_job_handler.namespace,
+            batch_v1=self.k8s_job_handler._batch_v1_client,
+        )
+
+    def k8s_is_failed(self) -> bool:
+        return self.k8s_job_status().is_failed()
+
+    def k8s_is_failed_or_gone(self) -> bool:
+        try:
+            k8s_job_status = self.k8s_job_status()
+            failed_or_gone = k8s_job_status.is_failed()
+        except K8SJobNotFound as exc:
+            logger.debug(
+                "job status cannot be fetched (%s), assuming job has failed...",
+                str(exc),
+            )
+            failed_or_gone = self.submitted_to_k8s
+        return failed_or_gone
+
+    def has_active_status(self) -> bool:
+        return self.status in [
+            Status.initializing,
+            Status.parsing,
+            Status.running,
+            Status.post_processing,
+            Status.retrying,
+        ] or (self.status == Status.pending and self.submitted_to_k8s)
+
+    def is_queued(self) -> bool:
+        return self.status == Status.pending and not self.submitted_to_k8s
+
+    def is_stalled(
+        self, inactive_since: str = "5h", check_inactive_dashboard: bool = True
+    ) -> bool:
+        # check if inactive for too long
+        if self.has_active_status():
+            if self.updated and passed_time_to_timestamp(inactive_since) > self.updated:
+                logger.debug(
+                    "%s: %s but has been inactive since %s",
+                    self.job_id,
+                    self.status,
+                    self.updated,
+                )
+                return True
+            elif (
+                check_inactive_dashboard
+                and self.dask_dashboard_link
+                and requests.get(self.dask_dashboard_link).status_code != 200
+            ):
+                logger.debug(
+                    "%s: %s but dashboard %s does not have a status code of 200",
+                    self.job_id,
+                    self.status,
+                    self.dask_dashboard_link,
+                )
+                return True
+
+        return False
 
 
 # Define the Kubernetes Job specification

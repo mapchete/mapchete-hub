@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from dask.distributed import LocalCluster
+from mapchete.commands.observer import Observers
 from mapchete.enums import Status
 
 from mapchete_hub.db import BaseStatusHandler
@@ -62,8 +63,10 @@ class BackgroundThreadJobHandler(JobHandlerBase):
             logger.debug("closing dask LocalCluster ...")
             self.local_cluster.close()
 
-    def submit(self, job_entry: JobEntry) -> JobEntry:
-        observers = self.get_job_observers(job_entry)
+    def submit(
+        self, job_entry: JobEntry, observers: Optional[Observers] = None
+    ) -> JobEntry:
+        observers = observers or self.get_job_observers(job_entry)
         try:
             # send task to background to be able to quickly return a message
             self._thread_pool.submit(

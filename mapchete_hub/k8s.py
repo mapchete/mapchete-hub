@@ -9,6 +9,10 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
+class K8SJobNotFound(KeyError):
+    pass
+
+
 class V1JobCondition(BaseModel):
     # Last time the condition was checked.
     # [optional]
@@ -192,7 +196,7 @@ def get_job_status(job_name: str, namespace: str, batch_v1=None) -> KubernetesJo
 
     except ApiException as exc:
         if "404" in str(exc):
-            raise KeyError(f"job {job_name} cannot be found by Kubernetes")
+            raise K8SJobNotFound(f"job {job_name} cannot be found by Kubernetes")
         raise
 
 

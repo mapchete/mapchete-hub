@@ -1,6 +1,8 @@
 from __future__ import annotations
 import logging
+from typing import Optional
 
+from mapchete.commands.observer import Observers
 from mapchete.enums import Status
 
 from mapchete_hub.db.base import BaseStatusHandler
@@ -28,14 +30,17 @@ class MHubWorkerJobHandler(JobHandlerBase):
         self.self_instance_name = self_instance_name
         self.backend_db_event_rate_limit = backend_db_event_rate_limit
 
-    def submit(self, job_entry: JobEntry) -> JobEntry:
+    def submit(
+        self, job_entry: JobEntry, observers: Optional[Observers] = None
+    ) -> JobEntry:
         """Submit a job."""
         logger.debug(
             "job %s submitted and will have to be processed separately by a worker"
             % job_entry.job_id
         )
         # this step is important to send the initialization message to slack:
-        self.get_job_observers(job_entry).notify(
+        observers = observers or self.get_job_observers(job_entry)
+        observers.notify(
             message="job waiting in queue to be picked up by manager",
             status=Status.pending,
         )

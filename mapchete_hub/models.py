@@ -5,6 +5,7 @@ Models and schemas.
 from __future__ import annotations
 
 from enum import Enum
+import logging
 from typing import List, Optional, Union
 
 from mapchete.config import ProcessConfig
@@ -14,6 +15,8 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, NonNegativeInt
 
 from mapchete_hub.random_names import random_name
 from mapchete_hub.timetools import parse_to_date
+
+logger = logging.getLogger(__name__)
 
 
 class MapcheteCommand(str, Enum):
