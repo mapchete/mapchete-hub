@@ -97,9 +97,7 @@ def watch(
                     )
 
                     # submit jobs waiting in queue
-                    all_jobs = submit_pending_jobs(
-                        jobs=all_jobs, job_handler=job_handler
-                    )
+                    all_jobs = submit_pending_jobs(jobs=all_jobs)
 
                     logger.info("next check in %s", watch_interval)
                     time.sleep(interval_to_timedelta(watch_interval).seconds)
@@ -196,9 +194,7 @@ def retry_stalled_jobs(
     return jobs
 
 
-def submit_pending_jobs(
-    jobs: List[K8SJobEntry], job_handler: KubernetesWorkerJobHandler
-) -> List[K8SJobEntry]:
+def submit_pending_jobs(jobs: List[K8SJobEntry]) -> List[K8SJobEntry]:
     # determine jobs
     currently_running_count = len(running_jobs(jobs))
     logger.debug("currently %s jobs running", currently_running_count)
@@ -233,7 +229,6 @@ def submit_pending_jobs(
                     logger.exception(exc)
             else:
                 logger.debug("maximum limit of running jobs reached")
-        jobs.append(job)
     return jobs
 
 
