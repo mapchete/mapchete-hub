@@ -333,11 +333,6 @@ def create_k8s_job(
         logger.exception(exc)
         raise RuntimeError(f"could not sent job to kubernetes cluster: {exc}")
 
-    logger.debug(
-        "Job %s created in namespace %s with status %s",
-        job_entry.job_id,
-        namespace,
-        k8s_job.status,
-    )
+    logger.debug("Job %s created in namespace %s", job_entry.job_id, namespace)
     status: client.V1JobStatus = k8s_job.status  # type: ignore
     return KubernetesJobStatus(**status.to_dict())
