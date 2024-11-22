@@ -174,7 +174,9 @@ class K8SJobEntry(JobEntry):
             )
             observers.notify(
                 status=Status.failed,
-                exception=RuntimeError("too many kubernetes job attempts failed"),
+                exception=RuntimeError(
+                    f"too many kubernetes job attempts ({self.k8s_attempts}) failed"
+                ),
             )
             self.update(status=Status.failed)
             return
