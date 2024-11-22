@@ -177,6 +177,7 @@ class K8SJobEntry(JobEntry):
                 exception=RuntimeError("too many kubernetes job attempts failed"),
             )
             self.update(status=Status.failed)
+            return
 
         # attempt a further retry
         logger.info(
