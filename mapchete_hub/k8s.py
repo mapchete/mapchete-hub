@@ -9,6 +9,14 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
+class K8SJobNotFound(KeyError):
+    pass
+
+
+class K8SJobAlreadyExists(Exception):
+    pass
+
+
 class V1JobCondition(BaseModel):
     # Last time the condition was checked.
     # [optional]
@@ -128,9 +136,10 @@ def batch_client():
         # If not running inside the cluster, fall back to kubeconfig
         logger.debug("In-cluster config failed. Trying kubeconfig:", e)
         logger.debug("Kubeconfig loaded")
-
+    batch_v1 = client.BatchV1Api()
+    logger.debug("Connected to k8s cluster as %s", batch_v1)
     # Return a configured Kubernetes client
-    return client.BatchV1Api()
+    return batch_v1
 
 
 def core_client():
@@ -192,7 +201,7 @@ def get_job_status(job_name: str, namespace: str, batch_v1=None) -> KubernetesJo
 
     except ApiException as exc:
         if "404" in str(exc):
-            raise KeyError(f"job {job_name} cannot be found by Kubernetes")
+            raise K8SJobNotFound(f"job {job_name} cannot be found by Kubernetes")
         raise
 
 
