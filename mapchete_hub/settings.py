@@ -78,7 +78,7 @@ class MHubSettings(BaseSettings):
     k8s_worker_default_memory_limit: str = "512Mi"
     k8s_worker_default_cpu_limit: str = "1"
     k8s_retry_job_x_times: int = 0
-    k8s_remove_job_after_seconds: int = 0
+    k8s_remove_job_after_seconds: int = 300
     worker_default_image: str = "registry.gitlab.eox.at/maps/mapchete_hub/mhub"
     worker_image_tag: str = __version__
     worker_propagate_env_prefixes: str = "AWS, CPL, DASK, GDAL, MHUB, MAPCHETE, MP, VSI"
