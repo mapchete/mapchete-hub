@@ -13,6 +13,10 @@ class K8SJobNotFound(KeyError):
     pass
 
 
+class K8SJobAlreadyExists(Exception):
+    pass
+
+
 class V1JobCondition(BaseModel):
     # Last time the condition was checked.
     # [optional]

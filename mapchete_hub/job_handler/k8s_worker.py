@@ -12,6 +12,7 @@ import requests
 from mapchete_hub.db.base import BaseStatusHandler
 from mapchete_hub.job_handler.base import JobHandlerBase
 from mapchete_hub.k8s import (
+    K8SJobAlreadyExists,
     K8SJobNotFound,
     KubernetesJobStatus,
     batch_client,
@@ -95,6 +96,9 @@ class KubernetesWorkerJobHandler(JobHandlerBase):
                 submitted_to_k8s=True,
                 k8s_attempts=job_entry.k8s_attempts + 1,
             )
+        except K8SJobAlreadyExists:
+            logger.error("kubernetes job %s already exists", job_entry.job_id)
+            return job_entry
         except Exception as exc:
             observers.notify(status=Status.failed, exception=exc)
             raise
@@ -321,6 +325,10 @@ def create_k8s_job(
             namespace=namespace, body=request_body
         )  # type: ignore
     except Exception as exc:
+        if "AlreadyExists" in str(exc):
+            raise K8SJobAlreadyExists(
+                f"a job with name {job_entry.job_id} already exists on cluster"
+            )
         logger.exception(exc)
         raise RuntimeError(f"could not sent job to kubernetes cluster: {exc}")
 

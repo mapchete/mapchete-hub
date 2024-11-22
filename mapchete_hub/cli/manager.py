@@ -197,16 +197,8 @@ def retry_stalled_jobs(
 def submit_pending_jobs(jobs: List[K8SJobEntry]) -> List[K8SJobEntry]:
     # determine jobs
     currently_running_count = len(running_jobs(jobs))
-    logger.debug("currently %s jobs running", currently_running_count)
-    currently_queued_count = len(queued_jobs(jobs=jobs))
-    logger.debug("currently %s jobs queued", currently_queued_count)
 
     if currently_running_count >= mhub_settings.max_parallel_jobs:
-        logger.info(
-            "%s/%s jobs currently running, nothing to submit",
-            currently_running_count,
-            mhub_settings.max_parallel_jobs,
-        )
         return jobs
 
     # iterate to queued jobs and try to submit them
