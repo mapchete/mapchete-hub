@@ -136,9 +136,10 @@ def batch_client():
         # If not running inside the cluster, fall back to kubeconfig
         logger.debug("In-cluster config failed. Trying kubeconfig:", e)
         logger.debug("Kubeconfig loaded")
-
+    batch_v1 = client.BatchV1Api()
+    logger.debug("Connected to k8s cluster as %s", batch_v1)
     # Return a configured Kubernetes client
-    return client.BatchV1Api()
+    return batch_v1
 
 
 def core_client():

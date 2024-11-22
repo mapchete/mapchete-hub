@@ -271,7 +271,6 @@ def create_k8s_job(
 
     # Set up the Kubernetes client
     batch_v1: client.BatchV1Api = batch_v1_client or batch_client()
-    logger.debug("Connected to k8s cluster as %s", batch_v1)
 
     if pod_env_vars:
         env_list = [
