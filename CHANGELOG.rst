@@ -3,6 +3,18 @@ Changelog
 #########
 
 
+2024.11.5 - 2024-11-21
+----------------------
+
+* core
+
+  * `mhub-manager`: refactored; retry kubernetes jobs if they are stalled
+
+* packaging
+
+  * bump `mapchete_eo` to `2024.11.5`
+
+
 2024.11.4 - 2024-11-21
 ----------------------
 
