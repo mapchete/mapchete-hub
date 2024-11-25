@@ -87,7 +87,7 @@ test_unit:
 
 # build image for mhub
 build_image:
-  image: quay.io/podman/stable 
+  image: quay.io/podman/stable:v4.9.4
   tags:
     - 'privileged'
   stage: build_image
