@@ -3,6 +3,14 @@ Changelog
 #########
 
 
+2024.12.1 - 2024-12-04
+----------------------
+
+* core
+
+  * `mhub-worker`: also run job if it is in retrying status; add log info messages
+
+
 2024.12.0 - 2024-12-03
 ----------------------
 
