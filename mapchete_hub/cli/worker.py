@@ -2,6 +2,7 @@ import logging
 
 import click
 from distributed import LocalCluster
+from mapchete import Timer
 from mapchete.commands.observer import Observers
 from mapchete.enums import Status
 
@@ -53,7 +54,7 @@ def run_job(
             job_entry = backend_db.job(job_id)
             logger.debug("got job %s", job_entry)
             # only attempt to run job if its status is pending
-            if job_entry.status == Status.pending:
+            if job_entry.status in [Status.pending, Status.retrying]:
                 logger.debug("job is in pending status, setting up observers")
 
                 # set up status updater observer
@@ -71,27 +72,30 @@ def run_job(
                 observers = Observers([job_db_updater, job_slack_messenger])
                 logger.debug("observers created: %s", observers)
                 try:
-                    if (
-                        mhub_settings.dask_gateway_url is None
-                        and mhub_settings.dask_scheduler_url is None
-                    ):
-                        logger.debug("initializing LocalCluster ...")
-                        local_cluster = LocalCluster(
-                            processes=False, n_workers=4, threads_per_worker=8
+                    with Timer() as tt:
+                        if (
+                            mhub_settings.dask_gateway_url is None
+                            and mhub_settings.dask_scheduler_url is None
+                        ):
+                            logger.debug("initializing LocalCluster ...")
+                            local_cluster = LocalCluster(
+                                processes=False, n_workers=4, threads_per_worker=8
+                            )
+                        else:
+                            local_cluster = None
+                        job_wrapper(
+                            job_entry,
+                            observers=observers,
+                            local_cluster=local_cluster,
                         )
-                    else:
-                        local_cluster = None
-                    job_wrapper(
-                        job_entry,
-                        observers=observers,
-                        local_cluster=local_cluster,
-                    )
                 except Exception as exc:
                     logger.exception(exc)
                     observers.notify(status=Status.failed, exception=exc)
                     raise
+                finally:
+                    logger.info("job %s ran for %s", job_id, tt)
             else:
-                logger.debug(
+                logger.info(
                     "job %s cannot be run because it is in status %s",
                     job_id,
                     job_entry.status.value,
