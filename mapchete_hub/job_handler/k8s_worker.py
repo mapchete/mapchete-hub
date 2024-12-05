@@ -299,6 +299,7 @@ def create_k8s_job(
         restart_policy="Never",
         image_pull_secrets=[client.V1LocalObjectReference(name=image_pull_secret)],
         service_account_name=service_account_name,
+        active_deadline_seconds=mhub_settings.k8s_worker_active_deadline_seconds,
     )
 
     # Define Pod template spec
