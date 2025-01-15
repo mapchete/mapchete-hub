@@ -33,6 +33,7 @@ dependencies = [
     "pydantic_settings",
     "pymongo",
     "uvicorn",
+    "zarr==2.18.4",
 ]
 
 [project.optional-dependencies]
@@ -53,6 +54,7 @@ complete = [
     "pymongo",
     "slack_sdk",
     "uvicorn",
+    "zarr==2.18.4",
 ]
 kubernetes = [
     "kubernetes",
@@ -69,6 +71,7 @@ test = [
 ]
 xarray = [
     "mapchete_xarray>=2022.10.0",
+    "zarr==2.18.4",
 ]
 eo = [
     "mapchete_eo>=2024.3.4",
