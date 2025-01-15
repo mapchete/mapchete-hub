@@ -3,6 +3,15 @@ Changelog
 #########
 
 
+* CI
+
+  * bump test image to `mapchete:2025.1.1`
+
+* packaging
+
+  * add and freeze `zarr==2.18.4`
+
+
 2025.1.0 -2025-01-07
 --------------------
 
