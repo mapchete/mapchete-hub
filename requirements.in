@@ -6,7 +6,7 @@ dask-gateway==2024.1.0
 dask-gateway-server==2024.1.0
 dask-kubernetes==2024.8.0
 distributed==2024.8.2
-fastapi==0.114.1
+fastapi==0.115.6
 httpx
 jupyter-server-proxy
 kubernetes
