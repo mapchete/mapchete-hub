@@ -10,7 +10,7 @@ Changelog
 * packaging
 
   * add and freeze `zarr==2.18.4`
-  * bump `fastapi` to ``
+  * bump `fastapi` to `0.115.6`
 
 
 2025.1.0 -2025-01-07
