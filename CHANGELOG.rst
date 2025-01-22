@@ -3,6 +3,9 @@ Changelog
 #########
 
 
+2025.1.1 -2025-01-22
+--------------------
+
 * CI
 
   * bump test image to `mapchete:2025.1.1`
@@ -11,6 +14,7 @@ Changelog
 
   * add and freeze `zarr==2.18.4`
   * bump `fastapi` to `0.115.6`
+  * bump `mapchete_eo` to `2025.1.1`
 
 
 2025.1.0 -2025-01-07
