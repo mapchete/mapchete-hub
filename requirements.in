@@ -6,13 +6,13 @@ dask-gateway==2024.1.0
 dask-gateway-server==2024.1.0
 dask-kubernetes==2024.8.0
 distributed==2024.8.2
-fastapi==0.115.6
+fastapi==0.115.7
 httpx
 jupyter-server-proxy
 kubernetes
 lz4
 mapchete==2024.12.0
-mapchete_eo==2025.1.1
+mapchete_eo==2025.1.2
 mapchete_internal_processes==2024.9.4
 mapchete_xarray==2022.10.0
 mongomock
