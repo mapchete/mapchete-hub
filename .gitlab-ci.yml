@@ -1,4 +1,4 @@
-image: registry.gitlab.eox.at/maps/docker-base/mapchete:2025.1.1
+image: registry.gitlab.eox.at/maps/docker-base/mapchete:2025.3.0
 
 stages:
   - codecheck
