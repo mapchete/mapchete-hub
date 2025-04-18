@@ -3,6 +3,20 @@ Changelog
 #########
 
 
+2025.4.1 -2025-04-08
+--------------------
+
+* CI
+
+  * bump build and test image to `mapchete:2025.4.0`
+
+* packaging
+
+  * bump `mapchete` to `2025.4.0`
+  * bump `mapchete_eo` to `2025.4.0`
+  * bump `mapchete_internal_processes` to `2025.4.0`
+
+
 2025.4.0 -2025-04-03
 --------------------
 
