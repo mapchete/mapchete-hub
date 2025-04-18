@@ -3,7 +3,16 @@ Changelog
 #########
 
 
-2025.4.1 -2025-04-08
+2025.4.2 -2025-04-18
+--------------------
+
+* CI
+
+  * bump build image in Dockerfile to `mapchete:2025.4.0`
+  * fix `mapchete_xarray` and `numcodecs` deps in Dockerfile for build
+
+
+2025.4.1 -2025-04-18
 --------------------
 
 * CI
