@@ -27,6 +27,7 @@ dependencies = [
     "dask-gateway",
     "distributed",
     "fastapi",
+    "httpx",
     "mapchete[contours,geobuf,http,s3,vrt]>=2024.2.1",
     "mongomock",
     "pydantic>=2.0.0",
