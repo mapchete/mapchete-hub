@@ -3,6 +3,15 @@ Changelog
 #########
 
 
+2025.4.3 -2025-04-25
+--------------------
+
+* CI
+
+  * bump build image in Dockerfile to `mapchete:2025.4.1` (now runs on Python 3.13)
+  * remove `mapchete_xarray` dependency from build
+
+
 2025.4.2 -2025-04-18
 --------------------
 
