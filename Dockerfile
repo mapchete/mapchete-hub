@@ -1,5 +1,5 @@
 ARG BASE_IMAGE_NAME=mapchete
-ARG BASE_IMAGE_TAG=2025.4.0
+ARG BASE_IMAGE_TAG=2025.4.1
 
 
 # use builder to build python wheels #
@@ -12,62 +12,23 @@ ARG BASE_IMAGE_TAG=2025.4.0
 # If your test branch needs new requirements, add them here under the following pip wheel
 # command. This also applies to dependencies which require building (like jenkspy) which
 # should be added here as build dependencies are not available in the runner stage.
-# FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as builder
-# ARG EOX_PYPI_TOKEN
-
-# ENV BUILD_DIR /usr/local
-# ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
-# ENV WHEEL_DIR /usr/local/wheels
-
-# RUN apt-get update && \
-#     apt-get install --yes --no-install-recommends build-essential gcc g++ git && \
-#     rm -rf /var/lib/apt/lists/* && \
-#     pip install --upgrade pip
-
-# RUN mkdir -p $MHUB_DIR $WHEEL_DIR
-
-# # Build wheels either for packages which need to always be built or for packages which are
-# # under current development and where a specific branch is required.
-# RUN pip install --upgrade pip setuptools wheel && \
-#     pip wheel \
-#     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-#     git+https://github.com/ungarj/mapchete.git@3c03b634b30c5600bdbf323cd75c82665b821c26 \
-#     --wheel-dir $WHEEL_DIR \
-#     --no-deps
-
-# build image using pre-built libraries and wheels #
-####################################################
-FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} as runner
-ARG BASE_IMAGE_NAME
+FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} AS builder
 ARG EOX_PYPI_TOKEN
 
-ENV C_FORCE_ROOT "yes"
-ENV GML_SKIP_CORRUPTED_FEATURES YES
-ENV BUILD_DIR /usr/local
-ENV MHUB_DIR $BUILD_DIR/src/mapchete_hub
-ENV WHEEL_DIR /usr/local/wheels
+ENV BUILD_DIR=/usr/local
+ENV MHUB_DIR=$BUILD_DIR/src/mapchete_hub
 
 RUN apt-get update && \
-    apt-get install --yes htop && \
-    rm -rf /var/lib/apt/lists/*
-
-# get wheels from builder
-# COPY --from=builder $WHEEL_DIR $WHEEL_DIR
+    apt-get install --yes --no-install-recommends build-essential gcc g++ git && \
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip pip-tools
 
 # get requirements from mhub
 COPY pypi_dont_update.sh $MHUB_DIR/
 COPY requirements.in $MHUB_DIR/
 
-# install wheels first and then everything else
-RUN pip install --upgrade pip && \
-    # pip uninstall -y numcodecs && \
-    # install previously built wheels
-    # pip install \
-    # --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-    # --force-reinstall \
-    # $WHEEL_DIR/*.whl && \
-    # this is important so pip won't update our precious precompiled packages:
-    ./$MHUB_DIR/pypi_dont_update.sh \
+# this is important so pip won't update our precious precompiled packages:
+RUN ./$MHUB_DIR/pypi_dont_update.sh \
     affine \
     aiobotocore \
     aiohttp \
@@ -77,7 +38,7 @@ RUN pip install --upgrade pip && \
     dask-gateway-server \
     fiona \
     fsspec \
-    gdal \
+    GDAL \
     mapchete \
     numcodecs \
     numpy \
@@ -90,18 +51,34 @@ RUN pip install --upgrade pip && \
     tqdm \
     tilematrix \
     zipp \
-    >> ${MHUB_DIR}/requirements.in && \
-    cat $MHUB_DIR/requirements.in && \
-    pip install pip-tools && \
-    pip-compile \
+    >> ${MHUB_DIR}/requirements.in
+RUN cat $MHUB_DIR/requirements.in
+RUN pip-compile \
     -v \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-    $MHUB_DIR/requirements.in -o $MHUB_DIR/requirements.txt && \
-    pip install \
+    $MHUB_DIR/requirements.in -o $MHUB_DIR/combined_requirements.txt
+RUN cat $MHUB_DIR/combined_requirements.txt
+
+# build image using pre-built libraries and wheels #
+####################################################
+FROM registry.gitlab.eox.at/maps/docker-base/${BASE_IMAGE_NAME}:${BASE_IMAGE_TAG} AS runner
+ARG BASE_IMAGE_NAME
+ARG EOX_PYPI_TOKEN
+
+ENV C_FORCE_ROOT="yes"
+ENV GML_SKIP_CORRUPTED_FEATURES=YES
+ENV BUILD_DIR=/usr/local
+ENV MHUB_DIR=$BUILD_DIR/src/mapchete_hub
+
+RUN apt-get update && \
+    apt-get install --yes htop && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder $MHUB_DIR/combined_requirements.txt $MHUB_DIR/combined_requirements.txt
+
+RUN pip install \
     --extra-index-url https://__token__:${EOX_PYPI_TOKEN}@gitlab.eox.at/api/v4/projects/255/packages/pypi/simple \
-    -r $MHUB_DIR/requirements.txt && \
-    pip uninstall -y pip-tools && \
-    rm -r $WHEEL_DIR
+    -r $MHUB_DIR/combined_requirements.txt
 
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR

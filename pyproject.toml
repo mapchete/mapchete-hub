@@ -33,13 +33,12 @@ dependencies = [
     "pydantic_settings",
     "pymongo",
     "uvicorn",
-    "zarr==2.18.4",
+    "zarr",
 ]
 
 [project.optional-dependencies]
 complete = [
     "bokeh",
-    "blosc",
     "dask",
     "dask-gateway",
     "distributed",
@@ -47,14 +46,15 @@ complete = [
     "kubernetes",
     "mapchete[contours,geobuf,http,s3,vrt]>=2024.2.1",
     "mapchete_eo>=2024.10.3",
-    "mapchete_xarray>=2022.5.0",
+    #"mapchete_xarray>=2022.5.0",
     "mongomock",
+    "numcodecs",
     "pydantic>=2.0.0",
     "pydantic_settings",
     "pymongo",
     "slack_sdk",
     "uvicorn",
-    "zarr==2.18.4",
+    "zarr",
 ]
 kubernetes = [
     "kubernetes",
@@ -63,6 +63,7 @@ slack = [
     "slack_sdk",
 ]
 test = [
+    "httpx",
     "pytest",
     "pytest-cov",
     "pytest-env",
@@ -70,8 +71,9 @@ test = [
     "requests",
 ]
 xarray = [
-    "mapchete_xarray>=2022.10.0",
-    "zarr==2.18.4",
+    #"mapchete_xarray>=2022.10.0",
+    "xarray",
+    "zarr",
 ]
 eo = [
     "mapchete_eo>=2024.3.4",

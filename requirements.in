@@ -1,6 +1,5 @@
 aiohttp
 bokeh
-blosc
 dask==2024.8.2
 dask-gateway==2024.1.0
 dask-gateway-server==2024.1.0
@@ -14,13 +13,14 @@ lz4
 mapchete==2025.4.0
 mapchete_eo==2025.4.0
 mapchete_internal_processes==2025.4.0
-mapchete_xarray==2023.6.0
+#mapchete_xarray==2023.6.0
 mongomock
-orgonite==2023.10.0
+orgonite==2025.4.0
 prometheus-client
 pydantic>=2.0.0
 pymongo
 slack_sdk
 sqlalchemy
 uvicorn
-zarr==2.18.4
+xarray
+zarr
