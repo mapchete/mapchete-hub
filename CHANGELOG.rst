@@ -3,6 +3,26 @@ Changelog
 #########
 
 
+2025.4.4 -2025-04-28
+--------------------
+
+* CI
+
+  * bump build image in Dockerfile to `mapchete:2025.4.2` (using NumPy 2.2.5)
+
+* packaging
+
+  * bump `dask` to `2025.4.1`
+  * bump `dask-gateway` to `2025.4.0`
+  * bump `dask-gateway-server` to `2025.4.0`
+  * bump `dask-kubernetes` to `2025.4.3`
+  * bump `distributed` to `2025.4.1`
+  * bump `fastapi` to `0.115.12`
+  * bump `mapchete_internal_processes` to `2025.4.1`
+  * bump `zarr` to `3.0.7`
+  * add `httpx` to dependencies
+
+
 2025.4.3 -2025-04-25
 --------------------
 
