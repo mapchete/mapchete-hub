@@ -22,5 +22,4 @@ pymongo
 slack_sdk
 sqlalchemy
 uvicorn
-xarray
-zarr
+zarr==3.0.7
