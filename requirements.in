@@ -12,7 +12,7 @@ kubernetes
 lz4
 mapchete==2025.4.0
 mapchete_eo==2025.4.0
-mapchete_internal_processes==2025.4.0
+mapchete_internal_processes==2025.4.1
 #mapchete_xarray==2023.6.0
 mongomock
 orgonite==2025.4.0
