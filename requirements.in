@@ -1,11 +1,11 @@
 aiohttp
 bokeh
-dask==2024.8.2
-dask-gateway==2024.1.0
-dask-gateway-server==2024.1.0
-dask-kubernetes==2024.8.0
-distributed==2024.8.2
-fastapi==0.115.7
+dask==2025.4.1
+dask-gateway==2025.4.0
+dask-gateway-server==2025.4.0
+dask-kubernetes==2025.4.3
+distributed==2025.4.1
+fastapi==0.115.12
 httpx
 jupyter-server-proxy
 kubernetes
@@ -22,5 +22,4 @@ pymongo
 slack_sdk
 sqlalchemy
 uvicorn
-xarray
-zarr
+zarr==3.0.7

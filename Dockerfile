@@ -40,7 +40,7 @@ RUN ./$MHUB_DIR/pypi_dont_update.sh \
     fsspec \
     GDAL \
     mapchete \
-    numcodecs \
+    # numcodecs \
     numpy \
     psutil \
     rasterio \
