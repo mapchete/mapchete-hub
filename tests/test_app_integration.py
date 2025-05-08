@@ -106,6 +106,7 @@ def test_post_job_custom_process(test_process_id, example_config_custom_process_
     response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}")
     assert response.status_code == 200
     assert response.json()["properties"]["status"] in [
+        "pending",
         "parsing",
         "initializing",
         "running",
