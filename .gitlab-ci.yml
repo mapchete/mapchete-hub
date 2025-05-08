@@ -1,4 +1,4 @@
-image: registry.gitlab.eox.at/maps/docker-base/mapchete:python_3.13
+image: registry.gitlab.eox.at/maps/docker-base/mapchete:2025.5.0
 
 stages:
   - codecheck
