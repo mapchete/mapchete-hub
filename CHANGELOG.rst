@@ -11,6 +11,7 @@ Changelog
 
 * packaging
 
+  * bump `mapchete` to `2025.5.1`
   * bump `mapchete_internal_processes` to `2025.5.2`
 
 

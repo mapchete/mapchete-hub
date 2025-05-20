@@ -10,7 +10,7 @@ httpx
 jupyter-server-proxy
 kubernetes
 lz4
-mapchete==2025.5.0
+mapchete==2025.5.1
 mapchete_eo==2025.5.0
 mapchete_internal_processes==2025.5.2
 #mapchete_xarray==2023.6.0
