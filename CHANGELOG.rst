@@ -2,6 +2,21 @@
 Changelog
 #########
 
+2025.5.2 - 2025-05-20
+---------------------
+
+* CI
+
+  * bump build image in Dockerfile to `mapchete:2025.5.1` as well as test CI images
+
+* packaging
+
+  * bump `dask` to `2025.5.0`
+  * bump `distributed` to `2025.5.0`
+  * bump `mapchete` to `2025.5.1`
+  * bump `mapchete_internal_processes` to `2025.5.2`
+
+
 2025.5.1 -2025-05-19
 --------------------
 
