@@ -2,6 +2,15 @@
 Changelog
 #########
 
+2025.5.3 - 2025-05-22
+---------------------
+
+* packaging
+
+  * bump `mapchete_internal_processes` to `2025.5.3`
+  * set `Programming Language` in `pyproject.toml` to: `3.10`, `3.11`, `3.12`, `3.13`
+
+
 2025.5.2 - 2025-05-20
 ---------------------
 
