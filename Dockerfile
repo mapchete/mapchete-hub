@@ -1,20 +1,30 @@
-FROM ghcr.io/osgeo/gdal:ubuntu-small-3.11.3 AS runner
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.11.3 AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 ENV GML_SKIP_CORRUPTED_FEATURES=YES
 ENV BUILD_DIR=/usr/local
 ENV MHUB_DIR=$BUILD_DIR/src/mapchete_hub
-ENV UV_NO_CACHE=true
+# Set environment variables for uv and Python
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-RUN ls
+WORKDIR $MHUB_DIR
 
-COPY requirements.in $MHUB_DIR/
-RUN uv venv
-RUN uv pip install -r $MHUB_DIR/requirements.in
+COPY pyproject.toml uv.lock $MHUB_DIR/
 
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR
 
-RUN uv pip install --editable $MHUB_DIR/
+# RUN --mount=type=cache,target=/root/.cache/uv \
+#     uv sync --locked --no-install-project --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev
 
-WORKDIR $MHUB_DIR
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.11.3 AS runner
+ENV BUILD_DIR=/usr/local
+ENV MHUB_DIR=$BUILD_DIR/src/mapchete_hub
+
+COPY --from=builder /$MHUB_DIR /$MHUB_DIR
+ENV PATH="/${MHUB_DIR}/.venv/bin:${PATH}"

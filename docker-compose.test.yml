@@ -5,12 +5,9 @@ services:
   mhub_tester:
     build:
       context: .
-      args:
-        BASE_IMAGE_NAME: "${BASE_IMAGE_NAME:-mapchete}"
-        EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     environment:
       - MHUB_HOST=http://server:${MHUB_PORT:-5000}
-    command: /bin/bash -c "echo $MHUB_HOST; sleep 5; pip install -r requirements_test.txt && python -m pytest -v --cov=mapchete_hub tests/test_app_integration.py && coverage report"
+    command: /bin/bash -c "echo $MHUB_HOST; sleep 5; uv pip install --extra test -r pyproject.toml && python -m pytest -v --cov=mapchete_hub tests/test_app_integration.py && coverage report"
     networks:
       - backend
 

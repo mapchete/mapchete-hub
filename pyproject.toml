@@ -29,7 +29,7 @@ dependencies = [
     "distributed",
     "fastapi",
     "httpx",
-    "mapchete[contours,geobuf,http,s3,vrt]>=2024.2.1",
+    "mapchete[contours,http,s3,vrt]>=2024.2.1",
     "mongomock",
     "pydantic>=2.0.0",
     "pydantic_settings",
@@ -47,7 +47,7 @@ complete = [
     "distributed",
     "fastapi",
     "kubernetes",
-    "mapchete[contours,geobuf,http,s3,vrt]>=2024.2.1",
+    "mapchete[contours,http,s3,vrt]>=2024.2.1",
     #"mapchete_eo>=2024.10.3",
     "mongomock",
     "numcodecs",
@@ -77,9 +77,9 @@ xarray = [
     "xarray",
     "zarr",
 ]
-eo = [
-    "mapchete_eo>=2024.3.4",
-]
+# eo = [
+#     "mapchete_eo>=2024.3.4",
+# ]
 
 [project.scripts]
 mhub-manager = "mapchete_hub.cli.manager:main"
