@@ -87,7 +87,7 @@ mhub-server = "mapchete_hub.cli.server:main"
 mhub-worker = "mapchete_hub.cli.worker:main"
 
 [project.urls]
-Homepage = "https://gitlab.eox.at/maps/mapchete_hub"
+Homepage = "https://github.com/mapchete/mapchete-hub"
 
 [tool.hatch.version]
 path = "mapchete_hub/__init__.py"
