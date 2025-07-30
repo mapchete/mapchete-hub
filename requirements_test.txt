@@ -1,6 +1,0 @@
-anyio==3.7.1
-pytest
-pytest-cov
-pytest-env
-pytest-mongodb
-requests
