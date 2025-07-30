@@ -7,7 +7,7 @@ db.mhub.createIndex({"timestamp": 1})
 db.createUser(
     {
         "user" : "mhub",
-        "pwd" : "REDACTED_API_KEY",
+        "pwd" : "foo",
         "roles" : [
             {
                 "role" : "dbOwner",

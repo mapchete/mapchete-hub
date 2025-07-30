@@ -8,7 +8,7 @@ services:
       - backend
     environment:
       - MONGO_INITDB_ROOT_USERNAME=mhub
-      - MONGO_INITDB_ROOT_PASSWORD=REDACTED_API_KEY
+      - MONGO_INITDB_ROOT_PASSWORD=foo
       # https://github.com/docker-library/mongo/issues/329
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
     volumes:
@@ -20,9 +20,6 @@ services:
   server:
     build:
       context: .
-      args:
-        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME:-mapchete}
-        EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     depends_on:
       - db
       - dask_scheduler
@@ -31,7 +28,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REQUEST_PAYER=${AWS_REQUEST_PAYER}
       - MHUB_DASK_SCHEDULER_URL=tcp://dask_scheduler:8786
-      - MHUB_BACKEND_DB=mongodb://mhub:REDACTED_API_KEY@db:27017
+      - MHUB_BACKEND_DB=mongodb://mhub:foo@db:27017
       - MHUB_ADD_MAPCHETE_LOGGER=true
     networks:
       - backend
@@ -52,9 +49,6 @@ services:
   dask_scheduler:
     build:
       context: .
-      args:
-        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME:-mapchete}
-        EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     networks:
       - backend
     command:
@@ -69,9 +63,6 @@ services:
   dask_worker:
     build:
       context: .
-      args:
-        BASE_IMAGE_NAME: ${BASE_IMAGE_NAME:-mapchete}
-        EOX_PYPI_TOKEN: ${EOX_PYPI_TOKEN}
     depends_on:
       - dask_scheduler
     networks:
