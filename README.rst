@@ -1,144 +1,121 @@
-============
-mapchete Hub
-============
+.. image:: logo/mapchete_hub_grey.svg
 
 Distributed mapchete processing.
 
-.. image:: https://gitlab.eox.at/maps/mapchete_hub/badges/master/pipeline.svg
-    :target: https://gitlab.eox.at/maps/mapchete_hub/commits/master
+.. |PyPI version| image:: https://img.shields.io/pypi/v/mapchete-hub.svg
+   :target: https://pypi.org/project/mapchete-hub/
+   :alt: PyPI version
+.. |Build Status| image:: https://github.com/mapchete/mapchete-hub/actions/workflows/python-package.yml/badge.svg
+   :target: https://github.com/mapchete/mapchete-hub/actions
+   :alt: Build Status
+.. |PyPI license| image:: https://img.shields.io/pypi/l/mapchete.svg
+   :target: https://github.com/mapchete/mapchete-hub/blob/main/LICENSE
+   :alt: PyPI license
 
-.. image:: https://gitlab.eox.at/maps/mapchete_hub/badges/master/coverage.svg
-    :target: https://gitlab.eox.at/maps/mapchete_hub/commits/master
-
-
-Mapchete Hub executes mapchete processes asynchronously in the cloud. The process management interface is a REST api. To submit and observe jobs, there is a command line tool available as a separate package.
-
------
-Usage
------
-
-A fully functional mapchete Hub instance needs the following services:
-
-* mhub server
-* mongodb
-* either a dask scheduler with one or more dask workers or a dask gateway providing a dask cluster upon request
-
-Please consult the ``docker-compose.yml`` file to gather details.
-
-A mapchete process can be used in mapchete Hub if its inputs and outputs are not locally stored as we cannot be sure on which worker (or host) the process will run.
+|PyPI version| |Build Status| |PyPI license|
 
 
-Set up modes
+About mapchete Hub
+==================
+
+**mapchete Hub** provides a RESTful web interface to the **mapchete** geospatial data processing engine. Its API is inspired by the **OGC API - Processes** standard and allows you to execute, manage, and scale your processing jobs over HTTP.
+
+The main use cases for the Hub are running processing jobs asynchronously and scaling them up in the background, potentially using Dask for distributed computing.
+
+
+Key Features
+============
+
+* 🌐 **OGC API - Processes inspired**: A REST API for submitting jobs, monitoring their status, and retrieving results.
+* ⚙️ **Advanced Job Monitoring**: Inspect detailed job states (``pending``, ``running``, ``failed``, ``success``) and view the overall progress percentage for currently running jobs.
+* 🚀 **Scalable Execution**: Can be configured to use Dask for distributed, parallel execution of jobs.
+* 💬 **Slack Notifications**: Optionally sends job status updates directly to a configured Slack channel.
+* 🐳 **Container-Ready**: Designed to be deployed in containerized environments like Docker, making it easy to scale your processing capabilities.
+
+
+How It Works
+============
+
+1.  **Serve**: Start the **mapchete Hub** server. It listens for incoming job requests.
+2.  **Prepare Job**: A client application prepares a job configuration as a JSON object that follows the `MapcheteJob schema <https://github.com/mapchete/mapchete-hub/blob/main/mapchete_hub/models.py#L29>`_.
+3.  **Submit**: The client ``POST``\s the JSON configuration to the ``/jobs`` endpoint. The Hub validates it and returns a unique ``job_id``.
+4.  **Monitor**: The client uses the ``job_id`` to poll the ``/jobs/{job_id}`` endpoint to track the job's status and progress.
+5.  **Retrieve**: Once the job is successful, the results can be accessed from the location defined in the job's output configuration.
+
+
+Getting Started
+===============
+
+Installation
 ------------
 
-Easy try out mode
-~~~~~~~~~~~~~~~~~
+Install **mapchete Hub** and its dependencies from PyPI:
 
-```bash
-$ mhub-server start
-```
+.. code-block:: bash
 
-The most straight-forward variation is to run everything in one process. The command above will use an internal memory "database" which will be gone after the server process ends. It will also create a dask `LocalCluster` to do the actual processing. It will not scale and everything will run on your machine which, depending on the size of the job, won't run successfully.
+   pip install mapchete-hub
 
+Running the Server
+------------------
 
+To start the server, simply run the following command:
 
+.. code-block:: bash
 
-Configuration options
----------------------
+   mhub-server start
 
-MHUB_ADD_MAPCHETE_LOGGER
-~~~~~~~~~~~~~~~~~~~~~~~~
+The API documentation will be available at ``http://127.0.0.1:8000/docs``.
 
-Add mapchete logger to log output.
+Interacting with the Hub
+------------------------
 
-MHUB_BACKEND_CRS
-~~~~~~~~~~~~~~~~
+While you can use tools like `curl`, the easiest way to interact with the Hub is by using the `mapchete-hub-cli <https://github.com/mapchete/mapchete-hub-cli>`_ package.
 
-CRS used to store job geometries (default: `EPSG:4326`).
+First, install the client:
+.. code-block:: bash
 
-MHUB_MONGODB_URL
-~~~~~~~~~~~~~~~~
+   pip install mapchete-hub-cli
 
-URL to MongoDB instance used as backend to store job metadata, e.g.: `mongodb://mhub:REDACTED_API_KEY@mongodb:27017`
+Next, create a job configuration file, for example `my_job.json`:
 
-MHUB_DASK_GATEWAY_URL
-~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: json
 
-URL to dask gateway if available.
+   {
+     "process": "mapchete.processes.examples.hillshade",
+     "zoom_levels": [
+       10
+     ],
+     "pyramid": {
+       "grid": "geodetic"
+     },
+     "input": {
+       "dem": "https://storage.googleapis.com/mapchete-test-data/cleantopo2/dem.tif"
+     },
+     "output": {
+       "path": "./hillshade_output",
+       "format": "GTiff",
+       "dtype": "uint8",
+       "bands": 1
+     }
+   }
 
-MHUB_DASK_ADAPTIVE_SCALING
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Now, use the CLI to submit the job and check its status:
 
-Activate adaptive cluster scaling. (default: True)
+.. code-block:: bash
 
-MHUB_DASK_SCHEDULER_URL
-~~~~~~~~~~~~~~~~~~~~~~~
+   # Submit the job
+   mhub-cli submit my_job.json
 
-URL to dask scheduler if available.
-
-MHUB_IMAGE_TAG
-~~~~~~~~~~~~~~
-
-Image tag to be used when spawning new workers using dask gateway. (default: current mhub version)
-
-MHUB_SCHEDULER_CORES
-~~~~~~~~~~~~~~~~~~~~
-
-Number of CPU cores of new scheduler spawned by dask gateway. (default: 1)
-
-MHUB_SCHEDULER_MEMORY
-~~~~~~~~~~~~~~~~~~~~~
-
-RAM of new scheduler spawned by dask gateway. (default: 2)
-
-MHUB_SELF_INSTANCE_NAME
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Instance name used for Slack messages.
-
-MHUB_SELF_URL
-~~~~~~~~~~~~~
-
-Instance root URL.
-
-MHUB_WORKER_CORES
-~~~~~~~~~~~~~~~~~
-
-Number of CPU cores of new worker spawned by dask gateway. (default: 1)
-
-MHUB_WORKER_MEMORY
-~~~~~~~~~~~~~~~~~~
-
-RAM of new scheduler spawned by dask gateway. (default: 2)
-
-MHUB_WORKER_EVENT_RATE_LIMIT
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Limit frequency in seconds to send job updates to metadatabase. This eases the DB traffic especially for jobs with short running tasks. (default: 0.2)
-
-------
-Docker
-------
-
-Build and upload mhub image
----------------------------
-
-All required mhub services use the mhub base image: ``registry.gitlab.eox.at/maps/mapchete_hub/mhub``
+   # The command will return a job_id. Use it to check the status:
+   mhub-cli status <your_job_id>
 
 
-.. code-block:: shell
+Contributing
+============
 
-    # this will create an image named registry.gitlab.eox.at/maps/mapchete_hub/mhub:<name_of_current_git_branch>
-    ./docker-build.sh
-    # to use a custom image tag, pass it on to the script:
-    ./docker-build.sh 0.3
+**mapchete Hub** is an open-source project and we welcome contributions! Please see the `Contributing Guide <https://github.com/mapchete/mapchete/blob/main/CONTRIBUTING.md>`_ in the main ``mapchete`` repository for guidelines on how to get started.
 
+Acknowledgements
+================
 
-License
--------
-
-MIT License
-
-Copyright (c) 2018 - 2024 `EOX IT Services`_
-
-.. _`EOX IT Services`: https://eox.at/
+The initial development of **mapchete Hub** was made possible with the resources and support of `EOX IT Services GmbH <https://eox.at/>`_.
