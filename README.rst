@@ -5,7 +5,7 @@ Distributed mapchete processing.
 .. |PyPI version| image:: https://img.shields.io/pypi/v/mapchete-hub.svg
    :target: https://pypi.org/project/mapchete-hub/
    :alt: PyPI version
-.. |Build Status| image:: https://github.com/ungarj/mapchete-hub/actions/workflows/python-package.yml/badge.svg
+.. |Build Status| image:: https://github.com/mapchete/mapchete-hub/actions/workflows/python-package.yml/badge.svg
    :target: https://github.com/mapchete/mapchete-hub/actions
    :alt: Build Status
 .. |PyPI license| image:: https://img.shields.io/pypi/l/mapchete.svg
