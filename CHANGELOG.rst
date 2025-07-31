@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2025.7.0 - 2025-07-31
+---------------------
+
+* packaging
+
+  * first PyPI release after migrating to GitHub
+
+
 2025.5.3 - 2025-05-22
 ---------------------
 
