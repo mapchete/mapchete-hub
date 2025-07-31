@@ -15,9 +15,6 @@ Distributed mapchete processing.
 |PyPI version| |Build Status| |PyPI license|
 
 
-About mapchete Hub
-==================
-
 **mapchete Hub** provides a RESTful web interface to the **mapchete** geospatial data processing engine. Its API is inspired by the **OGC API - Processes** standard and allows you to execute, manage, and scale your processing jobs over HTTP.
 
 The main use cases for the Hub are running processing jobs asynchronously and scaling them up in the background, potentially using Dask for distributed computing.
