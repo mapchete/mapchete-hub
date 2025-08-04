@@ -11,6 +11,9 @@ Distributed mapchete processing.
 .. |PyPI license| image:: https://img.shields.io/pypi/l/mapchete.svg
    :target: https://github.com/mapchete/mapchete-hub/blob/main/LICENSE
    :alt: PyPI license
+.. |Code Coverage| image:: https://codecov.io/gh/mapchete/mapchete-hub/graph/badge.svg?token=VD1YOF3QA2
+   :target: https://codecov.io/gh/mapchete/mapchete-hub
+   :alt: Code Coverage
 
 |PyPI version| |Build Status| |PyPI license|
 
