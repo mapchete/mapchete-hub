@@ -2,23 +2,22 @@
 
 Distributed mapchete processing.
 
-.. |PyPI version| image:: https://img.shields.io/pypi/v/mapchete-hub.svg
+.. image:: https://img.shields.io/pypi/v/mapchete-hub.svg
    :target: https://pypi.org/project/mapchete-hub/
-   :alt: PyPI version
-.. |Build Status| image:: https://github.com/mapchete/mapchete-hub/actions/workflows/python-package.yml/badge.svg
-   :target: https://github.com/mapchete/mapchete-hub/actions
-   :alt: Build Status
-.. |PyPI license| image:: https://img.shields.io/pypi/l/mapchete.svg
+
+.. image:: https://img.shields.io/pypi/l/mapchete-hub.svg
    :target: https://github.com/mapchete/mapchete-hub/blob/main/LICENSE
-   :alt: PyPI license
-.. |Code Coverage| image:: https://codecov.io/gh/mapchete/mapchete-hub/graph/badge.svg?token=VD1YOF3QA2
+
+.. image:: https://github.com/mapchete/mapchete-hub/actions/workflows/python-package.yml/badge.svg
+   :target: https://github.com/mapchete/mapchete-hub/actions
+
+.. image:: https://codecov.io/gh/mapchete/mapchete-hub/graph/badge.svg?token=VD1YOF3QA2
    :target: https://codecov.io/gh/mapchete/mapchete-hub
-   :alt: Code Coverage
 
-|PyPI version| |Build Status| |PyPI license|
+.. image:: https://img.shields.io/github/repo-size/mapchete/mapchete-hub
+   :alt: GitHub repo size
 
-
-**mapchete Hub** provides a RESTful web interface to the **mapchete** geospatial data processing engine. Its API is inspired by the **OGC API - Processes** standard and allows you to execute, manage, and scale your processing jobs over HTTP.
+mapchete Hub provides a RESTful web interface to the mapchete geospatial data processing engine. Its API is inspired by the **OGC API - Processes** standard and allows you to execute, manage, and scale your processing jobs over HTTP.
 
 The main use cases for the Hub are running processing jobs asynchronously and scaling them up in the background, potentially using Dask for distributed computing.
 
@@ -36,7 +35,7 @@ Key Features
 How It Works
 ============
 
-1.  **Serve**: Start the **mapchete Hub** server. It listens for incoming job requests.
+1.  **Serve**: Start the mapchete Hub server. It listens for incoming job requests.
 2.  **Prepare Job**: A client application prepares a job configuration as a JSON object that follows the `MapcheteJob schema <https://github.com/mapchete/mapchete-hub/blob/main/mapchete_hub/models.py#L29>`_.
 3.  **Submit**: The client ``POST``\s the JSON configuration to the ``/jobs`` endpoint. The Hub validates it and returns a unique ``job_id``.
 4.  **Monitor**: The client uses the ``job_id`` to poll the ``/jobs/{job_id}`` endpoint to track the job's status and progress.
@@ -49,7 +48,7 @@ Getting Started
 Installation
 ------------
 
-Install **mapchete Hub** and its dependencies from PyPI:
+Install mapchete Hub and its dependencies from PyPI:
 
 .. code-block:: bash
 
@@ -113,9 +112,9 @@ Now, use the CLI to submit the job and check its status:
 Contributing
 ============
 
-**mapchete Hub** is an open-source project and we welcome contributions! Please see the `Contributing Guide <https://github.com/mapchete/mapchete/blob/main/CONTRIBUTING.md>`_ in the main ``mapchete`` repository for guidelines on how to get started.
+mapchete Hub is an open-source project and we welcome contributions! Please see the `Contributing Guide <https://github.com/mapchete/mapchete/blob/main/CONTRIBUTING.md>`_ in the main ``mapchete`` repository for guidelines on how to get started.
 
 Acknowledgements
 ================
 
-The initial development of **mapchete Hub** was made possible with the resources and support of `EOX IT Services GmbH <https://eox.at/>`_.
+The initial development of mapchete Hub was made possible with the resources and support of `EOX IT Services GmbH <https://eox.at/>`_.
