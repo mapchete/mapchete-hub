@@ -3,19 +3,19 @@
 Distributed mapchete processing.
 
 .. image:: https://img.shields.io/pypi/v/mapchete-hub.svg
-   :target: https://pypi.org/project/mapchete-hub/
+  :target: https://pypi.org/project/mapchete-hub/
 
 .. image:: https://img.shields.io/pypi/l/mapchete-hub.svg
-   :target: https://github.com/mapchete/mapchete-hub/blob/main/LICENSE
+  :target: https://github.com/mapchete/mapchete-hub/blob/main/LICENSE
 
-.. image:: https://github.com/mapchete/mapchete-hub/actions/workflows/python-package.yml/badge.svg
-   :target: https://github.com/mapchete/mapchete-hub/actions
+.. image:: https://img.shields.io/github/actions/workflow/status/mapchete/mapchete-hub/python-package.yml?label=tests
+  :target: https://github.com/mapchete/mapchete-hub/actions
 
 .. image:: https://codecov.io/gh/mapchete/mapchete-hub/graph/badge.svg?token=VD1YOF3QA2
-   :target: https://codecov.io/gh/mapchete/mapchete-hub
+  :target: https://codecov.io/gh/mapchete/mapchete-hub
 
 .. image:: https://img.shields.io/github/repo-size/mapchete/mapchete-hub
-   :alt: GitHub repo size
+  :target: https://github.com/mapchete/mapchete-hub
 
 mapchete Hub provides a RESTful web interface to the mapchete geospatial data processing engine. Its API is inspired by the **OGC API - Processes** standard and allows you to execute, manage, and scale your processing jobs over HTTP.
 
