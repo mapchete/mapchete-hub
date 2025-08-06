@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2025.8.0 - 2025-08-06
+---------------------
+
+* packaging
+
+  * automatically build and push images to registry: ghcr.io/mapchete/mapchete-hub
+
+
 2025.7.0 - 2025-07-31
 ---------------------
 
