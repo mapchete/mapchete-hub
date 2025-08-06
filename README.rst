@@ -1,4 +1,4 @@
-.. image:: logo/mapchete_hub_grey.svg
+.. image:: https://github.com/mapchete/mapchete-hub/blob/main/logo/mapchete_hub_grey.svg
 
 Distributed mapchete processing.
 
