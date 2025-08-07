@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mapchete-hub"
 dynamic = ["version"]
-description = "distributed mapchete processing"
+description = "Distributed mapchete processing."
 readme = "README.rst"
 license = "MIT"
 authors = [
@@ -48,7 +48,6 @@ complete = [
     "fastapi",
     "kubernetes",
     "mapchete[contours,http,s3,vrt]>=2024.2.1",
-    #"mapchete_eo>=2024.10.3",
     "mongomock",
     "numcodecs",
     "pydantic>=2.0.0",
@@ -72,14 +71,6 @@ test = [
     "pytest-mongodb",
     "requests",
 ]
-xarray = [
-    #"mapchete_xarray>=2022.10.0",
-    "xarray",
-    "zarr",
-]
-# eo = [
-#     "mapchete_eo>=2024.3.4",
-# ]
 
 [project.scripts]
 mhub-manager = "mapchete_hub.cli.manager:main"
