@@ -39,23 +39,35 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-complete = [
+deployment = [
+    "aiohttp",
     "bokeh",
     "click<=8.1.3",
-    "dask",
-    "dask-gateway",
-    "distributed",
-    "fastapi",
+    "dask==2025.5.0",
+    "dask-gateway==2025.4.0",
+    "dask-gateway-server==2025.4.0",
+    "dask-kubernetes==2025.4.3",
+    "distributed==2025.5.0",
+    "fastapi==0.115.12",
+    "fiona==1.10.1",
+    "httpx",
+    "jupyter-server-proxy",
     "kubernetes",
-    "mapchete[contours,http,s3,vrt]>=2024.2.1",
+    "lz4",
+    "mapchete[contours,http,s3,vrt]==2025.6.0",
+    "mapchete-eo==2025.8.0",
     "mongomock",
-    "numcodecs",
+    "numcodecs==0.16.0",
+    "numpy==2.2.5",
+    "prometheus-client",
     "pydantic>=2.0.0",
-    "pydantic_settings",
     "pymongo",
+    "rasterio==1.4.3",
+    "shapely==2.1.0",
     "slack_sdk",
+    "sqlalchemy",
     "uvicorn",
-    "zarr",
+
 ]
 kubernetes = [
     "kubernetes",
