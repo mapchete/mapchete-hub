@@ -28,5 +28,5 @@ jobs:
           tags: pr-check-${{ github.event.number }}
 
       # You can add additional steps here to test the built image
-      # - name: Run tests on the container
-      #   run: docker run --rm pr-check-${{ github.event.number }} your-test-command
+      - name: Run tests on the container
+        run: docker run --rm pr-check-${{ github.event.number }} mhub-server --help

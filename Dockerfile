@@ -20,7 +20,7 @@ COPY . $MHUB_DIR
 
 # RUN --mount=type=cache,target=/root/.cache/uv \
 #     uv sync --locked --no-install-project --no-dev
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev --extra deployment
 
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.11.3 AS runner
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/

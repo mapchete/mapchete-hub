@@ -37,9 +37,6 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Create a tag for the Git version tag (e.g., v1.2.3)
-            type=ref,event=tag
-
             # Create a tag for the branch name (e.g., main)
             type=ref,event=branch
 
