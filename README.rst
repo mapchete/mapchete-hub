@@ -5,6 +5,9 @@ Distributed mapchete processing.
 .. image:: https://img.shields.io/pypi/v/mapchete-hub.svg
   :target: https://pypi.org/project/mapchete-hub/
 
+.. image:: https://img.shields.io/conda/v/conda-forge/mapchete-hub
+  :target: https://anaconda.org/conda-forge/mapchete-hub
+
 .. image:: https://img.shields.io/pypi/l/mapchete-hub.svg
   :target: https://github.com/mapchete/mapchete-hub/blob/main/LICENSE
 
