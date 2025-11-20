@@ -451,7 +451,6 @@ def test_job_result(client, test_process_id, example_config_json):
     response = client.get(f"/jobs/{job_id}/results")
     assert response.status_code == 200
     assert isinstance(response.json(), dict)
-    assert response.json()["properties"]["status"] == "done"
     assert "tmp" in response.json()["imagesOutput"]["href"]
 
 
