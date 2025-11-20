@@ -447,7 +447,8 @@ def test_job_result(client, test_process_id, example_config_json):
     job_id = response.json()["id"]
 
     wait_for_job(client, job_id, until_status="done")
-
+    # after 'done' status, the results still have to be updated
+    time.sleep(1)
     response = client.get(f"/jobs/{job_id}/results")
     assert response.status_code == 200
     assert isinstance(response.json(), dict)
