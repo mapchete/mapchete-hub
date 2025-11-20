@@ -2,6 +2,20 @@
 Changelog
 #########
 
+2025.11.0 - 2025-11-20
+----------------------
+
+* packaging
+
+  * bump `dask` to `2025.11.0`
+  * bump `dask-kubernetes` to `2025.7.0`
+  * bump `distributed` to `2025.11.0`
+  * bump `fastapi` to `0.121.3`
+  * bump `mapchete` to `2025.11.0`
+  * bump `mapchete-eo` to `2025.11.0`
+  * bump `shapely` to `2.1.2`
+
+
 2025.8.0 - 2025-08-06
 ---------------------
 
