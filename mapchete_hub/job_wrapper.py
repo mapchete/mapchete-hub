@@ -73,13 +73,6 @@ def job_wrapper(
                 if k not in ["job_name", "dask_specs", "dask_settings"]
             },
         )
-
-    except JobCancelledError:
-        logger.info("%s got cancelled.", job_id)
-        observers.notify(status=Status.cancelled)
-    except Exception as exc:
-        logger.exception(exc)
-    finally:
         # NOTE: this is not ideal, as we have to get the STACTA path from the output
         observers.notify(
             result={
@@ -89,4 +82,11 @@ def job_wrapper(
                 }
             },
         )
+
+    except JobCancelledError:
+        logger.info("%s got cancelled.", job_id)
+        observers.notify(status=Status.cancelled)
+    except Exception as exc:
+        logger.exception(exc)
+    finally:
         logger.info("%s background task finished", job_id)
