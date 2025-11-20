@@ -444,6 +444,7 @@ def test_job_result(test_process_id, example_config_json):
         response = requests.get(f"{TEST_ENDPOINT}/jobs/{job_id}", timeout=3)
         status = response.json()["properties"]["status"]
         if status == "done":
+            time.sleep(1)
             break
         elif time.time() - start > 120:
             raise RuntimeError(f"job not finished in time, last status was '{status}'")
