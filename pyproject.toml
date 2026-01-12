@@ -5,6 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mapchete-hub"
 dynamic = ["version"]
+requires-python = ">=3.10"
 description = "Distributed mapchete processing."
 readme = "README.rst"
 license = "MIT"
@@ -42,28 +43,28 @@ dependencies = [
 deployment = [
     "aiohttp",
     "bokeh",
-    "click<=8.1.3",
+    "click",
     "dask==2025.11.0",
     "dask-gateway==2025.4.0",
     "dask-gateway-server==2025.4.0",
     "dask-kubernetes==2025.7.0",
     "distributed==2025.11.0",
     "fastapi==0.121.3",
-    "fiona==1.10.1",
+    "fiona",
     "httpx",
     "jupyter-server-proxy",
     "kubernetes",
     "lz4",
-    "mapchete[contours,http,s3,vrt]==2025.11.0",
-    "mapchete-eo==2025.11.0",
+    "mapchete[contours,http,s3,vrt]>=2025.11.0",
+    "mapchete-eo>=2025.11.0",
     "mongomock",
-    "numcodecs==0.16.0",
-    "numpy==2.2.5",
+    "numcodecs",
+    "numpy",
     "prometheus-client",
     "pydantic>=2.0.0",
     "pymongo",
-    "rasterio==1.4.3",
-    "shapely==2.1.2",
+    "rasterio",
+    "shapely",
     "slack_sdk",
     "sqlalchemy",
     "uvicorn",
@@ -99,3 +100,10 @@ path = "mapchete_hub/__init__.py"
 include = [
     "/mapchete_hub",
 ]
+
+[tool.pytest.ini_options]
+env = [
+    "MHUB_ENV=testing",
+]
+mongodb_fixture_dir = "tests"
+addopts = "--durations 20 --verbose --nf --cov=mapchete_hub"
