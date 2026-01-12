@@ -10,6 +10,7 @@ on:
     branches: [main]
   schedule:
     - cron: '0 8 * * 1,4'
+  workflow_call:    
 
 jobs:
   unit-tests:
@@ -34,16 +35,23 @@ jobs:
           python -m pip install pre-commit
           pre-commit run --show-diff-on-failure --all-files
 
-      - name: Install dependencies
-        env:
-          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+      - name: Install GIS Dependencies
         run: |
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
           sudo apt-get -y update
-          sudo apt-get install -y gdal-bin libgdal-dev libproj-dev libgeos-dev
-          python -m pip install --upgrade pip wheel
-          pip install -e .[complete,test]
-          pip freeze
+          sudo apt-get install -y gdal-bin libgdal-dev libproj-dev libgeos-dev g++
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        env:
+          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
+          GDAL_CONFIG: /usr/bin/gdal-config
+        run: |
+          uv sync --extra deployment --extra test
 
       # - name: Start containers
       #   run: docker compose -f "test/docker-compose.yml" up -d
@@ -55,7 +63,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REQUEST_PAYER: ${{ secrets.AWS_REQUEST_PAYER }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-        run: pytest -v --cov mapchete_hub --cov-report xml:coverage.xml --cov-report=term-missing:skip-covered --junitxml=pytest.xml
+        run: uv run pytest -v --cov mapchete_hub --cov-report xml:coverage.xml --cov-report=term-missing:skip-covered --junitxml=pytest.xml
 
       # Upload the report to Codecov
       - name: Upload coverage reports to Codecov
@@ -66,7 +74,7 @@ jobs:
 
       # this will let the workflow fail if coverage is below 100%
       - name: Pytest coverage
-        run: coverage report --skip-covered --show-missing
+        run: uv run coverage report --skip-covered --show-missing
         # --fail-under 100
 
       # - name: Stop containers
