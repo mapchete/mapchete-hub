@@ -15,7 +15,6 @@ dependencies:
   - distributed
   - fastapi
   - httpx
-  - mapchete-eo>=2025.11.0
   - mapchete>=2024.2.1
   - mongomock
   - pydantic>=2.0.0
