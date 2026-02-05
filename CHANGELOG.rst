@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2026.2.1 - 2026-02-05
+----------------------
+
+* depdendencies
+
+    * release the `dask` and `distributed` packages versions in the `deployment` group
+
+
 2026.2.0 - 2026-02-05
 ----------------------
 
