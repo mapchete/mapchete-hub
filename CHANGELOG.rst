@@ -2,6 +2,15 @@
 Changelog
 #########
 
+2026.2.0 - 2026-02-05
+----------------------
+
+* dependencies
+
+  * manage `pyproject.toml` primarily with uv
+  * release some deps versions, let `uv` try to resolve them on daily basis via CI
+
+
 2025.11.0 - 2025-11-20
 ----------------------
 
