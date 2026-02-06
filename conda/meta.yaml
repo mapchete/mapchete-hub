@@ -11,7 +11,7 @@ dependencies:
   - python>=3.10
   - click
   - dask
-  - dask-gateway
+  - dask-gateway==2025.4.0
   - distributed
   - fastapi
   - httpx
