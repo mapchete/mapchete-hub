@@ -17,64 +17,37 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",    
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
-    "click",
-    "dask",
-    "dask-gateway==2025.4.0",
-    "distributed",
-    "fastapi",
-    "httpx",
-    "mapchete[contours,http,s3,vrt]>=2024.2.1",
-    "mongomock",
-    "pydantic>=2.0.0",
-    "pydantic_settings",
-    "pymongo",
-    "uvicorn",
-    "zarr",
-]
-
-[project.optional-dependencies]
-deployment = [
     "aiohttp",
     "bokeh",
     "click",
     "dask",
     "dask-gateway==2025.4.0",
     "dask-gateway-server==2025.4.0",
-    "dask-kubernetes==2025.7.0",
+    "dask-kubernetes",
     "distributed",
     "fastapi",
-    "fiona",
     "httpx",
     "jupyter-server-proxy",
     "kubernetes",
-    "lz4",
     "mapchete[contours,http,s3,vrt]>=2025.11.0",
     "mongomock",
-    "numcodecs",
-    "numpy",
     "prometheus-client",
     "pydantic>=2.0.0",
+    "pydantic_settings",
     "pymongo",
-    "rasterio",
-    "shapely",
     "slack_sdk",
     "sqlalchemy",
     "uvicorn",
+    "zarr",
+]
 
-]
-kubernetes = [
-    "kubernetes",
-]
-slack = [
-    "slack_sdk",
-]
+[project.optional-dependencies]
 test = [
     "httpx",
     "pytest",
@@ -105,4 +78,12 @@ env = [
     "MHUB_ENV=testing",
 ]
 mongodb_fixture_dir = "tests"
-addopts = "--durations 20 --verbose --nf --cov=mapchete_hub"
+addopts = [
+    "--durations=20",
+    "--verbose",
+    "--nf",
+    "--cov=mapchete_hub",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-append"
+]
+testpaths = ["tests"]

@@ -2,10 +2,25 @@
 Changelog
 #########
 
+2026.2.2 - 2026-02-06
+----------------------
+
+* CI
+
+  * run python package tests in parallel with integration tests and docker build
+  * the test-suite aligned/based on `mapchete`'s latest test-suite
+  * docker base image version bumped to `gdal:ubuntu-small-3.12.0`
+
+* dependencies
+
+  * removed `deployment` dependency group
+  * the dependencies source of truth is now `pyproject.toml` under `[project.dependencies]`
+
+
 2026.2.1 - 2026-02-05
 ----------------------
 
-* depdendencies
+* dependencies
 
     * release the `dask` and `distributed` packages versions in the `deployment` group
 

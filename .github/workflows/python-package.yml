@@ -1,89 +1,243 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
 name: Python package test
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "conda/meta.yaml"     
   schedule:
     - cron: '0 8 * * 1,4'
-  workflow_call:    
+  workflow_call:
+    inputs:
+      override-deps-artifact:
+        description: "Name of artifact containing updated lockfiles"
+        required: false
+        type: string    
 
 jobs:
-  unit-tests:
-    runs-on: ${{ matrix.os }}
+  lint:
+    name: "📝 Pre-commit / Code Quality"
+    runs-on: ubuntu-latest
+    # Skip linting when triggered by the Sync Workflow (it just updated locks)
+    if: github.event_name != 'workflow_call'
+    steps:
+      - uses: actions/checkout@v4
+      - name: ⚡ Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      - name: 🏃 Run Pre-commit
+        run: |
+          uv tool install pre-commit
+          uv tool run pre-commit run --show-diff-on-failure --all-files
 
+  setup:
+      name: "🏗️ Build Py${{ matrix.python-version }}"
+      needs: lint
+      if: |
+        always() && 
+        (needs.lint.result == 'success' || needs.lint.result == 'skipped')
+      runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          python-version: ["3.11", "3.12", "3.13"]
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: ⚡ Install uv
+          run: |
+            apt-get update && apt-get install -y curl
+            curl -LsSf https://astral.sh/uv/install.sh | BINDIR=/usr/local/bin sh
+
+        - name: 📝 Export Locked Requirements
+          run: |
+            uv export --frozen --all-extras --format requirements-txt > requirements.txt
+      
+        - name: 📤 Upload Requirements
+          uses: actions/upload-artifact@v4
+          with:
+            name: frozen-reqs-${{ matrix.python-version }}
+            path: requirements.txt
+            retention-days: 1
+
+  test:
+    needs: setup
+    name: "🧪 py${{ matrix.python-version }}"
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-        os: ["ubuntu-latest"]
-
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
+      - name: 📥 Download Requirements
+        uses: actions/download-artifact@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          name: frozen-reqs-${{ matrix.python-version }}
 
-      - name: Lint
-        run: |
-          python -m pip install pre-commit
-          pre-commit run --show-diff-on-failure --all-files
-
-      - name: Install GIS Dependencies
+      - name: 📥 Apply Dependency Overrides
+        if: "${{ inputs.override-deps-artifact != '' }}"
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.override-deps-artifact }}          
+      
+      - name: ⚡ Install uv, Docker Compose & git
         run: |
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
-          sudo apt-get -y update
-          sudo apt-get install -y gdal-bin libgdal-dev libproj-dev libgeos-dev g++
+          sudo apt-get update
+          sudo apt-get install -y curl git gpg gdal-bin libgdal-dev libproj-dev libgeos-dev g++
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
+          curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="/usr/local/bin" sh          
 
-      - name: Install dependencies
-        env:
-          CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-          GDAL_CONFIG: /usr/bin/gdal-config
+          uv --version
+
+      - name: 🏗️ Restore Native Env
         run: |
-          uv sync --extra deployment --extra test
-
-      # - name: Start containers
-      #   run: docker compose -f "test/docker-compose.yml" up -d
-
-      # run tests
-      - name: run 
+          uv venv --python ${{ matrix.python-version }}
+          uv pip install -r requirements.txt
+          uv pip install -e ".[test]" --no-deps      
+         
+      - name: 🧪 Run Split
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REQUEST_PAYER: ${{ secrets.AWS_REQUEST_PAYER }}
+          AWS_REQUEST_PAYER: ${{ vars.AWS_REQUEST_PAYER }}
+          AWS_DEFAULT_REGION: ${{ vars.AWS_DEFAULT_REGION }}
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
-        run: uv run pytest -v --cov mapchete_hub --cov-report xml:coverage.xml --cov-report=term-missing:skip-covered --junitxml=pytest.xml
+          COVERAGE_FILE: .coverage.python.${{ matrix.python-version }}
+        run: |
+            uv run pytest -v \
+            --cov=mapchete_hub \
+            --cov-report=xml:coverage.xml \
+            --junitxml="pytest-${{ matrix.python-version }}.xml"
 
-      # Upload the report to Codecov
-      - name: Upload coverage reports to Codecov
+      - name: 📊 Upload to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: mapchete/mapchete-hub
+          files: ./coverage.xml
+          flags: py${{ matrix.python-version }}
+          fail_ci_if_error: true
 
-      # this will let the workflow fail if coverage is below 100%
-      - name: Pytest coverage
-        run: uv run coverage report --skip-covered --show-missing
-        # --fail-under 100
+      - name: 📤 Upload Coverage Chunk (Latest Only)
+        if: matrix.python-version == '3.13'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-all
+          path: .coverage.python.${{ matrix.python-version }}
+          include-hidden-files: true
+          retention-days: 1
 
-      # - name: Stop containers
-      #   if: always()
-      #   run: docker compose -f "test/docker-compose.yml" down
+      - name: 📤 Archive JUnit Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.python-version }}
+          path: pytest-${{ matrix.python-version }}.xml
+          retention-days: 1
 
   integration-tests:
-    runs-on: "ubuntu-latest"
+    name: "🚀 Integration Tests"
+    needs: setup
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Run
-        run: ./run_integration_tests.sh
+      - uses: actions/checkout@v4
+      - name: 🏃 Run Integration Tests
+        run: |
+          chmod +x ./run_integration_tests.sh
+          ./run_integration_tests.sh
+
+  build-docker-image:
+    name: "🐳 Docker Build & CLI Check"
+    if: github.event_name == 'pull_request'
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ⚡ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: 🏗️ Build image for validation
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: mapchete-hub:test
+      - name: 🏃 Run CLI checks
+        run: |
+          docker run --rm mapchete-hub:test mhub-server --help
+          docker run --rm mapchete-hub:test mhub-manager --help
+          docker run --rm mapchete-hub:test mhub-worker --help
+
+  summary:
+    name: "📊 Final Summary & Coverage"
+    needs: [test, integration-tests, build-docker-image]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # Needed for coverage to see source files
+
+      - name: ⚡ Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: 📥 Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-results
+          pattern: "*-*" 
+          merge-multiple: true
+
+      - name: 📊 Check Tests & Coverage
+        run: |
+          echo "### 🧪 Test & Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          
+          # 1. CHECK OVERALL TEST STATUS
+          if [[ "${{ needs.test.result }}" != "success" || "${{ needs.integration-tests.result }}" != "success" || ( "${{ github.event_name }}" == "pull_request" && "${{ needs.build-docker-image.result }}" != "success" ) ]]; then
+            echo "❌ **Test Suite Failed**" >> $GITHUB_STEP_SUMMARY
+            echo "- Unit/Doc Tests: ${{ needs.test.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              echo "- Docker Build: ${{ needs.build-docker-image.result }}" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "Coverage check skipped because tests failed." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ **Test Suite Passed**" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit/Doc Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration Tests: Passed" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "- Docker Build: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- Docker Build: Skipped (Not a PR)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # 2. COMBINE COVERAGE (Only 3.13 files exist here)
+          uv tool install coverage
+          
+          # Move the specific 3.13 files to root
+          # The pattern matches .coverage.3.13.1, .coverage.3.13.2, etc.
+          mv all-results/.coverage* .
+          
+          echo "Merging coverage files..."
+          uv tool run coverage combine
+          
+          # 3. ENFORCE 70%
+          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=70 2>&1)
+          EXIT_CODE=$?
+          
+          echo "$OUTPUT"
+          
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$OUTPUT" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 70%." >> $GITHUB_STEP_SUMMARY
+            # Exit with the original code to fail the build
+            exit $EXIT_CODE
+          else
+            echo "✅ **Coverage Passed:** 70% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
