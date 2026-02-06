@@ -48,9 +48,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-slack = [
-    "slack_sdk",
-]
 test = [
     "httpx",
     "pytest",

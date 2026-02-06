@@ -2242,9 +2242,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-slack = [
-    { name = "slack-sdk" },
-]
 test = [
     { name = "httpx" },
     { name = "pytest" },
@@ -2281,12 +2278,11 @@ requires-dist = [
     { name = "pytest-mongodb", marker = "extra == 'test'" },
     { name = "requests", marker = "extra == 'test'" },
     { name = "slack-sdk" },
-    { name = "slack-sdk", marker = "extra == 'slack'" },
     { name = "sqlalchemy" },
     { name = "uvicorn" },
     { name = "zarr" },
 ]
-provides-extras = ["slack", "test"]
+provides-extras = ["test"]
 
 [[package]]
 name = "markdown-it-py"
