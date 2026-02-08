@@ -120,8 +120,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: updated-deps
-          run-id: ${{ github.run_id }}
-          merge-multiple: true
+          path: .
 
       - name: ⬆️ Push to Existing PR
         if: github.event_name == 'pull_request'

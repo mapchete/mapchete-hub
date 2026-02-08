@@ -83,7 +83,8 @@ jobs:
         if: "${{ inputs.override-deps-artifact != '' }}"
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.override-deps-artifact }}          
+          name: ${{ inputs.override-deps-artifact }}  
+          path: .        
       
       - name: ⚡ Install uv, git & GIS Dependencies
         run: |
