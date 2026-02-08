@@ -2242,12 +2242,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-<<<<<<< HEAD
-=======
-slack = [
-    { name = "slack-sdk" },
-]
->>>>>>> 0ef20ab (remove deployment dependency group as that is basically useless now)
 test = [
     { name = "httpx" },
     { name = "pytest" },
@@ -2284,19 +2278,11 @@ requires-dist = [
     { name = "pytest-mongodb", marker = "extra == 'test'" },
     { name = "requests", marker = "extra == 'test'" },
     { name = "slack-sdk" },
-<<<<<<< HEAD
-=======
-    { name = "slack-sdk", marker = "extra == 'slack'" },
->>>>>>> 0ef20ab (remove deployment dependency group as that is basically useless now)
     { name = "sqlalchemy" },
     { name = "uvicorn" },
     { name = "zarr" },
 ]
-<<<<<<< HEAD
 provides-extras = ["test"]
-=======
-provides-extras = ["slack", "test"]
->>>>>>> 0ef20ab (remove deployment dependency group as that is basically useless now)
 
 [[package]]
 name = "markdown-it-py"
