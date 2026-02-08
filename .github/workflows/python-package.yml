@@ -1,29 +1,28 @@
 name: Python package test
 
 on:
+  schedule:
+    - cron: '0 8 * * 1,4'  
   push:
     branches: [main]
-    paths-ignore:
-      - "docs/**"
+    tags: ['*']
   pull_request:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-  schedule:
-    - cron: '0 8 * * 1,4'
+    branches: ['**']
   workflow_call:
     inputs:
       override-deps-artifact:
         description: "Name of artifact containing updated lockfiles"
         required: false
-        type: string    
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
     name: "📝 Pre-commit / Code Quality"
     runs-on: ubuntu-latest
-    # Skip linting when triggered by the Sync Workflow (it just updated locks)
-    if: github.event_name != 'workflow_call'
     steps:
       - uses: actions/checkout@v4
       - name: ⚡ Install uv
@@ -36,9 +35,6 @@ jobs:
   setup:
       name: "🏗️ Build Py${{ matrix.python-version }}"
       needs: lint
-      if: |
-        always() && 
-        (needs.lint.result == 'success' || needs.lint.result == 'skipped')
       runs-on: ubuntu-latest
       strategy:
         matrix:
@@ -84,12 +80,12 @@ jobs:
           name: frozen-reqs-${{ matrix.python-version }}
 
       - name: 📥 Apply Dependency Overrides
-        if: "${{ inputs.override-deps-artifact != '' }}"
+        if: "${{ inputs.override-deps-artifact != '' && inputs.override-deps-artifact != 'null' }}"
         uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.override-deps-artifact }}          
       
-      - name: ⚡ Install uv, Docker Compose & git
+      - name: ⚡ Install uv, git & GIS Dependencies
         run: |
           sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
           sudo apt-get update
@@ -219,31 +215,30 @@ jobs:
             echo "- Docker Build: Skipped (Not a PR)" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # 2. COMBINE COVERAGE (Only 3.13 files exist here)
+          # 2. PREPARE COVERAGE DATA
           uv tool install coverage
           
-          # Move the specific 3.13 files to root
-          # The pattern matches .coverage.3.13.1, .coverage.3.13.2, etc.
-          mv all-results/.coverage* .
+          if ls all-results/.coverage* 1> /dev/null 2>&1; then
+            mv all-results/.coverage* .
+          fi
           
-          echo "Merging coverage files..."
-          uv tool run coverage combine
+          echo "Merging/Preparing coverage data..."
+          # combine will merge .coverage.* into .coverage
+          uv tool run coverage combine --append || echo "No extra coverage files to combine."
           
           # 3. ENFORCE 70%
-          OUTPUT=$(uv tool run coverage report --show-missing --fail-under=70 2>&1)
+          REPORT_OUTPUT=$(uv tool run coverage report --show-missing --fail-under=70 2>&1)
           EXIT_CODE=$?
           
-          echo "$OUTPUT"
+          echo "$REPORT_OUTPUT"
           
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "$OUTPUT" >> $GITHUB_STEP_SUMMARY
+          echo "$REPORT_OUTPUT" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           
           if [ $EXIT_CODE -ne 0 ]; then
             echo "❌ **Coverage Failed:** Python 3.13 coverage is below 70%." >> $GITHUB_STEP_SUMMARY
-            # Exit with the original code to fail the build
             exit $EXIT_CODE
           else
             echo "✅ **Coverage Passed:** 70% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
-            exit 0
           fi
