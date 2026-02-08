@@ -80,11 +80,10 @@ jobs:
           name: frozen-reqs-${{ matrix.python-version }}
 
       - name: 📥 Apply Dependency Overrides
-        if: "${{ inputs.override-deps-artifact != '' }}"
+        if: "${{ inputs.override-deps-artifact != '' && inputs.override-deps-artifact != 'null' }}"
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.override-deps-artifact }}  
-          path: .        
+          name: ${{ inputs.override-deps-artifact }}          
       
       - name: ⚡ Install uv, git & GIS Dependencies
         run: |

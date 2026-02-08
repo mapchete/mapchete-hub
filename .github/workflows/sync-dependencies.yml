@@ -96,7 +96,7 @@ jobs:
     needs: sync-and-prepare
     uses: ./.github/workflows/python-package.yml
     with:
-      override-deps-artifact: updated-deps
+      override-deps-artifact: ${{ needs.sync-and-prepare.outputs.sync_needed == 'true' && 'updated-deps' || '' }}
     secrets: inherit
 
   finalize:
@@ -120,7 +120,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: updated-deps
-          path: .
 
       - name: ⬆️ Push to Existing PR
         if: github.event_name == 'pull_request'
