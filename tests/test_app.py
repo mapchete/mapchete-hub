@@ -64,7 +64,7 @@ def test_post_job(client, test_process_id, example_config_json):
     # response = client.get("/jobs")
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json,
                 params=dict(
@@ -74,6 +74,7 @@ def test_post_job(client, test_process_id, example_config_json):
                 ),
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     assert client.get("/jobs/").json()
@@ -94,7 +95,7 @@ def test_post_job_custom_dask_specs(client, test_process_id, example_config_json
     # response = client.get("/jobs")
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json,
                 params=dict(
@@ -104,6 +105,7 @@ def test_post_job_custom_dask_specs(client, test_process_id, example_config_json
                 ),
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     assert client.get("/jobs/").json()
@@ -122,12 +124,13 @@ def test_post_job_custom_process(
 ):
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_custom_process_json,
                 params=dict(example_config_custom_process_json["params"], zoom=2),
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     assert client.get("/jobs/").json()
@@ -148,12 +151,13 @@ def test_list_jobs(client, test_process_id, example_config_json):
     for _ in range(2):
         client.post(
             f"/processes/{test_process_id}/execution",
-            data=json.dumps(
+            content=json.dumps(
                 dict(
                     example_config_json,
                     params=dict(example_config_json["params"], zoom=2),
                 )
             ),
+            headers={"Content-Type": "application/json"},
         )
 
     response = client.get("/jobs")
@@ -167,11 +171,12 @@ def test_list_jobs_bounds(client, test_process_id, example_config_json):
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -192,12 +197,13 @@ def test_list_jobs_area(client, test_process_id, example_config_json_area):
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json_area,
                 params=dict(example_config_json_area["params"], zoom=2),
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -221,12 +227,13 @@ def test_list_jobs_area_file(
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json_area_fgb,
                 params=dict(example_config_json_area_fgb["params"], zoom=2),
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -248,12 +255,13 @@ def test_list_jobs_bounds_area_file(
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json_area_fgb,
                 params=dict(example_config_json_area_fgb["params"], zoom=2),
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -274,11 +282,12 @@ def test_list_jobs_output_path(client, test_process_id, example_config_json):
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -301,11 +310,12 @@ def test_list_jobs_status(client, test_process_id, example_config_json):
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -330,12 +340,13 @@ def test_list_jobs_job_name(client, test_process_id, example_config_json):
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json,
                 params=dict(example_config_json["params"], zoom=2, job_name="foo"),
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -357,11 +368,12 @@ def test_list_jobs_from_date(client, test_process_id, example_config_json):
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -387,11 +399,12 @@ def test_list_jobs_to_date(client, test_process_id, example_config_json):
     assert response.status_code == 200
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -417,11 +430,12 @@ def test_send_cancel_signal(client, test_process_id, example_config_json):
     # make one long running job
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -438,11 +452,12 @@ def test_send_cancel_signal(client, test_process_id, example_config_json):
 def test_job_result(client, test_process_id, example_config_json):
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(
+        content=json.dumps(
             dict(
                 example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     job_id = response.json()["id"]
 
@@ -474,7 +489,8 @@ def test_process_exception(
 ):
     response = client.post(
         f"/processes/{test_process_id}/execution",
-        data=json.dumps(example_config_process_exception_json),
+        content=json.dumps(example_config_process_exception_json),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
     job_id = response.json()["id"]
@@ -500,7 +516,9 @@ def test_process_custom_params(client, test_process_id, example_config_json):
     conf = dict(example_config_json)
     conf["config"]["process_parameters"] = dict(foo="bar")
     response = client.post(
-        f"/processes/{test_process_id}/execution", data=json.dumps(conf)
+        f"/processes/{test_process_id}/execution",
+        content=json.dumps(conf),
+        headers={"Content-Type": "application/json"},
     )
     job_id = response.json()["id"]
 
@@ -514,7 +532,9 @@ def test_process_custom_params(client, test_process_id, example_config_json):
 
 def test_dask_dashboard_link(client, test_process_id, example_config_json):
     response = client.post(
-        f"/processes/{test_process_id}/execution", data=json.dumps(example_config_json)
+        f"/processes/{test_process_id}/execution",
+        content=json.dumps(example_config_json),
+        headers={"Content-Type": "application/json"},
     )
     job_id = response.json()["id"]
 
@@ -528,7 +548,9 @@ def test_dask_specs(client, test_process_id, example_config_json):
     job_config = deepcopy(example_config_json)
     job_config["config"]["dask_specs"] = dict(worker_memory=20)
     response = client.post(
-        f"/processes/{test_process_id}/execution", data=json.dumps(job_config)
+        f"/processes/{test_process_id}/execution",
+        content=json.dumps(job_config),
+        headers={"Content-Type": "application/json"},
     )
     job_id = response.json()["id"]
     response = client.get(f"/jobs/{job_id}")
