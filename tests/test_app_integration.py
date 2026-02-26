@@ -77,6 +77,7 @@ def test_post_job(test_process_id, example_config_json):
     response = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
         data=json.dumps(example_config_json),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
 
@@ -96,6 +97,7 @@ def test_post_job_custom_process(test_process_id, example_config_custom_process_
     response = requests.post(
         f"{TEST_ENDPOINT}/processes/{test_process_id}/execution",
         data=json.dumps(example_config_custom_process_json),
+        headers={"Content-Type": "application/json"},
     )
     assert response.status_code == 201
 
@@ -133,6 +135,7 @@ def test_list_jobs(test_process_id, example_config_json):
                     params=dict(example_config_json["params"], zoom=2),
                 )
             ),
+            headers={"Content-Type": "application/json"},
         )
 
     response = requests.get(f"{TEST_ENDPOINT}/jobs")
@@ -157,6 +160,7 @@ def test_list_jobs_bounds(test_process_id, example_config_json):
                 example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     job_id = response.json()["id"]
 
@@ -183,6 +187,7 @@ def test_list_jobs_output_path(test_process_id, example_config_json):
                 example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     job_id = response.json()["id"]
 
@@ -212,6 +217,7 @@ def test_list_jobs_status(test_process_id, example_config_json):
                 example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     job_id = response.json()["id"]
 
@@ -249,6 +255,7 @@ def test_list_jobs_job_name(test_process_id, example_config_json):
                 params=dict(example_config_json["params"], zoom=1, job_name="foo"),
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
 
     job_id = response.json()["id"]
@@ -276,6 +283,7 @@ def test_list_jobs_from_date(test_process_id, example_config_json):
                 example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
 
     job_id = response.json()["id"]
@@ -305,6 +313,7 @@ def test_list_jobs_to_date(test_process_id, example_config_json):
                 example_config_json, params=dict(example_config_json["params"], zoom=1)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
 
     job_id = response.json()["id"]
@@ -334,6 +343,7 @@ def test_cancel_job(test_process_id, example_config_json):
                 example_config_json, params=dict(example_config_json["params"], zoom=8)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     job_id = response.json()["id"]
 
@@ -386,6 +396,7 @@ def test_cancel_jobs(test_process_id, example_config_json):
                     ),
                 )
             ),
+            headers={"Content-Type": "application/json"},
             timeout=3,
         ).json()["id"]
         for _ in range(2)
@@ -434,6 +445,7 @@ def test_job_result(test_process_id, example_config_json):
                 example_config_json, params=dict(example_config_json["params"], zoom=2)
             )
         ),
+        headers={"Content-Type": "application/json"},
     )
     job_id = result.json()["id"]
 
