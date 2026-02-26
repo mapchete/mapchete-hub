@@ -17,7 +17,7 @@ dependencies:
   - dask-gateway==2025.4.0
   - dask-kubernetes
   - distributed
-  - fastapi<0.130.0
+  - fastapi
   - httpx
   - jupyter-server-proxy
   - kubernetes
