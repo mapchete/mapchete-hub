@@ -5,6 +5,10 @@ Changelog
 2026.2.3 - 2026-02-27
 ----------------------
 
+* CI
+
+  * `pip install hatch "virtualenv<21.0.0"` to mitigate hatch build issues with current virtualenv versions
+
 * core
 
   * add `"type": "application/json"` acrossthe board to have `fastapi` accept `json` as content type
