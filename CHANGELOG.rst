@@ -2,6 +2,14 @@
 Changelog
 #########
 
+2026.2.3 - 2026-02-27
+----------------------
+
+* core
+
+  * add `"type": "application/json"` acrossthe board to have `fastapi` accept `json` as content type
+
+
 2026.2.2 - 2026-02-06
 ----------------------
 
