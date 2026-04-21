@@ -254,7 +254,7 @@ class K8SJobEntry(JobEntry):
                         self.dask_dashboard_link,
                     )
                     return True
-            except requests.exceptions.InvalidURL as exception:
+            except requests.exceptions.InvalidURL as exception:  # pragma: no cover
                 # TODO: this happens on IPv6 deployments, we need to find a proper fix
                 # for now, let's assume the job is still active, as it will be flagged
                 # anyways once the inactive_since limit is reached
