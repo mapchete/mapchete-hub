@@ -230,26 +230,36 @@ class K8SJobEntry(JobEntry):
     ) -> bool:
         # check if inactive for too long
         if self.has_active_status():
-            if self.updated and passed_time_to_timestamp(inactive_since) > self.updated:
-                logger.debug(
-                    "%s: %s but has been inactive since %s",
-                    self.job_id,
-                    self.status,
-                    self.updated,
-                )
-                return True
-            elif (
-                check_inactive_dashboard
-                and self.dask_dashboard_link
-                and requests.get(self.dask_dashboard_link).status_code != 200
-            ):
-                logger.debug(
-                    "%s: %s but dashboard %s does not have a status code of 200",
-                    self.job_id,
-                    self.status,
-                    self.dask_dashboard_link,
-                )
-                return True
+            try:
+                if (
+                    self.updated
+                    and passed_time_to_timestamp(inactive_since) > self.updated
+                ):
+                    logger.debug(
+                        "%s: %s but has been inactive since %s",
+                        self.job_id,
+                        self.status,
+                        self.updated,
+                    )
+                    return True
+                elif (
+                    check_inactive_dashboard
+                    and self.dask_dashboard_link
+                    and requests.get(self.dask_dashboard_link).status_code != 200
+                ):
+                    logger.debug(
+                        "%s: %s but dashboard %s does not have a status code of 200",
+                        self.job_id,
+                        self.status,
+                        self.dask_dashboard_link,
+                    )
+                    return True
+            except requests.exceptions.InvalidURL as exception:
+                # TODO: this happens on IPv6 deployments, we need to find a proper fix
+                # for now, let's assume the job is still active, as it will be flagged
+                # anyways once the inactive_since limit is reached
+                logger.exception(exception)
+                return False
 
         return False
 
