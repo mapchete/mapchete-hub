@@ -69,7 +69,9 @@ def run_job(
                     job=job_entry,
                     db_updater=job_db_updater,
                 )
-                observers = Observers([job_db_updater, job_slack_messenger])
+                # make sure DB updater is the last observer as it will raise a JobCancelledError
+                # if the job gets cancelled, but we still want the Slack status be set first
+                observers = Observers([job_slack_messenger, job_db_updater])
                 logger.debug("observers created: %s", observers)
                 try:
                     with Timer() as tt:
