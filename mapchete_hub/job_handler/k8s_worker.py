@@ -203,15 +203,13 @@ class K8SJobEntry(JobEntry):
 
     def k8s_is_failed_or_gone(self) -> bool:
         try:
-            k8s_job_status = self.k8s_job_status()
-            failed_or_gone = k8s_job_status.is_failed()
+            return self.k8s_is_failed()
         except K8SJobNotFound as exc:
             logger.debug(
                 "job status cannot be fetched (%s), assuming job has failed...",
                 str(exc),
             )
-            failed_or_gone = self.submitted_to_k8s
-        return failed_or_gone
+            return self.submitted_to_k8s
 
     def has_active_status(self) -> bool:
         return self.status in [
