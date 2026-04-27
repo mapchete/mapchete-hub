@@ -41,6 +41,12 @@ def main():  # pragma: no cover
     show_default=True,
 )
 @click.option(
+    "--skip-dashboard-check",
+    type=click.STRING,
+    is_flag=True,
+    help="Skip dask dashboard availability check.",
+)
+@click.option(
     "--watch-interval", "-i", type=click.STRING, default="3s", show_default=True
 )
 @click.option(
@@ -59,11 +65,12 @@ def main():  # pragma: no cover
 def watch(
     since: str = "7d",
     inactive_since: str = "5h",
-    check_inactive_dashboard: bool = True,
+    skip_dashboard_check: bool = False,
     watch_interval: str = "3s",
     log_level: LogLevels = "info",
     add_mapchete_logger: bool = False,
 ):
+    check_inactive_dashboard = not skip_dashboard_check
     setup_logger(log_level, add_mapchete_logger=add_mapchete_logger)
     logger.info("mhub-manager online")
 
@@ -122,6 +129,12 @@ def watch(
     show_default=True,
 )
 @click.option(
+    "--skip-dashboard-check",
+    type=click.STRING,
+    is_flag=True,
+    help="Skip dask dashboard availability check.",
+)
+@click.option(
     "--log-level",
     type=click.Choice(
         ["critical", "error", "warning", "info", "debug", "notset"],
@@ -137,10 +150,11 @@ def watch(
 def clean(
     since: str = "7d",
     inactive_since: str = "5h",
-    check_inactive_dashboard: bool = True,
+    skip_dashboard_check: bool = False,
     log_level: LogLevels = "info",
     add_mapchete_logger: bool = False,
 ):
+    check_inactive_dashboard = not skip_dashboard_check
     setup_logger(log_level, add_mapchete_logger=add_mapchete_logger)
     logger.info("mhub-manager online")
 

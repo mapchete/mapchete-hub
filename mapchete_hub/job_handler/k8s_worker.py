@@ -203,15 +203,13 @@ class K8SJobEntry(JobEntry):
 
     def k8s_is_failed_or_gone(self) -> bool:
         try:
-            k8s_job_status = self.k8s_job_status()
-            failed_or_gone = k8s_job_status.is_failed()
+            return self.k8s_is_failed()
         except K8SJobNotFound as exc:
             logger.debug(
                 "job status cannot be fetched (%s), assuming job has failed...",
                 str(exc),
             )
-            failed_or_gone = self.submitted_to_k8s
-        return failed_or_gone
+            return self.submitted_to_k8s
 
     def has_active_status(self) -> bool:
         return self.status in [
@@ -230,26 +228,36 @@ class K8SJobEntry(JobEntry):
     ) -> bool:
         # check if inactive for too long
         if self.has_active_status():
-            if self.updated and passed_time_to_timestamp(inactive_since) > self.updated:
-                logger.debug(
-                    "%s: %s but has been inactive since %s",
-                    self.job_id,
-                    self.status,
-                    self.updated,
-                )
-                return True
-            elif (
-                check_inactive_dashboard
-                and self.dask_dashboard_link
-                and requests.get(self.dask_dashboard_link).status_code != 200
-            ):
-                logger.debug(
-                    "%s: %s but dashboard %s does not have a status code of 200",
-                    self.job_id,
-                    self.status,
-                    self.dask_dashboard_link,
-                )
-                return True
+            try:
+                if (
+                    self.updated
+                    and passed_time_to_timestamp(inactive_since) > self.updated
+                ):
+                    logger.debug(
+                        "%s: %s but has been inactive since %s",
+                        self.job_id,
+                        self.status,
+                        self.updated,
+                    )
+                    return True
+                elif (
+                    check_inactive_dashboard
+                    and self.dask_dashboard_link
+                    and requests.get(self.dask_dashboard_link).status_code != 200
+                ):
+                    logger.debug(
+                        "%s: %s but dashboard %s does not have a status code of 200",
+                        self.job_id,
+                        self.status,
+                        self.dask_dashboard_link,
+                    )
+                    return True
+            except requests.exceptions.InvalidURL as exception:  # pragma: no cover
+                # TODO: this happens on IPv6 deployments, we need to find a proper fix
+                # for now, let's assume the job is still active, as it will be flagged
+                # anyways once the inactive_since limit is reached
+                logger.exception(exception)
+                return False
 
         return False
 

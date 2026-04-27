@@ -69,9 +69,12 @@ def run_job(
                     job=job_entry,
                     db_updater=job_db_updater,
                 )
-                observers = Observers([job_db_updater, job_slack_messenger])
+                # make sure DB updater is the last observer as it will raise a JobCancelledError
+                # if the job gets cancelled, but we still want the Slack status be set first
+                observers = Observers([job_slack_messenger, job_db_updater])
                 logger.debug("observers created: %s", observers)
                 try:
+                    local_cluster = None
                     with Timer() as tt:
                         if (
                             mhub_settings.dask_gateway_url is None
@@ -81,8 +84,6 @@ def run_job(
                             local_cluster = LocalCluster(
                                 processes=False, n_workers=4, threads_per_worker=8
                             )
-                        else:
-                            local_cluster = None
                         job_wrapper(
                             job_entry,
                             observers=observers,
@@ -94,6 +95,12 @@ def run_job(
                     raise
                 finally:
                     logger.info("job %s ran for %s", job_id, tt)
+                    # close local cluster if necessary
+                    if local_cluster is not None:
+                        try:
+                            local_cluster.close()
+                        except Exception as exc:
+                            logger.exception(exc)
             else:
                 logger.info(
                     "job %s cannot be run because it is in status %s",
