@@ -2,6 +2,22 @@
 Changelog
 #########
 
+
+2026.4.0 - 2026-04-28
+----------------------
+
+* core
+
+  * `cli.worker`: make sure `LocalCluster` is closed appropriately (#51)
+  * `cli.worker`: slack messages now get sent before `JobCancelledError` is being raised (#51)
+  * `app`: also allow cancelling job which is in a retrying state; update slack message without waiting for job manager to do so (#51)
+  * `job_handler.k8s_worker`: don't fail if IPv6 address cannot be parsed by requests (#51)
+
+* CLI
+
+  * `manager`: add `--skip-dashboard-check` flag (#51)
+
+
 2026.2.3 - 2026-02-27
 ----------------------
 
