@@ -11,7 +11,7 @@ services:
       /bin/bash -c "
         echo $MHUB_HOST;
         sleep 5;
-        uv pip install --extra test -r /usr/local/src/mapchete_hub/pyproject.toml && python -m pytest -v --cov=mapchete_hub /usr/local/src/mapchete_hub/tests/test_app_integration.py && coverage report
+        uv sync --extra test --no-editable && uv run pytest -v --cov=mapchete_hub /usr/local/src/mapchete_hub/tests/test_app_integration.py && uv run coverage report
       "
     networks:
       - backend

@@ -15,6 +15,13 @@ Unreleased
   * use `uv sync --frozen` for test environment management
   * enable `uv` caching and add `uv cache prune --ci` steps
 
+* infrastructure
+
+  * Docker: use `uv run` for all entrypoints to ensure robust dependency execution
+  * Docker: switch to `uv sync --no-editable` for clean container builds
+  * Docker: exclude `.venv` and `.github` from build context via `.dockerignore`
+  * Integration tests: modernized `docker-compose.test.yml` to use `uv sync` and `uv run`
+
 
 2026.4.0 - 2026-04-28
 ----------------------

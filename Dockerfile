@@ -18,9 +18,8 @@ COPY pyproject.toml uv.lock $MHUB_DIR/
 # copy mapchete_hub source code and install
 COPY . $MHUB_DIR
 
-# RUN --mount=type=cache,target=/root/.cache/uv \
-#     uv sync --locked --no-install-project --no-dev
-RUN --mount=type=cache,target=/root/.cache/uv uv sync --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --no-dev --no-editable
 
 FROM ghcr.io/osgeo/gdal:ubuntu-small-3.12.0 AS runner
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -28,5 +27,5 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV BUILD_DIR=/usr/local
 ENV MHUB_DIR=$BUILD_DIR/src/mapchete_hub
 
-COPY --from=builder /$MHUB_DIR /$MHUB_DIR
-ENV PATH="/${MHUB_DIR}/.venv/bin:${PATH}"
+COPY --from=builder $MHUB_DIR $MHUB_DIR
+ENV PATH="$MHUB_DIR/.venv/bin:${PATH}"
