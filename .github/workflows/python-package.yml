@@ -246,17 +246,22 @@ jobs:
           # 2. PREPARE COVERAGE DATA (Fetch from Python 3.13 tests only)
           uv tool install coverage
           
-          # Move the specific 3.13 file to root and rename to .coverage
-          if [ -f all-results/.coverage.python.3.13 ]; then
+          echo "DEBUG: Content of all-results (including hidden):"
+          ls -Ra all-results || echo "all-results not found"
+          
+          # Use find to robustly move all hidden coverage files from all-results to current dir
+          find all-results -name ".coverage*" -exec mv {} . \;
+          
+          # Rename the specific 3.13 file to .coverage if it exists
+          if [ -f .coverage.python.3.13 ]; then
             echo "Found Python 3.13 coverage data, renaming to .coverage"
-            mv all-results/.coverage.python.3.13 .coverage
-          elif ls all-results/.coverage* 1> /dev/null 2>&1; then
-            mv all-results/.coverage* .
-            # If there's only one file, rename it to .coverage
-            FILES=$(ls .coverage.* 2>/dev/null | wc -l)
+            mv .coverage.python.3.13 .coverage
+          else
+            # Fallback: if there's only one coverage file, rename it
+            FILES=$(ls -a .coverage.* 2>/dev/null | grep -v '^\.$' | grep -v '^\.\.$' | wc -l)
             if [ "$FILES" -eq 1 ]; then
               mv .coverage.* .coverage
-            else
+            elif [ "$FILES" -gt 1 ]; then
               uv tool run coverage combine --append
             fi
           fi
