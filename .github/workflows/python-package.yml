@@ -132,7 +132,7 @@ jobs:
         if: matrix.python-version == '3.13'
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-all
+          name: coverage-python-${{ matrix.python-version }}
           path: .coverage.python.${{ matrix.python-version }}
           include-hidden-files: true
           retention-days: 1
@@ -210,7 +210,9 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: all-results
-          pattern: "*-*" 
+          pattern: |
+            results-*
+            coverage-python-*
           merge-multiple: true
 
       - name: 📊 Check Tests & Coverage
@@ -246,6 +248,7 @@ jobs:
           
           # Move the specific 3.13 file to root and rename to .coverage
           if [ -f all-results/.coverage.python.3.13 ]; then
+            echo "Found Python 3.13 coverage data, renaming to .coverage"
             mv all-results/.coverage.python.3.13 .coverage
           elif ls all-results/.coverage* 1> /dev/null 2>&1; then
             mv all-results/.coverage* .
