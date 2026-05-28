@@ -115,7 +115,7 @@ jobs:
           CURL_CA_BUNDLE: /etc/ssl/certs/ca-certificates.crt
           COVERAGE_FILE: .coverage.python.${{ matrix.python-version }}
         run: |
-            uv run pytest -v \
+            uv run pytest -v --log-cli-level=DEBUG \
             --cov=mapchete_hub \
             --cov-report=xml:coverage.xml \
             --junitxml="pytest-${{ matrix.python-version }}.xml"
@@ -206,13 +206,18 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache-suffix: ${{ github.job }}
 
-      - name: 📥 Download Artifacts
+      - name: 📥 Download Results
         uses: actions/download-artifact@v8
         with:
           path: all-results
-          pattern: |
-            results-*
-            coverage-python-*
+          pattern: results-*
+          merge-multiple: true
+
+      - name: 📥 Download Coverage
+        uses: actions/download-artifact@v8
+        with:
+          path: all-results
+          pattern: coverage-*
           merge-multiple: true
 
       - name: 📊 Check Tests & Coverage
@@ -246,11 +251,13 @@ jobs:
           # 2. PREPARE COVERAGE DATA (Fetch from Python 3.13 tests only)
           uv tool install coverage
           
-          echo "DEBUG: Content of all-results (including hidden):"
-          ls -Ra all-results || echo "all-results not found"
-          
-          # Use find to robustly move all hidden coverage files from all-results to current dir
-          find all-results -name ".coverage*" -exec mv {} . \;
+          if [ -d all-results ]; then
+            echo "DEBUG: Content of all-results (including hidden):"
+            ls -Ra all-results            
+            find all-results -name ".coverage*" -exec mv {} . \;
+          else
+            echo "⚠️ **Warning:** all-results directory not found. Artifacts might have failed to download." >> $GITHUB_STEP_SUMMARY
+          fi
           
           # Rename the specific 3.13 file to .coverage if it exists
           if [ -f .coverage.python.3.13 ]; then
