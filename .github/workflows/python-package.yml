@@ -38,8 +38,42 @@ jobs:
       - name: 🧹 Cache Prune
         run: uv cache prune --ci
 
+  setup:
+      name: "🏗️ Build Py${{ matrix.python-version }}"
+      needs: lint
+      runs-on: ubuntu-latest
+      strategy:
+        matrix:
+          python-version: ["3.11", "3.12", "3.13"]
+      steps:
+        - uses: actions/checkout@v6
+
+        - name: 📥 Apply Dependency Overrides
+          if: "${{ inputs.override-deps-artifact != '' && inputs.override-deps-artifact != 'null' }}"
+          uses: actions/download-artifact@v8
+          with:
+            name: ${{ inputs.override-deps-artifact }}
+
+        - name: ⚡ Setup uv
+          uses: astral-sh/setup-uv@v8.1.0
+          with:
+            enable-cache: true
+            github-token: ${{ secrets.GITHUB_TOKEN }}
+            cache-suffix: setup-${{ matrix.python-version }}
+
+        - name: 📝 Export Locked Requirements
+          run: |
+            uv export --frozen --all-extras --format requirements-txt > requirements.txt
+      
+        - name: 📤 Upload Requirements
+          uses: actions/upload-artifact@v7
+          with:
+            name: frozen-reqs-${{ matrix.python-version }}
+            path: requirements.txt
+            retention-days: 1
+
   test:
-    needs: lint
+    needs: setup
     name: "🧪 py${{ matrix.python-version }}"
     runs-on: ubuntu-latest
     strategy:
@@ -48,24 +82,30 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v6
-
-      - name: 📥 Apply Dependency Overrides
-        if: "${{ inputs.override-deps-artifact != '' && inputs.override-deps-artifact != 'null' }}"
+      - name: 📥 Download Requirements
         uses: actions/download-artifact@v8
         with:
-          name: ${{ inputs.override-deps-artifact }}
+          name: frozen-reqs-${{ matrix.python-version }}      
+      
+      - name: ⚡ Install git & GIS Dependencies
+        run: |
+          sudo apt-add-repository -y ppa:ubuntugis/ubuntugis-unstable
+          sudo apt-get update
+          sudo apt-get install -y curl git gpg gdal-bin libgdal-dev libproj-dev libgeos-dev g++
       
       - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          cache-suffix: ${{ matrix.python-version }}
+          cache-suffix: test-${{ matrix.python-version }}
 
-      - name: 🏗️ Sync Environment
+      - name: 🏗️ Restore Native Env
         run: |
-          uv sync --frozen --all-extras --python ${{ matrix.python-version }}
-
+          uv venv --python ${{ matrix.python-version }}
+          uv pip install -r requirements.txt
+          uv pip install -e ".[test]" --no-deps      
+         
       - name: 🧪 Run Tests
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -92,7 +132,7 @@ jobs:
         if: matrix.python-version == '3.13'
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-chunk-all
+          name: coverage-all
           path: .coverage.python.${{ matrix.python-version }}
           include-hidden-files: true
           retention-days: 1
@@ -110,7 +150,7 @@ jobs:
 
   integration-tests:
     name: "🚀 Integration Tests"
-    needs: lint
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -132,7 +172,7 @@ jobs:
   build-docker-image:
     name: "🐳 Docker Build & CLI Check"
     if: github.event_name == 'pull_request'
-    needs: lint
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -172,7 +212,7 @@ jobs:
           path: all-results
           pattern: |
             results-*
-            coverage-chunk-*
+            coverage-all*
           merge-multiple: true
 
       - name: 📊 Check Tests & Coverage
@@ -203,57 +243,35 @@ jobs:
             fi
           fi
 
-          # 2. PREPARE COVERAGE DATA
+          # 2. PREPARE COVERAGE DATA (Fetch from python tests only)
           uv tool install coverage
           
-          echo "DEBUG: Content of all-results:"
-          ls -R all-results || echo "all-results not found"
-          
-          # Move files from download path
           if ls all-results/.coverage* 1> /dev/null 2>&1; then
             mv all-results/.coverage* .
           fi
           
-          # 🧹 Delete empty files
+          # 🧹 Delete empty files to avoid coverage combine errors
           find . -maxdepth 1 -name ".coverage*" -size 0 -print -delete
           
-          echo "Processing coverage files..."
-          FILES=$(ls .coverage.* 2>/dev/null | wc -l)
-          if [ "$FILES" -gt 0 ]; then
-            if [ "$FILES" -eq 1 ]; then
-              echo "Single coverage file found, renaming to .coverage"
-              mv .coverage.* .coverage
-            else
-              echo "Multiple coverage files found, combining..."
-              uv tool run coverage combine
-            fi
-          else
-            echo "⚠️ No coverage files found to process."
-          fi
+          echo "Merging/Preparing coverage data..."
+          # combine will merge .coverage.* into .coverage
+          uv tool run coverage combine --append || echo "No extra coverage files to combine."
           
           # 3. ENFORCE 70%
-          if [ -f .coverage ]; then
-            echo "Generating coverage report..."
-            set +e
-            REPORT_OUTPUT=$(uv tool run coverage report --show-missing --fail-under=70 2>&1)
-            EXIT_CODE=$?
-            set -e
-            
-            echo "$REPORT_OUTPUT"
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            echo "$REPORT_OUTPUT" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            
-            if [ $EXIT_CODE -ne 0 ]; then
-              echo "❌ **Coverage Failed:** Coverage is below 70%." >> $GITHUB_STEP_SUMMARY
-              # Only fail if coverage is low, not if report failed for other reasons
-              exit $EXIT_CODE
-            else
-              echo "✅ **Coverage Passed:** 70% coverage achieved." >> $GITHUB_STEP_SUMMARY
-            fi
+          REPORT_OUTPUT=$(uv tool run coverage report --show-missing --fail-under=70 2>&1)
+          EXIT_CODE=$?
+          
+          echo "$REPORT_OUTPUT"
+          
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$REPORT_OUTPUT" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 70%." >> $GITHUB_STEP_SUMMARY
+            exit $EXIT_CODE
           else
-            echo "❌ **Error:** No coverage data (.coverage) produced." >> $GITHUB_STEP_SUMMARY
-            # Don't exit here, let the job status fail if unit tests failed
+            echo "✅ **Coverage Passed:** 70% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
           fi
 
           # Fail overall if unit tests failed
