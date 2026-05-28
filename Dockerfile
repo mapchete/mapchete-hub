@@ -27,5 +27,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 ENV BUILD_DIR=/usr/local
 ENV MHUB_DIR=$BUILD_DIR/src/mapchete_hub
 
+WORKDIR $MHUB_DIR
+
 COPY --from=builder $MHUB_DIR $MHUB_DIR
 ENV PATH="$MHUB_DIR/.venv/bin:${PATH}"
