@@ -1,7 +1,9 @@
 .git
+.github
+.venv
 *.coverage
 *.egg-info
-.eggs
+*.eggs
 *.pyc
 __pycache__
 .pytest_cache

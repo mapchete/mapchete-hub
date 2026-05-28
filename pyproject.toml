@@ -73,6 +73,9 @@ include = [
     "/mapchete_hub",
 ]
 
+[tool.pyproject2conda]
+channels = ["conda-forge"]
+
 [tool.pytest.ini_options]
 env = [
     "MHUB_ENV=testing",

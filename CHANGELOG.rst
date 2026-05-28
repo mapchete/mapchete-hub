@@ -3,6 +3,26 @@ Changelog
 #########
 
 
+Unreleased
+----------
+
+* CI/CD
+
+  * modernize workflows for `uv 0.5+`
+  * upgrade all GitHub Actions to May 2026 versions (utilizing Node.js 24)
+  * standardized on `astral-sh/setup-uv@v8.1.0` (immutable release)
+  * fix GitHub API rate limit issues by providing `GITHUB_TOKEN` to `setup-uv`
+  * use `uv sync --frozen` for test environment management
+  * enable `uv` caching and add `uv cache prune --ci` steps
+
+* infrastructure
+
+  * Docker: use `uv run` for all entrypoints to ensure robust dependency execution
+  * Docker: switch to `uv sync --no-editable` for clean container builds
+  * Docker: exclude `.venv` and `.github` from build context via `.dockerignore`
+  * Integration tests: modernized `docker-compose.test.yml` to use `uv sync` and `uv run`
+
+
 2026.4.0 - 2026-04-28
 ----------------------
 
