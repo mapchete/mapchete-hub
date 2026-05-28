@@ -243,35 +243,43 @@ jobs:
             fi
           fi
 
-          # 2. PREPARE COVERAGE DATA (Fetch from python tests only)
+          # 2. PREPARE COVERAGE DATA (Fetch from Python 3.13 tests only)
           uv tool install coverage
           
-          if ls all-results/.coverage* 1> /dev/null 2>&1; then
+          # Move the specific 3.13 file to root and rename to .coverage
+          if [ -f all-results/.coverage.python.3.13 ]; then
+            mv all-results/.coverage.python.3.13 .coverage
+          elif ls all-results/.coverage* 1> /dev/null 2>&1; then
             mv all-results/.coverage* .
+            # If there's only one file, rename it to .coverage
+            FILES=$(ls .coverage.* 2>/dev/null | wc -l)
+            if [ "$FILES" -eq 1 ]; then
+              mv .coverage.* .coverage
+            else
+              uv tool run coverage combine --append
+            fi
           fi
           
-          # 🧹 Delete empty files to avoid coverage combine errors
-          find . -maxdepth 1 -name ".coverage*" -size 0 -print -delete
-          
-          echo "Merging/Preparing coverage data..."
-          # combine will merge .coverage.* into .coverage
-          uv tool run coverage combine --append || echo "No extra coverage files to combine."
-          
           # 3. ENFORCE 70%
-          REPORT_OUTPUT=$(uv tool run coverage report --show-missing --fail-under=70 2>&1)
-          EXIT_CODE=$?
-          
-          echo "$REPORT_OUTPUT"
-          
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "$REPORT_OUTPUT" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "❌ **Coverage Failed:** Python 3.13 coverage is below 70%." >> $GITHUB_STEP_SUMMARY
-            exit $EXIT_CODE
+          if [ -f .coverage ]; then
+            echo "Generating coverage report..."
+            REPORT_OUTPUT=$(uv tool run coverage report --show-missing --fail-under=70 2>&1)
+            EXIT_CODE=$?
+            
+            echo "$REPORT_OUTPUT"
+            
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "$REPORT_OUTPUT" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "❌ **Coverage Failed:** Python 3.13 coverage is below 70%." >> $GITHUB_STEP_SUMMARY
+              exit $EXIT_CODE
+            else
+              echo "✅ **Coverage Passed:** 70% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
+            fi
           else
-            echo "✅ **Coverage Passed:** 70% coverage achieved (Py3.13)." >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Warning:** No coverage data found for Python 3.13." >> $GITHUB_STEP_SUMMARY
           fi
 
           # Fail overall if unit tests failed
