@@ -30,6 +30,7 @@ jobs:
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-suffix: ${{ github.job }}
       - name: 🏃 Run Pre-commit
         run: |
           uv tool install pre-commit
@@ -59,6 +60,7 @@ jobs:
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-suffix: ${{ matrix.python-version }}
 
       - name: 🏗️ Sync Environment
         run: |
@@ -117,6 +119,7 @@ jobs:
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-suffix: ${{ github.job }}
       - name: 🏗️ Sync Environment
         run: uv sync --all-extras
       - name: 🏃 Run Integration Tests
@@ -161,6 +164,7 @@ jobs:
         with:
           enable-cache: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache-suffix: ${{ github.job }}
 
       - name: 📥 Download Artifacts
         uses: actions/download-artifact@v8
