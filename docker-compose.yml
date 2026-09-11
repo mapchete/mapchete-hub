@@ -1,9 +1,7 @@
-version: "3.8"
-
 services:
 
   db:
-    image: mongo:4.2.7-bionic
+    image: mongo:4.4.30-focal
     networks:
       - backend
     environment:
