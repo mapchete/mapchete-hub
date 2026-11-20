@@ -41,7 +41,7 @@ jobs:
   setup:
       name: "🏗️ Build Py${{ matrix.python-version }}"
       needs: lint
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       strategy:
         matrix:
           python-version: ["3.11", "3.12", "3.13"]
@@ -75,7 +75,7 @@ jobs:
   test:
     needs: setup
     name: "🧪 py${{ matrix.python-version }}"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -151,7 +151,7 @@ jobs:
   integration-tests:
     name: "🚀 Integration Tests"
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: ⚡ Setup uv
@@ -173,7 +173,7 @@ jobs:
     name: "🐳 Docker Build & CLI Check"
     if: github.event_name == 'pull_request'
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: ⚡ Set up Docker Buildx
@@ -195,7 +195,7 @@ jobs:
     name: "📊 Final Summary & Coverage"
     needs: [test, integration-tests, build-docker-image]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6 # Needed for coverage to see source files
 
